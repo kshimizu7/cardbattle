@@ -1,0 +1,14 @@
+# ビルド生成物（index.html だけをリポジトリに置く）
+ArcanaClash.html
+dist/
+
+# 作業中に出るもの
+node_modules/
+*.png
+*.jpg
+*.log
+*.wav
+*.mp3
+サウンド確認.html
+サウンド一覧.*
+_transfer.tar.gz
