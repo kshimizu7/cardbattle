@@ -1379,7 +1379,9 @@ body.shake{animation:shk2 .56s}
            画面の向きがひとつだけで済み、逆さまの文字が出ない。
    ========================================================= */
 @media (orientation: landscape) {
-  #app.land{max-width:none;height:100dvh;overflow:hidden;display:grid}
+  /* dvh はアドレスバーの出入りで値が変わり、そのたびに高さが動いて画面が揺れる。
+     svh（最小ビューポート）はバーが出ていても変化しないので、揺れが起きない。 */
+  #app.land{max-width:none;height:100vh;height:100svh;overflow:hidden;display:grid}
   /* 余白用の空div（class無し）はグリッドから外す */
   #app.land > div:not([class]){display:none}
 
@@ -1617,3 +1619,30 @@ body.shake{animation:shk2 .56s}
 }
 .acts.waiting{display:flex;align-items:center;justify-content:center;min-height:52px}
 .waitmsg{font-size:12.5px;font-weight:800;color:#7686a6;letter-spacing:.08em}
+
+/* ===== v32: 横持ちの文字を読みやすく ===== */
+@media (orientation: landscape) {
+  #app.land .unit .nm{font-size:14px;letter-spacing:-.01em}
+  #app.land .unit .hpb{height:19px;font-size:13.5px}
+  #app.land .unit .spb,#app.land .unit .atb{font-size:14px;padding:2px 6px}
+  #app.land .unit .rng,#app.land .unit .lnb{font-size:11px}
+  #app.land .unit .tg{font-size:11px}
+  #app.land .side-tag{font-size:13px}
+  #app.land .om .nm{font-size:12.5px}
+  #app.land .om .sp{font-size:11.5px}
+  #app.land .act{font-size:14.5px}
+  #app.land .act small{font-size:11.5px}
+}
+/* 画面が広い横持ち（iPad系）はもう一段大きく */
+@media (orientation: landscape) and (min-width: 1000px) {
+  #app.land .unit .nm{font-size:16.5px}
+  #app.land .unit .hpb{height:23px;font-size:16px}
+  #app.land .unit .spb,#app.land .unit .atb{font-size:16.5px;padding:3px 8px}
+  #app.land .unit .rng,#app.land .unit .lnb{font-size:12.5px}
+  #app.land .side-tag{font-size:15px}
+  #app.land .om .nm{font-size:14px}
+  #app.land .om .sp{font-size:13px}
+  #app.land .act{font-size:16px}
+  #app.land .act small{font-size:12.5px}
+  #app.land .panelbar .t{font-size:18px}
+}

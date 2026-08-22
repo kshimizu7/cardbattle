@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="31">
+<meta name="app-version" content="32">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -1391,7 +1391,9 @@ body.shake{animation:shk2 .56s}
            画面の向きがひとつだけで済み、逆さまの文字が出ない。
    ========================================================= */
 @media (orientation: landscape) {
-  #app.land{max-width:none;height:100dvh;overflow:hidden;display:grid}
+  /* dvh はアドレスバーの出入りで値が変わり、そのたびに高さが動いて画面が揺れる。
+     svh（最小ビューポート）はバーが出ていても変化しないので、揺れが起きない。 */
+  #app.land{max-width:none;height:100vh;height:100svh;overflow:hidden;display:grid}
   /* 余白用の空div（class無し）はグリッドから外す */
   #app.land > div:not([class]){display:none}
 
@@ -1629,6 +1631,33 @@ body.shake{animation:shk2 .56s}
 }
 .acts.waiting{display:flex;align-items:center;justify-content:center;min-height:52px}
 .waitmsg{font-size:12.5px;font-weight:800;color:#7686a6;letter-spacing:.08em}
+
+/* ===== v32: 横持ちの文字を読みやすく ===== */
+@media (orientation: landscape) {
+  #app.land .unit .nm{font-size:14px;letter-spacing:-.01em}
+  #app.land .unit .hpb{height:19px;font-size:13.5px}
+  #app.land .unit .spb,#app.land .unit .atb{font-size:14px;padding:2px 6px}
+  #app.land .unit .rng,#app.land .unit .lnb{font-size:11px}
+  #app.land .unit .tg{font-size:11px}
+  #app.land .side-tag{font-size:13px}
+  #app.land .om .nm{font-size:12.5px}
+  #app.land .om .sp{font-size:11.5px}
+  #app.land .act{font-size:14.5px}
+  #app.land .act small{font-size:11.5px}
+}
+/* 画面が広い横持ち（iPad系）はもう一段大きく */
+@media (orientation: landscape) and (min-width: 1000px) {
+  #app.land .unit .nm{font-size:16.5px}
+  #app.land .unit .hpb{height:23px;font-size:16px}
+  #app.land .unit .spb,#app.land .unit .atb{font-size:16.5px;padding:3px 8px}
+  #app.land .unit .rng,#app.land .unit .lnb{font-size:12.5px}
+  #app.land .side-tag{font-size:15px}
+  #app.land .om .nm{font-size:14px}
+  #app.land .om .sp{font-size:13px}
+  #app.land .act{font-size:16px}
+  #app.land .act small{font-size:12.5px}
+  #app.land .panelbar .t{font-size:18px}
+}
 
 </style>
 </head>
@@ -1964,6 +1993,16 @@ var CB = (function () {
   /* ---------- 盤面ヘルパー ---------- */
   function allUnits(st) { return st.players[0].units.concat(st.players[1].units); }
   function aliveUnits(st, side) { return st.players[side].units.filter(function (u) { return u.alive; }); }
+  /* 生死を問わず、そのマスに居るユニット（＝死体も含む）。
+     前進で生者が入るとき、先客の死体を押し出すために使う。 */
+  function occupantAt(st, side, row, col) {
+    var arr = st.players[side].units;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].row === row && arr[i].col === col) return arr[i];
+    }
+    return null;
+  }
+
   function unitAt(st, side, row, col) {
     var arr = st.players[side].units;
     for (var i = 0; i < arr.length; i++) {
@@ -2117,7 +2156,12 @@ var CB = (function () {
     if (unitAt(st, side, 0, col)) return null;         // まだ埋まっている
     var back = unitAt(st, side, 1, col);
     if (!back) return null;
+    /* 前衛マスには倒れた者がそのまま残っている。
+       生者が入ると同じマスに2体が重なり、描画が入れ替わって
+       生きているキャラが盤面から消えてしまう。死体を後ろへ下げて入れ替える。 */
+    var corpse = occupantAt(st, side, 0, col);
     back.row = 0;
+    if (corpse && corpse !== back) corpse.row = 1;
     push(st, { type: 'move', uid: back.uid, row: 0, col: col, fromRow: 1, fromCol: col });
     logMsg(st, back.def.name + ' が前線へ進み出た！');
     return back;
@@ -2130,7 +2174,9 @@ var CB = (function () {
     var frontMate = unitAt(st, u.side, 0, u.col);
     if (!frontMate) {
       if (doMove) {
+        var corpse2 = occupantAt(st, u.side, 0, u.col);
         u.row = 0;
+        if (corpse2 && corpse2 !== u) corpse2.row = 1;
         push(st, { type: 'move', uid: u.uid, row: 0, col: u.col, fromRow: 1, fromCol: u.col });
         logMsg(st, u.def.name + ' が前線へ進み出た！');
       }
@@ -6369,8 +6415,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
 
   function unitCellHTML(side, row, col) {
     var st = S.st;
+    /* 万一まだ重なっていても、生存キャラを優先して描く（消えないための保険） */
     var u = null;
-    st.players[side].units.forEach(function (x) { if (x.row === row && x.col === col) u = x; });
+    st.players[side].units.forEach(function (x) {
+      if (x.row !== row || x.col !== col) return;
+      if (!u || (x.alive && !u.alive)) u = x;
+    });
     if (!u) return '<div class="cell" data-cell="' + side + '-' + row + '-' + col + '"><div class="unit empty"></div></div>';
     return '<div class="cell" data-cell="' + side + '-' + row + '-' + col + '">' + unitHTML(u) + '</div>';
   }
@@ -7445,7 +7495,15 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     function next() {
       if (!evs.length) { done(); return; }
       var e = evs.shift();
-      var delay = applyEvent(e, evs);
+      var delay = 60;
+      /* 演出のどれか1つが失敗しても、そこで戦闘全体が止まらないようにする。
+         以前は例外が出ると再生が打ち切られ、複数体攻撃の2体目以降の
+         ダメージ表示が出ないまま固まることがあった。 */
+      try { delay = applyEvent(e, evs); }
+      catch (err) {
+        if (window.console && console.warn) console.warn('演出をスキップしました:', e && e.type, err);
+        delay = 60;
+      }
       wait(delay, next);
     }
     next();
@@ -7458,9 +7516,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
 
       case 'move': {
         var mu = E.findUid(st, e.uid);
+        if (!mu) return 120;
         var el = $('[data-uid="' + e.uid + '"]');
         var cell = $('[data-cell="' + mu.side + '-' + e.row + '-' + e.col + '"]');
-        if (!el || !cell) return 200;
+        if (!el || !cell) return 120;
         /* 移動前の位置を控えてから差し替え、その差分ぶん戻してから動かす。
            こうすると縦持ち（下→上）でも横持ち（外→内）でも、
            実際に「奥から前線へ動いた」ように見える。 */
@@ -7486,7 +7545,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       }
 
       case 'attack': {
-        flowWarline(e.src != null ? (E.findUid(st, e.src) || {}).side : null);
+        flowWarline(e.uid != null ? (E.findUid(st, e.uid) || {}).side : null);
         var f = fxOf(e.fx);
         S.fx = f; S.fxName = e.fx; S.hits = 0; S.total = 0; S.multi = e.targets.length > 1;
         SFX.play(e.fx);
@@ -7783,18 +7842,26 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
   };
   /* 端末を回したらレイアウトを組み直す */
   var _reflow = null, _wasLandscape = null;
+  function applyOrientClasses() {
+    if (S.screen !== 'battle') return;
+    var land = isLandscape();
+    app.classList.toggle('land', land);
+    app.classList.toggle('lp-side', land);
+  }
   function onOrient() {
     /* モバイルではアドレスバーの出入りだけで resize が連発する。
-       そのたびに組み直すと画面が上下に揺れるので、
-       「向きが実際に変わったとき」だけ組み直す。 */
+       そのたびに作り直すと画面が揺れるので、まずクラスだけ付け替える。
+       上段バーと右パネル内バーは常に両方描いてあり、表示はCSSが決めるので、
+       これだけで縦横のレイアウトは正しく入れ替わる（演出中でも安全）。 */
+    applyOrientClasses();
     var now = isLandscape();
     if (now === _wasLandscape) return;
     _wasLandscape = now;
     clearTimeout(_reflow);
     _reflow = setTimeout(function () {
-      if (S.screen === 'battle' && S.st && !S.busy) renderBattle();
-      else if (S.screen === 'ready') renderReady();
-    }, 200);
+      if (S.screen === 'ready') renderReady();
+      else if (S.screen === 'battle' && S.st && !S.busy) renderBattle();
+    }, 220);
   }
   _wasLandscape = isLandscape();
   window.addEventListener('orientationchange', onOrient);

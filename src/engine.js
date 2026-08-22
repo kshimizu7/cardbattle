@@ -325,6 +325,16 @@ var CB = (function () {
   /* ---------- 盤面ヘルパー ---------- */
   function allUnits(st) { return st.players[0].units.concat(st.players[1].units); }
   function aliveUnits(st, side) { return st.players[side].units.filter(function (u) { return u.alive; }); }
+  /* 生死を問わず、そのマスに居るユニット（＝死体も含む）。
+     前進で生者が入るとき、先客の死体を押し出すために使う。 */
+  function occupantAt(st, side, row, col) {
+    var arr = st.players[side].units;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i].row === row && arr[i].col === col) return arr[i];
+    }
+    return null;
+  }
+
   function unitAt(st, side, row, col) {
     var arr = st.players[side].units;
     for (var i = 0; i < arr.length; i++) {
@@ -478,7 +488,12 @@ var CB = (function () {
     if (unitAt(st, side, 0, col)) return null;         // まだ埋まっている
     var back = unitAt(st, side, 1, col);
     if (!back) return null;
+    /* 前衛マスには倒れた者がそのまま残っている。
+       生者が入ると同じマスに2体が重なり、描画が入れ替わって
+       生きているキャラが盤面から消えてしまう。死体を後ろへ下げて入れ替える。 */
+    var corpse = occupantAt(st, side, 0, col);
     back.row = 0;
+    if (corpse && corpse !== back) corpse.row = 1;
     push(st, { type: 'move', uid: back.uid, row: 0, col: col, fromRow: 1, fromCol: col });
     logMsg(st, back.def.name + ' が前線へ進み出た！');
     return back;
@@ -491,7 +506,9 @@ var CB = (function () {
     var frontMate = unitAt(st, u.side, 0, u.col);
     if (!frontMate) {
       if (doMove) {
+        var corpse2 = occupantAt(st, u.side, 0, u.col);
         u.row = 0;
+        if (corpse2 && corpse2 !== u) corpse2.row = 1;
         push(st, { type: 'move', uid: u.uid, row: 0, col: u.col, fromRow: 1, fromCol: u.col });
         logMsg(st, u.def.name + ' が前線へ進み出た！');
       }

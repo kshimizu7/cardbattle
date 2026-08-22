@@ -1391,8 +1391,12 @@
 
   function unitCellHTML(side, row, col) {
     var st = S.st;
+    /* 万一まだ重なっていても、生存キャラを優先して描く（消えないための保険） */
     var u = null;
-    st.players[side].units.forEach(function (x) { if (x.row === row && x.col === col) u = x; });
+    st.players[side].units.forEach(function (x) {
+      if (x.row !== row || x.col !== col) return;
+      if (!u || (x.alive && !u.alive)) u = x;
+    });
     if (!u) return '<div class="cell" data-cell="' + side + '-' + row + '-' + col + '"><div class="unit empty"></div></div>';
     return '<div class="cell" data-cell="' + side + '-' + row + '-' + col + '">' + unitHTML(u) + '</div>';
   }
@@ -2467,7 +2471,15 @@
     function next() {
       if (!evs.length) { done(); return; }
       var e = evs.shift();
-      var delay = applyEvent(e, evs);
+      var delay = 60;
+      /* 演出のどれか1つが失敗しても、そこで戦闘全体が止まらないようにする。
+         以前は例外が出ると再生が打ち切られ、複数体攻撃の2体目以降の
+         ダメージ表示が出ないまま固まることがあった。 */
+      try { delay = applyEvent(e, evs); }
+      catch (err) {
+        if (window.console && console.warn) console.warn('演出をスキップしました:', e && e.type, err);
+        delay = 60;
+      }
       wait(delay, next);
     }
     next();
@@ -2480,9 +2492,10 @@
 
       case 'move': {
         var mu = E.findUid(st, e.uid);
+        if (!mu) return 120;
         var el = $('[data-uid="' + e.uid + '"]');
         var cell = $('[data-cell="' + mu.side + '-' + e.row + '-' + e.col + '"]');
-        if (!el || !cell) return 200;
+        if (!el || !cell) return 120;
         /* 移動前の位置を控えてから差し替え、その差分ぶん戻してから動かす。
            こうすると縦持ち（下→上）でも横持ち（外→内）でも、
            実際に「奥から前線へ動いた」ように見える。 */
@@ -2508,7 +2521,7 @@
       }
 
       case 'attack': {
-        flowWarline(e.src != null ? (E.findUid(st, e.src) || {}).side : null);
+        flowWarline(e.uid != null ? (E.findUid(st, e.uid) || {}).side : null);
         var f = fxOf(e.fx);
         S.fx = f; S.fxName = e.fx; S.hits = 0; S.total = 0; S.multi = e.targets.length > 1;
         SFX.play(e.fx);
@@ -2805,18 +2818,26 @@
   };
   /* 端末を回したらレイアウトを組み直す */
   var _reflow = null, _wasLandscape = null;
+  function applyOrientClasses() {
+    if (S.screen !== 'battle') return;
+    var land = isLandscape();
+    app.classList.toggle('land', land);
+    app.classList.toggle('lp-side', land);
+  }
   function onOrient() {
     /* モバイルではアドレスバーの出入りだけで resize が連発する。
-       そのたびに組み直すと画面が上下に揺れるので、
-       「向きが実際に変わったとき」だけ組み直す。 */
+       そのたびに作り直すと画面が揺れるので、まずクラスだけ付け替える。
+       上段バーと右パネル内バーは常に両方描いてあり、表示はCSSが決めるので、
+       これだけで縦横のレイアウトは正しく入れ替わる（演出中でも安全）。 */
+    applyOrientClasses();
     var now = isLandscape();
     if (now === _wasLandscape) return;
     _wasLandscape = now;
     clearTimeout(_reflow);
     _reflow = setTimeout(function () {
-      if (S.screen === 'battle' && S.st && !S.busy) renderBattle();
-      else if (S.screen === 'ready') renderReady();
-    }, 200);
+      if (S.screen === 'ready') renderReady();
+      else if (S.screen === 'battle' && S.st && !S.busy) renderBattle();
+    }, 220);
   }
   _wasLandscape = isLandscape();
   window.addEventListener('orientationchange', onOrient);
