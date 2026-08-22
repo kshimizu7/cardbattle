@@ -19,7 +19,7 @@
     seenIds: [],
     st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
-    compact: false, sideBySide: false, landPanel: 'auto'
+    compact: false, sideBySide: false, landPanel: 'auto', hintSeen: false
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
@@ -64,7 +64,7 @@
       SAVE.setSettings({ sound: S.sound, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
                          compact: S.compact, sideBySide: S.sideBySide,
-                         landPanel: S.landPanel });
+                         landPanel: S.landPanel, hintSeen: S.hintSeen });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -79,6 +79,7 @@
       if (typeof g.compact === 'boolean') S.compact = g.compact;
       if (typeof g.sideBySide === 'boolean') S.sideBySide = g.sideBySide;
       if (g.landPanel === 'auto' || g.landPanel === 'bottom' || g.landPanel === 'side') S.landPanel = g.landPanel;
+      if (typeof g.hintSeen === 'boolean') S.hintSeen = g.hintSeen;
     } catch (e) {}
   }
 
@@ -527,6 +528,7 @@
      タイトル
      ========================================================= */
   function renderTitle() {
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.screen = 'title';
     app.innerHTML =
       '<div id="screen-title">' +
@@ -1061,6 +1063,7 @@
   }
 
   function renderPass(side, next) {
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.screen = 'pass';
     app.innerHTML = '<div id="screen-pass">' +
       '<div class="pass-icon">📱</div>' +
@@ -1154,6 +1157,7 @@
   }
 
   function renderDraft() {
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.screen = 'draft';
     var side = S.draftIdx;
     var team = S.teams[side], hand = S.hands[side];
@@ -1457,6 +1461,7 @@
       '<div class="hdr">' +
         '<span class="t">R' + st.round + '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
         '<span class="sp" style="flex:1"></span>' +
+        '<button class="btn small ghost" id="fs" title="全画面">⛶</button>' +
         (S.compact
           ? '<button class="btn small ghost" id="disp">⚙ 表示</button>'
           : '<button class="btn small ghost" id="snd">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
@@ -1501,6 +1506,8 @@
     if (spdb) spdb.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
     var dispb = $('#disp');
     if (dispb) dispb.onclick = showDisplayMenu;
+    var fsb = $('#fs');
+    if (fsb) fsb.onclick = toggleFullscreen;
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
     var sndb = $('#snd');
@@ -1560,6 +1567,36 @@
     draw();
     m.onclick = function (ev) { if (ev.target === m) m.remove(); };
     document.body.appendChild(m);
+  }
+
+  /* 操作パネル内の行動順（横向きで余ったスペースに出す） */
+  function orderMiniHTML(st) {
+    var cur = E.currentActor(st);
+    return '<div class="om-hd">行動順<span>R' + st.round + '</span></div>' +
+      '<div class="om-list">' + st.order.map(function (uid, i) {
+        var v = E.findUid(st, uid);
+        if (!v) return '';
+        var cls = 'om s' + v.side + (i < st.turnIdx ? ' done' : '') + (!v.alive ? ' dead' : '') +
+          (cur && v.uid === cur.uid ? ' now' : '');
+        return '<div class="' + cls + '"><span class="n">' + (i + 1) + '</span>' +
+          '<span class="pic">' + ART.portrait(v.defId, v.def.elem) + '</span>' +
+          '<span class="nm">' + v.def.name + '</span>' +
+          '<span class="sp">⚡' + E.getSpd(v, st) + '</span></div>';
+      }).join('') + '</div>';
+  }
+
+  /* 全画面（アドレスバーを隠す）。対応していない端末では何も起きない */
+  function toggleFullscreen() {
+    try {
+      var d = document, el = d.documentElement;
+      if (d.fullscreenElement || d.webkitFullscreenElement) {
+        (d.exitFullscreen || d.webkitExitFullscreen).call(d);
+      } else {
+        var req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req) req.call(el);
+        else toast('この端末では全画面にできません。ホーム画面に追加すると隠せます');
+      }
+    } catch (e) { toast('全画面にできませんでした'); }
   }
 
   function renderActions() {
@@ -1622,7 +1659,9 @@
       '<button class="btn small ghost" id="info">詳細</button>' +
       '<button class="btn small ghost" id="auto">おまかせ</button></div>' +
       '<div class="acts">' + btns + '</div>' +
-      '<div class="hint" id="hint"></div>';
+      '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>' +
+      /* 横向きは操作パネルが縦に余るので、行動順をここに出す */
+      '<div class="ordmini" id="ordmini">' + orderMiniHTML(st) + '</div>';
 
     $$('[data-act]').forEach(function (b) {
       b.onclick = function () {
@@ -1662,6 +1701,12 @@
     } else { S.grpKey = null; S.selGrp = 0; }
 
     var info = highlightTargets(u, cur, S.selGrp);
+    /* 全体攻撃・全体回復・必中など「選ぶ余地がない技」は、
+       わざわざマスをタップさせず、技ボタンをもう一度押すだけで実行する */
+    if (info.go) {
+      var sb0 = $('[data-act="' + S.selAct + '"]');
+      if (sb0) sb0.onclick = info.go;
+    }
     // 対象になっていないマスはタップで詳細
     $$('.unit[data-uid]').forEach(function (el) {
       if (el.onclick) return;
@@ -1675,6 +1720,8 @@
     var selBtn = $('[data-act="' + S.selAct + '"]');
     var goTxt = '<b class="go">「' + (cur ? cur.action.name : '') + '」をもう一度タップで実行</b>';
     if (hintEl) {
+      S._hintCount = (S._hintCount || 0) + 1;
+      if (S._hintCount > 3 && !S.hintSeen) { S.hintSeen = true; rememberSettings(); }
       var tapTxt = '<b class="go">赤く光っているマスをタップして実行</b>';
       if (info.mode === 'fixed') {
         hintEl.innerHTML = '<span class="lgd f' + (info.heal ? ' h' : '') + '"></span>' +
@@ -1701,7 +1748,7 @@
         hintEl.innerHTML = goTxt;
         if (selBtn) selBtn.classList.add('ready');
       }
-      hintEl.innerHTML += '<span class="subhint">キャラを長押しすると詳細（敵味方どちらでも）</span>';
+      if (!S.hintSeen) hintEl.innerHTML += '<span class="subhint">キャラを長押しすると詳細（敵味方どちらでも）</span>';
     }
   }
 
@@ -1740,9 +1787,13 @@
         return { l: Math.min(p1.l, p2.l), t: Math.min(p1.t, p2.t),
                  r: Math.max(p1.l + p1.w, p2.l + p2.w), b: Math.max(p1.t + p1.h, p2.t + p2.h) };
       }
+      /* 縦持ちでは列＝横並び、横持ちでは列＝縦並びになる。
+         両端のマスから縦横まとめて外接矩形を取れば、どちらでも正しく囲える。 */
       var q1 = box(t.row, 0), q2 = box(t.row, 2);
       if (!q1 || !q2) return null;
-      return { l: q1.l, t: q1.t, r: q2.l + q2.w, b: q1.t + q1.h };
+      return { l: Math.min(q1.l, q2.l), t: Math.min(q1.t, q2.t),
+               r: Math.max(q1.l + q1.w, q2.l + q2.w),
+               b: Math.max(q1.t + q1.h, q2.t + q2.h) };
     }
     var areas = cur.targets.map(areaOf);
 
@@ -1869,7 +1920,7 @@
       fixed.forEach(function (pr) {
         markUnit(pr[0], { mode: 'fixed', label: rnd ? 'ランダム' : '命中', val: estimate(pr[0], pr[1]), onTap: go });
       });
-      return { mode: 'fixed', count: fixed.length, random: rnd, hits: a.hits || 1 };
+      return { mode: 'fixed', count: fixed.length, random: rnd, hits: a.hits || 1, go: go };
     }
     if (a.range === 'all_ally') {
       var al = E.aliveUnits(st, u.side);
@@ -1878,12 +1929,12 @@
         markUnit(v, { mode: 'fixed', heal: true, label: a.kind === 'heal' ? '回復' : '効果',
                       val: a.kind === 'heal' ? healAmt(v) : null, onTap: goA });
       });
-      return { mode: 'fixed', count: al.length, heal: true };
+      return { mode: 'fixed', count: al.length, heal: true, go: goA };
     }
     if (a.kind === 'guard') {
-      markUnit(u, { mode: 'fixed', heal: true, label: '防御', val: null,
-                    onTap: function () { doAction(u, a.key, { type: 'auto' }); } });
-      return { mode: 'self' };
+      var goG = function () { doAction(u, a.key, { type: 'auto' }); };
+      markUnit(u, { mode: 'fixed', heal: true, label: '防御', val: null, onTap: goG });
+      return { mode: 'self', go: goG };
     }
 
     /* ---- ② 単体を選ぶ ---- */
@@ -2559,6 +2610,9 @@
   function showResult() {
     var st = S.st, r = st.result;
     S.screen = 'result';
+    /* 横並びレイアウトは戦闘画面専用。結果画面では必ず解除する
+       （グリッド指定が残ると中身が置き場を失って真っ黒になる） */
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
     if (!S._saved) { S._saved = true; recordGame(st, r); }
     var win = r.winner;
     var names = [st.players[0].name, st.players[1].name];
@@ -2621,14 +2675,21 @@
     S.mode = mode || 'pvp'; S.teams = [teamA, teamB]; beginBattle();
   };
   /* 端末を回したらレイアウトを組み直す */
-  var _reflow = null;
+  var _reflow = null, _wasLandscape = null;
   function onOrient() {
+    /* モバイルではアドレスバーの出入りだけで resize が連発する。
+       そのたびに組み直すと画面が上下に揺れるので、
+       「向きが実際に変わったとき」だけ組み直す。 */
+    var now = isLandscape();
+    if (now === _wasLandscape) return;
+    _wasLandscape = now;
     clearTimeout(_reflow);
     _reflow = setTimeout(function () {
-      if (S.screen === 'battle' && S.st) renderBattle();
+      if (S.screen === 'battle' && S.st && !S.busy) renderBattle();
       else if (S.screen === 'ready') renderReady();
-    }, 180);
+    }, 200);
   }
+  _wasLandscape = isLandscape();
   window.addEventListener('orientationchange', onOrient);
   window.addEventListener('resize', onOrient);
 

@@ -1466,3 +1466,37 @@ body.shake{animation:shk2 .56s}
   .rd-note{display:none}
   #screen-ready .btn.primary{padding:12px;margin-top:2px}
 }
+
+/* ===== v26: 説明文の抑制／操作パネル内の行動順 ===== */
+/* 何戦かしたら操作説明を畳む。
+   技ボタンをもう一度押せば実行できるので、毎回の操作案内は不要。
+   「何体に当たるか」だけ残す。 */
+.hint.quiet .subhint,.hint.quiet .go{display:none}
+.hint.quiet{font-size:11px;opacity:.9;padding-bottom:2px}
+
+/* 操作パネル内の行動順。縦持ちや下の帯では出さない（すでに上に出ているため） */
+.ordmini{display:none}
+#app.land.lp-side .ordmini{display:flex;flex-direction:column;min-height:0;
+  margin-top:10px;border-top:1px solid var(--line);padding-top:8px;flex:1 1 auto}
+.om-hd{font-size:10px;letter-spacing:.16em;font-weight:900;color:var(--gold);
+  display:flex;justify-content:space-between;align-items:center;padding:0 2px 5px}
+.om-hd span{color:#7686a6;letter-spacing:.06em}
+.om-list{overflow-y:auto;min-height:0;display:flex;flex-direction:column;gap:3px;
+  scrollbar-width:none}
+.om-list::-webkit-scrollbar{display:none}
+.om{display:flex;align-items:center;gap:6px;padding:2px 5px;border-radius:7px;
+  background:rgba(255,255,255,.03);border:1px solid transparent}
+.om .n{font-size:9.5px;font-weight:900;color:#66748f;width:13px;text-align:right;flex:0 0 auto}
+.om .pic{width:20px;height:20px;border-radius:5px;overflow:hidden;background:#000;flex:0 0 auto}
+.om .pic svg{width:100%;height:100%;display:block}
+.om .nm{font-size:11px;font-weight:800;flex:1;min-width:0;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.om .sp{font-size:10px;font-weight:800;color:#7fd0ff;flex:0 0 auto}
+.om.s0 .nm{color:#bcd6ff} .om.s1 .nm{color:#ffc0c8}
+.om.done{opacity:.4}
+.om.dead{opacity:.28;text-decoration:line-through}
+.om.now{border-color:var(--gold);background:rgba(242,198,92,.14)}
+.om.now .nm{color:var(--gold)}
+
+/* 全画面ボタン */
+#fs{flex:0 0 auto;padding-left:9px;padding-right:9px}
