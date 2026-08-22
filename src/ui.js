@@ -19,7 +19,7 @@
     seenIds: [],
     st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
-    compact: false, sideBySide: false, landPanel: 'auto', hintSeen: false
+    compact: false, sideBySide: false, hintSeen: false
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
@@ -44,14 +44,6 @@
   function isLandscape() {
     return window.matchMedia && window.matchMedia('(orientation: landscape)').matches;
   }
-  /* 横向きのとき操作パネルをどこに出すか。
-     自動＝高さに余裕があれば下の帯、足りなければ右サイド。
-     （下に置くと盤面が全幅を使えて広いが、高さが足りないとマスが横長に潰れる） */
-  var LAND_PANEL_LABEL = { auto: '自動', bottom: '下に出す', side: '右に出す' };
-  function landPanelPos() {
-    if (S.landPanel === 'bottom' || S.landPanel === 'side') return S.landPanel;
-    return window.innerHeight >= 500 ? 'bottom' : 'side';
-  }
 
   function sideShort(side) {
     if (S.mode === 'cpu') return side === 0 ? '自陣' : '敵陣';
@@ -64,7 +56,7 @@
       SAVE.setSettings({ sound: S.sound, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
                          compact: S.compact, sideBySide: S.sideBySide,
-                         landPanel: S.landPanel, hintSeen: S.hintSeen });
+                         hintSeen: S.hintSeen });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -78,7 +70,6 @@
       if (g.diff === 'easy' || g.diff === 'normal' || g.diff === 'hard') S.diff = g.diff;
       if (typeof g.compact === 'boolean') S.compact = g.compact;
       if (typeof g.sideBySide === 'boolean') S.sideBySide = g.sideBySide;
-      if (g.landPanel === 'auto' || g.landPanel === 'bottom' || g.landPanel === 'side') S.landPanel = g.landPanel;
       if (typeof g.hintSeen === 'boolean') S.hintSeen = g.hintSeen;
     } catch (e) {}
   }
@@ -588,15 +579,7 @@
             '<span class="pn">🤝 横並び対戦 <b>' + (S.sideBySide ? 'ON' : 'OFF') + '</b></span>' +
             '<span class="pd">編成は<b>縦持ちで各自</b>、戦闘は<b>端末を横にして隣同士</b>で。' +
               '向きがひとつなので、どちらからも同じように読めます</span></div>' +
-          (S.sideBySide
-            ? '<div class="opt poolopt tgl sub" data-tgl="landPanelCycle">' +
-                '<span class="pn">📍 操作パネルの位置 <b>' + LAND_PANEL_LABEL[S.landPanel] + '</b></span>' +
-                '<span class="pd">' + (
-                  S.landPanel === 'bottom' ? '画面下の帯に置きます。盤面が全幅を使えるぶんマスが大きくなります'
-                  : S.landPanel === 'side' ? '画面右に置きます。縦の余裕がない端末でもマスの形が崩れません'
-                  : '画面の高さで自動的に決めます（余裕があれば下、足りなければ右）') +
-                '</span></div>'
-            : '') +
+
         '</div></div>' +
         '<button class="btn ghost" id="record" style="width:100%">📊 戦績・記録' +
           (SAVE.gameCount() ? '<span class="rcnt">' + SAVE.gameCount() + '戦</span>' : '') + '</button>' +
@@ -606,9 +589,7 @@
     $$('[data-deal]').forEach(function (b) { b.onclick = function () { S.deal = b.dataset.deal; E.setDealMode(S.deal); rememberSettings(); renderTitle(); }; });
     $$('[data-tgl]').forEach(function (b) { b.onclick = function () {
       var k = b.dataset.tgl;
-      if (k === 'landPanelCycle') {
-        S.landPanel = S.landPanel === 'auto' ? 'bottom' : S.landPanel === 'bottom' ? 'side' : 'auto';
-      } else S[k] = !S[k];
+      S[k] = !S[k];
       rememberSettings(); renderTitle();
     }; });
     $$('[data-mode]').forEach(function (b) { b.onclick = function () { S.mode = b.dataset.mode; rememberSettings(); renderTitle(); }; });
@@ -1501,9 +1482,7 @@
     var act = E.currentActor(st);
     app.classList.toggle('turn0', !!act && act.side === 0);
     app.classList.toggle('turn1', !!act && act.side === 1);
-    var lp = landPanelPos();
-    app.classList.toggle('lp-bottom', land && lp === 'bottom');
-    app.classList.toggle('lp-side', land && lp === 'side');
+    app.classList.toggle('lp-side', land);
     var spdb = $('#spd');
     if (spdb) spdb.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
     var dispb = $('#disp');
@@ -1542,8 +1521,6 @@
           '<button class="dm" data-d="spd">⏩ 速度 x' + S.speed + '</button>' +
           '<button class="dm wide' + (S.compact ? ' on' : '') + '" data-d="compact">📐 コンパクト表示　' + (S.compact ? 'ON' : 'OFF') + '</button>' +
           '<button class="dm wide' + (S.sideBySide ? ' on' : '') + '" data-d="sidebyside">🤝 横並び対戦　' + (S.sideBySide ? 'ON' : 'OFF') + '</button>' +
-          '<button class="dm wide" data-d="landpanel">📍 操作パネルの位置　<b>' + LAND_PANEL_LABEL[S.landPanel] + '</b>' +
-            (isLandscape() ? '' : '<small>（横向きのとき）</small>') + '</button>' +
         '</div>' +
         '<button class="btn ghost" id="dmclose" style="width:100%;margin-top:12px">閉じる</button></div>';
       $$('[data-d]', m).forEach(function (b) {
@@ -1556,11 +1533,8 @@
           if (k === 'spd') S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1;
           if (k === 'compact') S.compact = !S.compact;
           if (k === 'sidebyside') S.sideBySide = !S.sideBySide;
-          if (k === 'landpanel') {
-            S.landPanel = S.landPanel === 'auto' ? 'bottom' : S.landPanel === 'bottom' ? 'side' : 'auto';
-          }
           rememberSettings();
-          if (k === 'compact' || k === 'sidebyside' || k === 'landpanel' || k === 'spd') { m.remove(); renderBattle(); return; }
+          if (k === 'compact' || k === 'sidebyside' || k === 'spd') { m.remove(); renderBattle(); return; }
           draw();
         };
       });

@@ -1411,22 +1411,9 @@ body.shake{animation:shk2 .56s}
   #app.land .orderline,#app.land .turnbar,#app.land .loglast{display:none}
 }
 
-/* --- 操作パネルの置き場所は設定で選べる（既定は自動） --- */
+/* --- 操作パネルは画面右に出す --- */
 @media (orientation: landscape) {
-  /* ① 下の帯 … 隣に並んで座るとき、中央下ならどちらからも等距離で届く。
-        盤面が全幅を使えるので、タブレットではマスが約1.3倍になる。 */
-  #app.land.lp-bottom{grid-template-areas:"hdr" "field" "panel";
-    grid-template-columns:1fr;grid-template-rows:auto minmax(0,1fr) auto}
-  #app.land.lp-bottom > .hdr{grid-area:hdr}
-  #app.land.lp-bottom > .field{grid-area:field}
-  #app.land.lp-bottom > .actpanel{grid-area:panel;position:static;
-    display:flex;flex-direction:row;align-items:center;gap:14px;
-    padding:6px 12px calc(6px + var(--safe-b))}
-  #app.land.lp-bottom > .actpanel > *{margin:0}
-  #app.land.lp-bottom .actpanel .actor-line{flex:0 0 auto;margin:0}
-  #app.land.lp-bottom .actpanel .hint{flex:1 1 auto;min-width:0}
-
-  /* ② 右サイド … 縦の余裕がない端末向け。下に置くとマスが横長に潰れるため。 */
+  /* 操作パネルは右サイドに固定（実機で見比べて決定） */
   #app.land.lp-side{grid-template-areas:"hdr hdr" "field panel";
     grid-template-columns:1fr minmax(240px,30vw);grid-template-rows:auto minmax(0,1fr)}
   #app.land.lp-side > .hdr{grid-area:hdr}

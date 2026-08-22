@@ -464,6 +464,24 @@ var CB = (function () {
     return best;
   }
 
+  /* 前進のタイミング
+     'turn'  … 従来。後衛は自分の手番が来たときに前進する
+     'death' … 前衛が倒れた瞬間、真下の後衛がその場で繰り上がる */
+  var advanceMode = 'turn';
+  function setAdvanceMode(m) { advanceMode = (m === 'death') ? 'death' : 'turn'; }
+  function getAdvanceMode() { return advanceMode; }
+
+  /** 前衛が空いたマスへ、真下の後衛を繰り上げる（倒れた瞬間に呼ぶ） */
+  function pullUp(st, side, col) {
+    if (unitAt(st, side, 0, col)) return null;         // まだ埋まっている
+    var back = unitAt(st, side, 1, col);
+    if (!back) return null;
+    back.row = 0;
+    push(st, { type: 'move', uid: back.uid, row: 0, col: col });
+    logMsg(st, back.def.name + ' が前線へ進み出た！');
+    return back;
+  }
+
   /** 近接ユニットが行動可能か。必要なら前進する */
   function meleeReady(st, u, doMove) {
     if (u.row === 0) return true;
@@ -658,6 +676,9 @@ var CB = (function () {
     tgt.hp = 0; tgt.alive = false;
     push(st, { type: 'death', uid: tgt.uid });
     logMsg(st, tgt.def.name + ' は倒れた…', 'bad');
+    /* 倒れた瞬間に繰り上げる方式のとき、その場で後衛を前へ出す。
+       いま実行中の技の対象はすでに確定しているので、この技の結果は変わらない。 */
+    if (advanceMode === 'death' && tgt.row === 0) pullUp(st, tgt.side, tgt.col);
     if (src) { src.stats.kills++; st.players[src.side].stats.kills++; }
 
     // 復活予約
@@ -1271,6 +1292,7 @@ var CB = (function () {
     findUid: findUid, getAtk: getAtk, getSpd: getSpd, hasP: hasP, threat: threat,
     cardPower: cardPower, RATING: RATING, meleeChain: meleeChain, meleeReady: meleeReady,
     squareCells: squareCells, tally: tally, deal: deal, redraw: redraw,
+    setAdvanceMode: setAdvanceMode, getAdvanceMode: getAdvanceMode,
     playable: playable, mulberry32: mulberry32, shuffle: shuffle, statusVal: statusVal,
     adjacentAllies: adjacentAllies, coverOf: coverOf,
     POOLS: POOLS, setPool: setPool, getPool: getPool, poolIds: poolIds, inPool: inPool, handSize: handSize,
