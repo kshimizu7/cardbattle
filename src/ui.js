@@ -1083,7 +1083,19 @@
           (land ? '⚔ 対戦開始' : '⚔ このまま開始する') + '</button>' +
         '<button class="btn ghost small" id="rback">編成に戻る</button>' +
       '</div>';
-    $('#rgo').onclick = beginBattle;
+    $('#rgo').onclick = function () {
+      /* 「対戦開始」のタップは利用者の操作なので、ここでなら全画面に入れる。
+         対応していない端末では黙って通常表示のまま進む。 */
+      try {
+        var el = document.documentElement;
+        var req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
+          var r = req.call(el);
+          if (r && r.catch) r.catch(function () {});
+        }
+      } catch (e) {}
+      beginBattle();
+    };
     $('#rback').onclick = function () {
       S.draftIdx = (S.mode === 'pvp') ? 1 : 0;
       renderDraft();
@@ -1440,12 +1452,13 @@
       '<div class="hdr">' +
         '<span class="t">R' + st.round + '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
         '<span class="sp" style="flex:1"></span>' +
-        '<button class="btn small ghost" id="fs" title="全画面">⛶</button>' +
+        '<button class="btn small ghost ico" id="fs" title="全画面">⛶</button>' +
         (S.compact
-          ? '<button class="btn small ghost" id="disp">⚙ 表示</button>'
-          : '<button class="btn small ghost" id="snd">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
-            '<button class="btn small ghost" id="spd">速度 x' + S.speed + '</button>') +
-        '<button class="btn small ghost" id="quit">✕</button>' +
+          ? '<button class="btn small ghost ico" id="disp" title="表示設定">⚙</button>'
+          : '<button class="btn small ghost ico snd' + (S.sound ? '' : ' off') + '" id="snd"' +
+              ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
+            '<button class="btn small ghost ico" id="spd" title="戦闘速度">x' + S.speed + '</button>') +
+        '<button class="btn small ghost ico" id="quit" title="タイトルへ">✕</button>' +
       '</div>' +
       '<div class="orderline">' +
         '<span class="lb">行動順</span>' +
@@ -1626,11 +1639,7 @@
     if (guardOpt) btns += '<button class="act' + (S.selAct === 'guard' ? ' on' : '') + '" data-act="guard">' +
       (S.selAct === 'guard' ? '<span class="tapgo">▶</span>' : '') + '防御<small>攻撃できない・被ダメ-2</small></button>';
 
-    var oi = orderIndexOf(st, u.uid);
-    var orow = orderRows(st)[oi];
     panel.innerHTML =
-      '<div class="turnwhy">行動順 <b>' + (oi + 1) + ' / ' + st.order.length + '</b>　—　' +
-        (orow ? orow.why : '') + '　<button class="ordbtn" id="ordq2">詳しく</button></div>' +
       '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
       '<div class="who">' + u.def.name + '<small>' + (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
       '　HP ' + u.hp + '/' + u.maxHp + '　⚡' + E.getSpd(u, st) + '</small></div>' +
@@ -1657,7 +1666,6 @@
         S.selAct = k; renderActions();
       };
     });
-    if ($('#ordq2')) $('#ordq2').onclick = showOrder;
     $('#info').onclick = function () {
       openDetail(u.defId, E.aliveUnits(st, u.side).map(function (v) { return v.defId; }));
     };
@@ -1719,7 +1727,7 @@
           '<b class="go">もう一度タップで実行</b>';
         if (selBtn) selBtn.classList.add('ready');
       } else if (info.mode === 'self') {
-        hintEl.innerHTML = '前衛が生きているため近接攻撃が届きません（前衛が倒れると自動で前進）　' +
+        hintEl.innerHTML = '<b>真上の前衛が塞がっている</b>ため近接攻撃が届きません（前衛が倒れた瞬間に前進します）　' +
           '<b class="go">自分をタップして防御</b>';
         if (selBtn) selBtn.classList.add('ready');
       } else {
@@ -2170,6 +2178,42 @@
       (function (e) { setTimeout(function () { e.remove(); }, 1250 / spd()); })(el);
     }
   }
+  /** 前進の軌跡：移動元から移動先へ伸びる帯 */
+  function advanceTrail(from, to) {
+    var x1 = from.left + from.width / 2, y1 = from.top + from.height / 2;
+    var x2 = to.left + to.width / 2, y2 = to.top + to.height / 2;
+    var len = Math.hypot(x2 - x1, y2 - y1);
+    if (len < 8) return;
+    var ang = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+    var d = document.createElement('div');
+    d.className = 'advtrail';
+    d.style.cssText = 'left:' + x1 + 'px;top:' + y1 + 'px;width:' + len + 'px;' +
+      'transform:translateY(-50%) rotate(' + ang + 'deg)';
+    d.innerHTML = '<i></i>';
+    fxl.appendChild(d);
+    d.animate([{ opacity: 0, clipPath: 'inset(0 100% 0 0)' },
+               { opacity: 1, clipPath: 'inset(0 0 0 0)', offset: .45 },
+               { opacity: 0, clipPath: 'inset(0 0 0 88%)' }],
+      { duration: 780 / spd(), easing: 'ease-out' });
+    setTimeout(function () { d.remove(); }, 820 / spd());
+  }
+
+  /** ユニットの上に短いラベルを浮かせる */
+  function floatTag(el, text, side) {
+    var r = el.getBoundingClientRect();
+    var d = document.createElement('div');
+    d.className = 'floattag s' + (side || 0);
+    d.textContent = text;
+    d.style.cssText = 'left:' + (r.left + r.width / 2) + 'px;top:' + (r.top + r.height * .16) + 'px';
+    fxl.appendChild(d);
+    d.animate([{ transform: 'translate(-50%,6px) scale(.7)', opacity: 0 },
+               { transform: 'translate(-50%,-10px) scale(1)', opacity: 1, offset: .3 },
+               { transform: 'translate(-50%,-22px) scale(1)', opacity: 1, offset: .75 },
+               { transform: 'translate(-50%,-34px) scale(.95)', opacity: 0 }],
+      { duration: 1100 / spd(), easing: 'ease-out' });
+    setTimeout(function () { d.remove(); }, 1150 / spd());
+  }
+
   function ringWave(x, y, color, size, thick, _sub) {
     size = size * 1.5;
     var d = document.createElement('div');
@@ -2381,14 +2425,32 @@
       case 'turnStart': return 60;
 
       case 'move': {
+        var mu = E.findUid(st, e.uid);
         var el = $('[data-uid="' + e.uid + '"]');
-        var cell = $('[data-cell="' + E.findUid(st, e.uid).side + '-' + e.row + '-' + e.col + '"]');
-        if (el && cell) {
-          cell.innerHTML = ''; cell.appendChild(el);
-          el.animate([{ transform: 'translateY(18px) scale(.9)', opacity: .3 }, { transform: 'none', opacity: 1 }],
-            { duration: 300 / spd() });
-        }
-        return 460;
+        var cell = $('[data-cell="' + mu.side + '-' + e.row + '-' + e.col + '"]');
+        if (!el || !cell) return 200;
+        /* 移動前の位置を控えてから差し替え、その差分ぶん戻してから動かす。
+           こうすると縦持ち（下→上）でも横持ち（外→内）でも、
+           実際に「奥から前線へ動いた」ように見える。 */
+        /* 盤面がすでに描き直されている場合、要素は移動先に居る。
+           そこで「元のマス」の位置はイベントの fromRow/fromCol から取る。 */
+        var srcCell = (e.fromRow != null)
+          ? $('[data-cell="' + mu.side + '-' + e.fromRow + '-' + e.fromCol + '"]') : null;
+        var from = (srcCell || el).getBoundingClientRect();
+        cell.innerHTML = ''; cell.appendChild(el);
+        var to = el.getBoundingClientRect();
+        var dx = Math.round(from.left - to.left), dy = Math.round(from.top - to.top);
+        el.classList.add('advancing');
+        el.animate([
+          { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.94)', offset: 0 },
+          { transform: 'translate(' + (dx * .18) + 'px,' + (dy * .18) + 'px) scale(1.12)', offset: .68 },
+          { transform: 'none', offset: 1 }
+        ], { duration: 620 / spd(), easing: 'cubic-bezier(.2,.85,.25,1)' });
+        advanceTrail(from, to);
+        floatTag(el, '前線へ！', mu.side);
+        if (S.sound) SFX.play('guard');
+        setTimeout(function () { el.classList.remove('advancing'); }, 900 / spd());
+        return 820;
       }
 
       case 'attack': {

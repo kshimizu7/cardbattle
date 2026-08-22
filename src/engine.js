@@ -465,9 +465,11 @@ var CB = (function () {
   }
 
   /* 前進のタイミング
-     'turn'  … 従来。後衛は自分の手番が来たときに前進する
-     'death' … 前衛が倒れた瞬間、真下の後衛がその場で繰り上がる */
-  var advanceMode = 'turn';
+     'death' … 既定。前衛が倒れた瞬間、真下の後衛がその場で繰り上がる
+     'turn'  … 旧仕様。後衛は自分の手番が来たときに前進する
+     技の対象はダメージ処理の前にまとめて確定するので、
+     どちらでも「いま実行中の技」の結果は変わらない。 */
+  var advanceMode = 'death';
   function setAdvanceMode(m) { advanceMode = (m === 'death') ? 'death' : 'turn'; }
   function getAdvanceMode() { return advanceMode; }
 
@@ -477,7 +479,7 @@ var CB = (function () {
     var back = unitAt(st, side, 1, col);
     if (!back) return null;
     back.row = 0;
-    push(st, { type: 'move', uid: back.uid, row: 0, col: col });
+    push(st, { type: 'move', uid: back.uid, row: 0, col: col, fromRow: 1, fromCol: col });
     logMsg(st, back.def.name + ' が前線へ進み出た！');
     return back;
   }
@@ -490,7 +492,7 @@ var CB = (function () {
     if (!frontMate) {
       if (doMove) {
         u.row = 0;
-        push(st, { type: 'move', uid: u.uid, row: 0, col: u.col });
+        push(st, { type: 'move', uid: u.uid, row: 0, col: u.col, fromRow: 1, fromCol: u.col });
         logMsg(st, u.def.name + ' が前線へ進み出た！');
       }
       return true;

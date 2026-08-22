@@ -1519,3 +1519,34 @@ body.shake{animation:shk2 .56s}
 /* 横向きでは、それぞれの陣地の幅いっぱいに広げて“帯”にする */
 #app.land .side-tag.s0{left:10px;right:52%;justify-content:flex-start}
 #app.land .side-tag.s1{left:52%;right:10px;justify-content:flex-end}
+
+/* ===== v29: ヘッダーのアイコン化 ===== */
+.hdr .btn.ico{min-width:0;padding:6px 11px;font-size:14px;font-weight:900;line-height:1}
+/* 音符に斜線を引いて「消音中」を示す */
+.hdr .btn.ico.snd{position:relative;font-size:16px}
+.hdr .btn.ico.snd.off{color:#6c7893}
+.hdr .btn.ico.snd.off::after{content:"";position:absolute;left:50%;top:50%;
+  width:19px;height:2px;background:#ff6b7d;border-radius:2px;
+  transform:translate(-50%,-50%) rotate(-45deg);box-shadow:0 0 5px rgba(255,107,125,.75)}
+
+/* ===== v29: 後衛が前線へ上がるときの演出 ===== */
+.unit.advancing{z-index:30;box-shadow:0 0 0 3px var(--gold),0 0 30px rgba(242,198,92,.65);
+  border-radius:10px}
+.unit.advancing::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:8;
+  background:linear-gradient(180deg,rgba(242,198,92,.32),transparent 62%);
+  animation:advglow .62s ease-out}
+@keyframes advglow{0%{opacity:1}100%{opacity:0}}
+
+.advtrail{position:absolute;height:16px;pointer-events:none;transform-origin:0 50%;
+  background:linear-gradient(90deg,rgba(242,198,92,0),rgba(242,198,92,.75));
+  border-radius:9px;filter:blur(1px)}
+.advtrail i{position:absolute;right:-2px;top:50%;width:0;height:0;
+  border-left:15px solid var(--gold);border-top:11px solid transparent;
+  border-bottom:11px solid transparent;transform:translateY(-50%);
+  filter:drop-shadow(0 0 7px rgba(242,198,92,.9))}
+
+.floattag{position:absolute;pointer-events:none;font-size:14px;font-weight:900;
+  letter-spacing:.06em;padding:4px 12px;border-radius:999px;white-space:nowrap;
+  background:linear-gradient(180deg,#ffe08a,#e8ac1c);color:#2a2005;
+  box-shadow:0 3px 14px rgba(0,0,0,.6),0 0 20px rgba(242,198,92,.55);
+  border:1.5px solid #fff3c8}
