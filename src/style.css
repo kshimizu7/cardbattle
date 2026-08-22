@@ -1332,3 +1332,88 @@ body.shake{animation:shk2 .56s}
   font-family:ui-monospace,Menlo,monospace;resize:none;word-break:break-all}
 .rc-btns .danger.armed{background:linear-gradient(180deg,#5c2231,#3a1420);border-color:#a8455f;
   color:#ffd9e0;font-size:11px;animation:doneglow 1.1s ease-in-out infinite}
+
+/* ===== v23: コンパクト表示 ／ 卓上対面モード ===== */
+
+/* --- タイトル画面のトグル --- */
+.poolopt.tgl .pn b{margin-left:4px;font-size:11px;padding:1px 7px;border-radius:999px;
+  background:rgba(255,255,255,.08);color:#8fa0c0}
+.poolopt.tgl.on .pn b{background:rgba(242,198,92,.2);color:var(--gold)}
+
+/* --- コンパクト表示：行動順バーと戦闘ログを畳んで盤面に回す --- */
+#app.compact .orderline,
+#app.compact .turnbar,
+#app.compact .loglast{display:none}
+#app.compact .field{padding:6px 7px}
+#app.compact .unit .nm{font-size:12px}
+#app.compact .unit .hpb{height:16px}
+#app.compact .unit .spb,#app.compact .unit .atb{font-size:12.5px}
+
+/* 表示メニュー */
+.dmenu{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.dm{appearance:none;cursor:pointer;font-family:inherit;font-weight:800;font-size:13px;
+  padding:13px 6px;border-radius:11px;color:#e8eefc;
+  background:linear-gradient(180deg,#1b2338,#121829);border:1px solid #2c3854;
+  transition:transform .07s}
+.dm:active{transform:scale(.96)}
+.dm.wide{grid-column:1 / -1}
+.dm.on{border-color:var(--gold);color:var(--gold);background:linear-gradient(180deg,#2a2413,#171208)}
+
+/* --- 卓上対面モード --- */
+/* 相手側(side1)のマスを丸ごと180°回して、相手が正しい向きで読めるようにする。
+   本物のボードゲームで、自分のカードが自分を向いているのと同じ状態。 */
+/* 回し方は2通り用意し、実機で見比べられるようにする */
+/* (a) カードごと回す ── 本物のボードゲームで自分のカードが自分を向くのと同じ */
+#app.tt.tt-card .cell[data-cell^="1-"]{transform:rotate(180deg)}
+/* (b) 文字だけ回す ── キャラの絵は常に正立のまま、数字と名前だけ相手を向く */
+#app.tt.tt-text .cell[data-cell^="1-"] .nm,
+#app.tt.tt-text .cell[data-cell^="1-"] .hpb,
+#app.tt.tt-text .cell[data-cell^="1-"] .spb,
+#app.tt.tt-text .cell[data-cell^="1-"] .atb,
+#app.tt.tt-text .cell[data-cell^="1-"] .cdb,
+#app.tt.tt-text .cell[data-cell^="1-"] .tg{transform:rotate(180deg)}
+#app.tt .side-tag.s1{transform:rotate(180deg)}
+/* 操作パネルは、行動しているプレイヤーの手元へ移し、その向きにする。
+   P2が行動するときは画面の上端（＝P2側）に出す */
+#app.tt.act1 .actpanel{order:-1;position:static;transform:rotate(180deg);
+  border-top:none;border-bottom:1px solid var(--line);
+  background:linear-gradient(0deg,rgba(8,11,20,.75),#080b14 26%);
+  padding:7px 9px 9px}
+#app.tt.act1 .actpanel .hint{text-align:center}
+
+/* 攻撃対象の吹き出し（タップ／命中／-6 など）は、つねに“選んでいる人”を向く。
+   (a)では相手陣のマスが180°回っているので、その分を打ち消す。 */
+#app.tt.tt-card:not(.act1) .cell[data-cell^="1-"] .tmark{transform:rotate(180deg)}
+#app.tt.act1 .cell[data-cell^="0-"] .tmark{transform:rotate(180deg)}
+#app.tt.tt-text.act1 .cell[data-cell^="1-"] .tmark{transform:rotate(180deg)}
+/* 吹き出しが出ているマスは、名前を薄くして重なりを避ける */
+#app.tt .unit.tg-pick .nm,#app.tt .unit.tg-fixed .nm,#app.tt .unit.tg-band .nm{opacity:.18}
+#app.tt .tmark .lb{font-size:11px;padding:2px 8px}
+#app.tt .tmark .vl{font-size:27px}
+/* 範囲選択のＡ／Ｂ表示も同様 */
+#app.tt.act1 .rmark .lt,#app.tt.act1 .rmark .cn,
+#app.tt.act1 .rband .cn{transform:rotate(180deg)}
+/* 卓上は視距離が伸びるので、文字を一段大きく */
+#app.tt .unit .nm{font-size:13px;letter-spacing:-.01em}
+#app.tt .unit .hpb{height:18px;font-size:12.5px}
+#app.tt .unit .spb,#app.tt .unit .atb{font-size:13.5px;padding:2px 6px}
+#app.tt .warline .wl-arrow{font-size:11px}
+#app.tt .side-tag{font-size:12px}
+
+/* --- 画面が大きいほど文字も大きく（従来は端末が変わっても11pxのままだった） --- */
+@media (min-width:480px){
+  .unit .nm{font-size:13px}
+  .unit .hpb{height:17px;font-size:12.5px}
+  .unit .spb,.unit .atb{font-size:13.5px}
+  #app.tt .unit .nm{font-size:15px}
+  #app.tt .unit .hpb{height:20px;font-size:14px}
+  #app.tt .unit .spb,#app.tt .unit .atb{font-size:15px}
+}
+@media (min-width:700px){
+  .unit .nm{font-size:15px}
+  .unit .hpb{height:20px;font-size:14px}
+  .unit .spb,.unit .atb{font-size:15px}
+  #app.tt .unit .nm{font-size:17px}
+  #app.tt .unit .hpb{height:23px;font-size:16px}
+  #app.tt .unit .spb,#app.tt .unit .atb{font-size:17px}
+}

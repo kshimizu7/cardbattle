@@ -18,7 +18,8 @@
     hands: [null, null], teams: [[], []], draftIdx: 0, mulligan: [true, true],
     seenIds: [],
     st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, pool: 'tutorial',
-    deal: 'shuffle', selSlot: null, hist: [[], []]
+    deal: 'shuffle', selSlot: null, hist: [[], []],
+    compact: false, tabletop: false, ttStyle: 'card'
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
@@ -39,6 +40,9 @@
     var st = S.st;
     return (st && st.players[side] && st.players[side].name) || ('プレイヤー' + (side + 1));
   }
+  /* 卓上対面モードが実際に効いている状態か。ふたり対戦のときだけ意味を持つ */
+  function ttOn() { return S.tabletop && S.mode === 'pvp'; }
+
   function sideShort(side) {
     if (S.mode === 'cpu') return side === 0 ? '自陣' : '敵陣';
     return 'P' + (side + 1);
@@ -48,7 +52,8 @@
   function rememberSettings() {
     try {
       SAVE.setSettings({ sound: S.sound, speed: S.speed, pool: S.pool, deal: S.deal,
-                         mode: S.mode, diff: S.diff });
+                         mode: S.mode, diff: S.diff,
+                         compact: S.compact, tabletop: S.tabletop, ttStyle: S.ttStyle });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -60,6 +65,9 @@
       if (g.deal === 'shuffle' || g.deal === 'full') S.deal = g.deal;
       if (g.mode === 'cpu' || g.mode === 'pvp') S.mode = g.mode;
       if (g.diff === 'easy' || g.diff === 'normal' || g.diff === 'hard') S.diff = g.diff;
+      if (typeof g.compact === 'boolean') S.compact = g.compact;
+      if (typeof g.tabletop === 'boolean') S.tabletop = g.tabletop;
+      if (g.ttStyle === 'card' || g.ttStyle === 'text') S.ttStyle = g.ttStyle;
     } catch (e) {}
   }
 
@@ -558,12 +566,23 @@
           '<button class="btn ghost" id="gallery" style="flex:1">🗂 カード図鑑</button>' +
           '<button class="btn ghost" id="snd0" style="flex:0 0 72px">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
         '</div>' +
+        '<div class="opt-group"><div class="opt-label">画面表示</div><div class="opt-col">' +
+          '<div class="opt poolopt tgl' + (S.compact ? ' on' : '') + '" data-tgl="compact">' +
+            '<span class="pn">📐 コンパクト表示 <b>' + (S.compact ? 'ON' : 'OFF') + '</b></span>' +
+            '<span class="pd">行動順バーと戦闘ログを畳んで、<b>盤面を大きく</b>します。' +
+              'スクロールせずに全体が見えるようになります</span></div>' +
+          '<div class="opt poolopt tgl' + (S.tabletop ? ' on' : '') + '" data-tgl="tabletop">' +
+            '<span class="pn">⇅ 卓上対面モード <b>' + (S.tabletop ? 'ON' : 'OFF') + '</b></span>' +
+            '<span class="pd">机に置いて<b>向かい合って遊ぶ</b>ための表示。' +
+              '相手側のカードと操作パネルが相手を向きます（ふたり対戦のみ）</span></div>' +
+        '</div></div>' +
         '<button class="btn ghost" id="record" style="width:100%">📊 戦績・記録' +
           (SAVE.gameCount() ? '<span class="rcnt">' + SAVE.gameCount() + '戦</span>' : '') + '</button>' +
         (VERSION ? '<div class="verlab">ver ' + VERSION + '</div>' : '') +
       '</div>';
     $$('[data-pool]').forEach(function (b) { b.onclick = function () { S.pool = b.dataset.pool; E.setPool(S.pool); rememberSettings(); renderTitle(); }; });
     $$('[data-deal]').forEach(function (b) { b.onclick = function () { S.deal = b.dataset.deal; E.setDealMode(S.deal); rememberSettings(); renderTitle(); }; });
+    $$('[data-tgl]').forEach(function (b) { b.onclick = function () { var k = b.dataset.tgl; S[k] = !S[k]; rememberSettings(); renderTitle(); }; });
     $$('[data-mode]').forEach(function (b) { b.onclick = function () { S.mode = b.dataset.mode; rememberSettings(); renderTitle(); }; });
     $$('[data-diff]').forEach(function (b) { b.onclick = function () { S.diff = b.dataset.diff; rememberSettings(); renderTitle(); }; });
     $('#go').onclick = startGame;
@@ -1374,8 +1393,10 @@
       '<div class="hdr">' +
         '<span class="t">R' + st.round + '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
         '<span class="sp" style="flex:1"></span>' +
-        '<button class="btn small ghost" id="snd">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
-        '<button class="btn small ghost" id="spd">速度 x' + S.speed + '</button>' +
+        (S.compact
+          ? '<button class="btn small ghost" id="disp">⚙ 表示</button>'
+          : '<button class="btn small ghost" id="snd">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
+            '<button class="btn small ghost" id="spd">速度 x' + S.speed + '</button>') +
         '<button class="btn small ghost" id="quit">✕</button>' +
       '</div>' +
       '<div class="orderline">' +
@@ -1406,8 +1427,16 @@
         : '<span style="color:var(--dim)">戦闘ログ</span>') + '<b>全ログ</b></div>' +
       '<div class="actpanel" id="actpanel"></div>';
 
-    $('#spd').onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
-    $('#ordq').onclick = showOrder;
+    app.classList.toggle('compact', !!S.compact);
+    app.classList.toggle('tt', ttOn());
+    app.classList.toggle('tt-card', ttOn() && S.ttStyle !== 'text');
+    app.classList.toggle('tt-text', ttOn() && S.ttStyle === 'text');
+    var spdb = $('#spd');
+    if (spdb) spdb.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
+    var dispb = $('#disp');
+    if (dispb) dispb.onclick = showDisplayMenu;
+    var ordqb = $('#ordq');
+    if (ordqb) ordqb.onclick = showOrder;
     var sndb = $('#snd');
     if (sndb) sndb.onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); renderBattle(); };
     var tb = $('#turnbar'), nowtk = $('.tk.now');
@@ -1424,6 +1453,49 @@
     renderActions();
   }
 
+  /* コンパクト表示のとき、隠れた機能をここから呼べるようにする */
+  function showDisplayMenu() {
+    var m = document.createElement('div');
+    m.className = 'modal';
+    function draw() {
+      m.innerHTML = '<div class="box">' +
+        '<h3 style="color:var(--gold);margin-bottom:10px">表示とサウンド</h3>' +
+        '<div class="dmenu">' +
+          '<button class="dm" data-d="order">🔢 行動順を見る</button>' +
+          '<button class="dm" data-d="log">📜 戦闘ログ</button>' +
+          '<button class="dm" data-d="snd">' + (S.sound ? '♪ 音 ON' : '♪ 音 OFF') + '</button>' +
+          '<button class="dm" data-d="spd">⏩ 速度 x' + S.speed + '</button>' +
+          '<button class="dm wide' + (S.compact ? ' on' : '') + '" data-d="compact">📐 コンパクト表示　' + (S.compact ? 'ON' : 'OFF') + '</button>' +
+          (S.mode === 'pvp'
+            ? '<button class="dm wide' + (S.tabletop ? ' on' : '') + '" data-d="tabletop">⇅ 卓上対面モード　' + (S.tabletop ? 'ON' : 'OFF') + '</button>' +
+              (S.tabletop ? '<button class="dm wide" data-d="ttstyle">↻ 相手側の回し方　<b>' +
+                (S.ttStyle === 'text' ? '文字だけ回す' : 'カードごと回す') + '</b></button>' : '')
+            : '') +
+        '</div>' +
+        '<button class="btn ghost" id="dmclose" style="width:100%;margin-top:12px">閉じる</button></div>';
+      $$('[data-d]', m).forEach(function (b) {
+        b.onclick = function (ev) {
+          ev.stopPropagation();
+          var k = b.dataset.d;
+          if (k === 'order') { m.remove(); showOrder(); return; }
+          if (k === 'log') { m.remove(); showLog(); return; }
+          if (k === 'snd') { S.sound = !S.sound; SFX.setEnabled(S.sound); }
+          if (k === 'spd') S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1;
+          if (k === 'compact') S.compact = !S.compact;
+          if (k === 'tabletop') S.tabletop = !S.tabletop;
+          if (k === 'ttstyle') S.ttStyle = (S.ttStyle === 'text') ? 'card' : 'text';
+          rememberSettings();
+          if (k === 'compact' || k === 'tabletop' || k === 'ttstyle' || k === 'spd') { m.remove(); renderBattle(); return; }
+          draw();
+        };
+      });
+      $('#dmclose', m).onclick = function () { m.remove(); };
+    }
+    draw();
+    m.onclick = function (ev) { if (ev.target === m) m.remove(); };
+    document.body.appendChild(m);
+  }
+
   function renderActions() {
     var st = S.st, panel = $('#actpanel');
     if (!panel) return;
@@ -1432,6 +1504,8 @@
     if (!u) { panel.innerHTML = '<div class="hint">ラウンド終了処理中…</div>'; return; }
 
     $$('.unit').forEach(function (e) { e.classList.toggle('acting', e.dataset.uid === u.uid); });
+    /* 卓上モードでは、操作パネルを行動しているプレイヤーの向きにする */
+    app.classList.toggle('act1', ttOn() && u.side === 1);
 
     if (S.busy) {
       panel.innerHTML = '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
