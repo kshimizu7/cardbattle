@@ -47,6 +47,7 @@ const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwrig
     }
     if (!(await doDraft())) { results.push('draft fail'); await p.close(); continue; }
     if (pvp) { await doDraft(); }
+    if (await p.$('#rgo')) { await p.click('#rgo'); await p.waitForTimeout(250); }
     await p.waitForTimeout(2500);
     await p.click('#spd'); await p.click('#spd');
     let guard = 0;

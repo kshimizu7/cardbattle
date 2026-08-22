@@ -19,7 +19,7 @@
     seenIds: [],
     st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
-    compact: false, tabletop: false, ttStyle: 'card'
+    compact: false, sideBySide: false, landPanel: 'auto'
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
@@ -40,10 +40,18 @@
     var st = S.st;
     return (st && st.players[side] && st.players[side].name) || ('プレイヤー' + (side + 1));
   }
-  /* 卓上対面モードが効いているか。
-     本来はふたり対戦のためのものだが、ひとりでも見え方を確かめられるよう
-     CPU戦でも有効にしている。 */
-  function ttOn() { return !!S.tabletop; }
+  /* 端末がいま横向きか。横並びレイアウトはこれで自動的に切り替わる */
+  function isLandscape() {
+    return window.matchMedia && window.matchMedia('(orientation: landscape)').matches;
+  }
+  /* 横向きのとき操作パネルをどこに出すか。
+     自動＝高さに余裕があれば下の帯、足りなければ右サイド。
+     （下に置くと盤面が全幅を使えて広いが、高さが足りないとマスが横長に潰れる） */
+  var LAND_PANEL_LABEL = { auto: '自動', bottom: '下に出す', side: '右に出す' };
+  function landPanelPos() {
+    if (S.landPanel === 'bottom' || S.landPanel === 'side') return S.landPanel;
+    return window.innerHeight >= 500 ? 'bottom' : 'side';
+  }
 
   function sideShort(side) {
     if (S.mode === 'cpu') return side === 0 ? '自陣' : '敵陣';
@@ -55,7 +63,8 @@
     try {
       SAVE.setSettings({ sound: S.sound, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
-                         compact: S.compact, tabletop: S.tabletop, ttStyle: S.ttStyle });
+                         compact: S.compact, sideBySide: S.sideBySide,
+                         landPanel: S.landPanel });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -68,8 +77,8 @@
       if (g.mode === 'cpu' || g.mode === 'pvp') S.mode = g.mode;
       if (g.diff === 'easy' || g.diff === 'normal' || g.diff === 'hard') S.diff = g.diff;
       if (typeof g.compact === 'boolean') S.compact = g.compact;
-      if (typeof g.tabletop === 'boolean') S.tabletop = g.tabletop;
-      if (g.ttStyle === 'card' || g.ttStyle === 'text') S.ttStyle = g.ttStyle;
+      if (typeof g.sideBySide === 'boolean') S.sideBySide = g.sideBySide;
+      if (g.landPanel === 'auto' || g.landPanel === 'bottom' || g.landPanel === 'side') S.landPanel = g.landPanel;
     } catch (e) {}
   }
 
@@ -573,18 +582,18 @@
             '<span class="pn">📐 コンパクト表示 <b>' + (S.compact ? 'ON' : 'OFF') + '</b></span>' +
             '<span class="pd">行動順バーと戦闘ログを畳んで、<b>盤面を大きく</b>します。' +
               'スクロールせずに全体が見えるようになります</span></div>' +
-          '<div class="opt poolopt tgl' + (S.tabletop ? ' on' : '') + '" data-tgl="tabletop">' +
-            '<span class="pn">⇅ 卓上対面モード <b>' + (S.tabletop ? 'ON' : 'OFF') + '</b></span>' +
-            '<span class="pd">机に置いて<b>向かい合って遊ぶ</b>ための表示。' +
-              '相手側のカードと操作パネルが相手を向きます。' +
-              '<b>CPU戦でも見え方を確かめられます</b></span></div>' +
-          (S.tabletop
-            ? '<div class="opt poolopt tgl sub" data-tgl="ttStyleFlip">' +
-                '<span class="pn">↻ 相手側の回し方 <b>' +
-                  (S.ttStyle === 'text' ? '文字だけ' : 'カードごと') + '</b></span>' +
-                '<span class="pd">' + (S.ttStyle === 'text'
-                  ? 'キャラの絵は正立のまま、名前と数字だけ相手を向きます'
-                  : 'カードを丸ごと180°回します（本物のボードゲームと同じ見え方）') + '</span></div>'
+          '<div class="opt poolopt tgl' + (S.sideBySide ? ' on' : '') + '" data-tgl="sideBySide">' +
+            '<span class="pn">🤝 横並び対戦 <b>' + (S.sideBySide ? 'ON' : 'OFF') + '</b></span>' +
+            '<span class="pd">編成は<b>縦持ちで各自</b>、戦闘は<b>端末を横にして隣同士</b>で。' +
+              '向きがひとつなので、どちらからも同じように読めます</span></div>' +
+          (S.sideBySide
+            ? '<div class="opt poolopt tgl sub" data-tgl="landPanelCycle">' +
+                '<span class="pn">📍 操作パネルの位置 <b>' + LAND_PANEL_LABEL[S.landPanel] + '</b></span>' +
+                '<span class="pd">' + (
+                  S.landPanel === 'bottom' ? '画面下の帯に置きます。盤面が全幅を使えるぶんマスが大きくなります'
+                  : S.landPanel === 'side' ? '画面右に置きます。縦の余裕がない端末でもマスの形が崩れません'
+                  : '画面の高さで自動的に決めます（余裕があれば下、足りなければ右）') +
+                '</span></div>'
             : '') +
         '</div></div>' +
         '<button class="btn ghost" id="record" style="width:100%">📊 戦績・記録' +
@@ -595,8 +604,9 @@
     $$('[data-deal]').forEach(function (b) { b.onclick = function () { S.deal = b.dataset.deal; E.setDealMode(S.deal); rememberSettings(); renderTitle(); }; });
     $$('[data-tgl]').forEach(function (b) { b.onclick = function () {
       var k = b.dataset.tgl;
-      if (k === 'ttStyleFlip') S.ttStyle = (S.ttStyle === 'text') ? 'card' : 'text';
-      else S[k] = !S[k];
+      if (k === 'landPanelCycle') {
+        S.landPanel = S.landPanel === 'auto' ? 'bottom' : S.landPanel === 'bottom' ? 'side' : 'auto';
+      } else S[k] = !S[k];
       rememberSettings(); renderTitle();
     }; });
     $$('[data-mode]').forEach(function (b) { b.onclick = function () { S.mode = b.dataset.mode; rememberSettings(); renderTitle(); }; });
@@ -1060,6 +1070,42 @@
     $('#pgo').onclick = next;
   }
 
+  /* 編成が済んだあと、端末を横にしてもらうための画面。
+     横向きになるとボタンが光る。縦のままでも押せる（強制はしない）。 */
+  function renderReady() {
+    S.screen = 'ready';
+    var land = isLandscape();
+    var vs = S.mode === 'cpu' ? 'CPU' : 'プレイヤー2';
+    app.innerHTML =
+      '<div id="screen-ready">' +
+        '<div class="rd-art' + (land ? ' ok' : '') + '">' +
+          '<svg viewBox="0 0 200 120" aria-hidden="true">' +
+            '<rect class="dev" x="78" y="18" width="44" height="84" rx="7"/>' +
+            '<rect class="dev-l" x="46" y="38" width="108" height="44" rx="7"/>' +
+            '<path class="arr" d="M64 30 A46 46 0 0 1 140 30" fill="none"/>' +
+            '<polygon class="arr-h" points="140,22 150,32 136,38"/>' +
+            '<circle class="ppl p1" cx="34" cy="98" r="9"/>' +
+            '<circle class="ppl p2" cx="60" cy="98" r="9"/>' +
+          '</svg>' +
+        '</div>' +
+        '<h2>' + (land ? '準備できました' : '端末を横向きにしてください') + '</h2>' +
+        '<p class="rd-lead">' +
+          'ふたりで<b>隣に並んで</b>座り、端末を横にして置いてください。<br>' +
+          '<b>左がプレイヤー1、右が' + vs + '</b>の陣地になります。' +
+        '</p>' +
+        '<p class="rd-note">横並びなら画面の向きがひとつなので、' +
+          'どちらからも同じように数字が読めます。</p>' +
+        '<button class="btn primary" id="rgo"' + (land ? ' data-ready="1"' : '') + '>' +
+          (land ? '⚔ 対戦開始' : '⚔ このまま開始する') + '</button>' +
+        '<button class="btn ghost small" id="rback">編成に戻る</button>' +
+      '</div>';
+    $('#rgo').onclick = beginBattle;
+    $('#rback').onclick = function () {
+      S.draftIdx = (S.mode === 'pvp') ? 1 : 0;
+      renderDraft();
+    };
+  }
+
   function teamCost(t) { return t.reduce(function (s, c) { return s + E.BY_ID[c.id].cost; }, 0); }
 
   /* ---------- 編成の並べ替えロジック ---------- */
@@ -1304,6 +1350,8 @@
       if (S.mode === 'pvp' && side === 0) {
         S.draftIdx = 1;
         renderPass(1, function () { renderDraft(); });
+      } else if (S.sideBySide) {
+        renderReady();
       } else {
         beginBattle();
       }
@@ -1444,9 +1492,11 @@
       '<div class="actpanel" id="actpanel"></div>';
 
     app.classList.toggle('compact', !!S.compact);
-    app.classList.toggle('tt', ttOn());
-    app.classList.toggle('tt-card', ttOn() && S.ttStyle !== 'text');
-    app.classList.toggle('tt-text', ttOn() && S.ttStyle === 'text');
+    var land = isLandscape();
+    app.classList.toggle('land', land);
+    var lp = landPanelPos();
+    app.classList.toggle('lp-bottom', land && lp === 'bottom');
+    app.classList.toggle('lp-side', land && lp === 'side');
     var spdb = $('#spd');
     if (spdb) spdb.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
     var dispb = $('#disp');
@@ -1482,9 +1532,9 @@
           '<button class="dm" data-d="snd">' + (S.sound ? '♪ 音 ON' : '♪ 音 OFF') + '</button>' +
           '<button class="dm" data-d="spd">⏩ 速度 x' + S.speed + '</button>' +
           '<button class="dm wide' + (S.compact ? ' on' : '') + '" data-d="compact">📐 コンパクト表示　' + (S.compact ? 'ON' : 'OFF') + '</button>' +
-          '<button class="dm wide' + (S.tabletop ? ' on' : '') + '" data-d="tabletop">⇅ 卓上対面モード　' + (S.tabletop ? 'ON' : 'OFF') + '</button>' +
-          (S.tabletop ? '<button class="dm wide" data-d="ttstyle">↻ 相手側の回し方　<b>' +
-            (S.ttStyle === 'text' ? '文字だけ回す' : 'カードごと回す') + '</b></button>' : '') +
+          '<button class="dm wide' + (S.sideBySide ? ' on' : '') + '" data-d="sidebyside">🤝 横並び対戦　' + (S.sideBySide ? 'ON' : 'OFF') + '</button>' +
+          '<button class="dm wide" data-d="landpanel">📍 操作パネルの位置　<b>' + LAND_PANEL_LABEL[S.landPanel] + '</b>' +
+            (isLandscape() ? '' : '<small>（横向きのとき）</small>') + '</button>' +
         '</div>' +
         '<button class="btn ghost" id="dmclose" style="width:100%;margin-top:12px">閉じる</button></div>';
       $$('[data-d]', m).forEach(function (b) {
@@ -1496,10 +1546,12 @@
           if (k === 'snd') { S.sound = !S.sound; SFX.setEnabled(S.sound); }
           if (k === 'spd') S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1;
           if (k === 'compact') S.compact = !S.compact;
-          if (k === 'tabletop') S.tabletop = !S.tabletop;
-          if (k === 'ttstyle') S.ttStyle = (S.ttStyle === 'text') ? 'card' : 'text';
+          if (k === 'sidebyside') S.sideBySide = !S.sideBySide;
+          if (k === 'landpanel') {
+            S.landPanel = S.landPanel === 'auto' ? 'bottom' : S.landPanel === 'bottom' ? 'side' : 'auto';
+          }
           rememberSettings();
-          if (k === 'compact' || k === 'tabletop' || k === 'ttstyle' || k === 'spd') { m.remove(); renderBattle(); return; }
+          if (k === 'compact' || k === 'sidebyside' || k === 'landpanel' || k === 'spd') { m.remove(); renderBattle(); return; }
           draw();
         };
       });
@@ -1518,8 +1570,6 @@
     if (!u) { panel.innerHTML = '<div class="hint">ラウンド終了処理中…</div>'; return; }
 
     $$('.unit').forEach(function (e) { e.classList.toggle('acting', e.dataset.uid === u.uid); });
-    /* 卓上モードでは、操作パネルを行動しているプレイヤーの向きにする */
-    app.classList.toggle('act1', ttOn() && u.side === 1);
 
     if (S.busy) {
       panel.innerHTML = '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
@@ -2570,6 +2620,18 @@
   window.CBTEST = function (teamA, teamB, mode) {
     S.mode = mode || 'pvp'; S.teams = [teamA, teamB]; beginBattle();
   };
+  /* 端末を回したらレイアウトを組み直す */
+  var _reflow = null;
+  function onOrient() {
+    clearTimeout(_reflow);
+    _reflow = setTimeout(function () {
+      if (S.screen === 'battle' && S.st) renderBattle();
+      else if (S.screen === 'ready') renderReady();
+    }, 180);
+  }
+  window.addEventListener('orientationchange', onOrient);
+  window.addEventListener('resize', onOrient);
+
   restoreSettings();
   SFX.setEnabled(S.sound);
   E.setPool(S.pool); E.setDealMode(S.deal);
