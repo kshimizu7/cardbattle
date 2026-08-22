@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="21">
+<meta name="app-version" content="22">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -4698,6 +4698,21 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     if (t && t.closest && t.closest('button,.opt,.card,.slot')) SFX.play('ui');
   }, true);
 
+  /* ---------- 陣営の呼び名 ----------
+     CPU戦は「自軍／敵軍」で正しい（人間は必ず side0）。
+     ふたり対戦は1画面を共有するため、どちらから見ても正しい
+     プレイヤー名で呼ぶ。以前は side0 基準に固定されていて、
+     P2 には自分の軍が「敵軍」と表示されていた。 */
+  function sideName(side) {
+    if (S.mode === 'cpu') return side === 0 ? '自軍' : '敵軍';
+    var st = S.st;
+    return (st && st.players[side] && st.players[side].name) || ('プレイヤー' + (side + 1));
+  }
+  function sideShort(side) {
+    if (S.mode === 'cpu') return side === 0 ? '自陣' : '敵陣';
+    return 'P' + (side + 1);
+  }
+
   /* ---------- 設定の記憶 ---------- */
   function rememberSettings() {
     try {
@@ -4782,7 +4797,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
         '<span class="no">' + (r.i + 1) + '</span>' +
         '<span class="pic">' + ART.portrait(r.u.defId, r.u.def.elem) + '</span>' +
         '<span class="who"><b style="color:' + (r.u.side === 0 ? 'var(--p1)' : 'var(--p2)') + '">' +
-          (r.u.side === 0 ? '自軍' : '敵軍') + '</b> ' + r.u.def.name +
+          sideName(r.u.side) + '</b> ' + r.u.def.name +
           (r.u.alive ? '' : '<span style="color:var(--bad)"> 戦闘不能</span>') +
           '<small>' + r.why + '</small></span>' +
         '<span class="spd">⚡' + r.spd + '</span></div>';
@@ -5056,7 +5071,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       if (a.uses != null && u.uses[a.key] <= 0) cds.push(a.name + ' 使用済');
     });
     return '<div class="livebox' + (u.side === 0 ? ' s0' : ' s1') + '">' +
-      '<div class="lvhd"><b>' + (u.side === 0 ? '自軍' : '敵軍') + '</b>' +
+      '<div class="lvhd"><b>' + sideName(u.side) + '</b>' +
         (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
         (u.alive ? '' : '<span style="color:var(--bad)">　戦闘不能</span>') + '</div>' +
       '<div class="lvrow"><span>現在HP</span><b>' + Math.max(0, u.hp) + ' / ' + u.maxHp + '</b></div>' +
@@ -6034,7 +6049,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       '</div>' +
       '<div class="orderline">' +
         '<span class="lb">行動順</span>' +
-        '<span class="lg"><i class="d0"></i>自軍</span><span class="lg"><i class="d1"></i>敵軍</span>' +
+        '<span class="lg"><i class="d0"></i>' + sideName(0) + '</span>' +
+        '<span class="lg"><i class="d1"></i>' + sideName(1) + '</span>' +
         '<button class="ordbtn" id="ordq">なぜこの順番？</button>' +
       '</div>' +
       '<div class="turnbar" id="turnbar">' + order + '</div>' +
@@ -6044,7 +6060,9 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
         '<div class="warline">' +
           '<div class="wl-edge top"></div>' +
-          '<div class="wl-mid"><span class="wl-arrow up">▲ 敵陣</span><span class="wl-tag">交 戦 ラ イ ン</span><span class="wl-arrow down">▼ 自陣</span></div>' +
+          '<div class="wl-mid"><span class="wl-arrow up">▲ ' + sideShort(1) + '</span>' +
+            '<span class="wl-tag">交 戦 ラ イ ン</span>' +
+            '<span class="wl-arrow down">▼ ' + sideShort(0) + '</span></div>' +
           '<div class="wl-edge bot"></div>' +
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
