@@ -19,7 +19,7 @@
     seenIds: [],
     st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
-    compact: false, sideBySide: false, hintSeen: false
+    compact: false, sideBySide: false, hintSeen: false, autoPlay: false
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
@@ -56,7 +56,7 @@
       SAVE.setSettings({ sound: S.sound, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
                          compact: S.compact, sideBySide: S.sideBySide,
-                         hintSeen: S.hintSeen });
+                         hintSeen: S.hintSeen, autoPlay: S.autoPlay });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -71,6 +71,7 @@
       if (typeof g.compact === 'boolean') S.compact = g.compact;
       if (typeof g.sideBySide === 'boolean') S.sideBySide = g.sideBySide;
       if (typeof g.hintSeen === 'boolean') S.hintSeen = g.hintSeen;
+      if (typeof g.autoPlay === 'boolean') S.autoPlay = g.autoPlay;
     } catch (e) {}
   }
 
@@ -1375,6 +1376,7 @@
      ========================================================= */
   function beginBattle() {
     S._saved = false;
+    S.autoPlay = false;
     S.st = E.createState(S.teams[0], S.teams[1], {
       nameA: 'プレイヤー1', nameB: S.mode === 'cpu' ? 'CPU' : 'プレイヤー2'
     });
@@ -1435,6 +1437,35 @@
   /* 陣営名の横の数字（生存・HP計・与ダメ）は、盤面を見れば分かるので出さない */
   function sideStats(side) { return ''; }
 
+  /* 戦闘中の共通バー。縦持ちでは画面上段に、横持ちでは右パネルの上部に置く。
+     同じ中身を2箇所に出すため、IDではなくクラスで拾う。 */
+  function battleBarHTML(st) {
+    return '<span class="t">R' + st.round +
+        '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
+      '<span class="sp" style="flex:1"></span>' +
+      '<button class="btn small ghost ico b-fs" title="全画面">⛶</button>' +
+      (S.compact
+        ? '<button class="btn small ghost ico b-disp" title="表示設定">⚙</button>'
+        : '<button class="btn small ghost ico snd b-snd' + (S.sound ? '' : ' off') + '"' +
+            ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
+          '<button class="btn small ghost ico b-spd" title="戦闘速度">x' + S.speed + '</button>') +
+      '<button class="btn small ghost ico b-quit" title="タイトルへ">✕</button>';
+  }
+
+  function bindBattleBar() {
+    $$('.b-fs').forEach(function (b) { b.onclick = toggleFullscreen; });
+    $$('.b-disp').forEach(function (b) { b.onclick = showDisplayMenu; });
+    $$('.b-snd').forEach(function (b) {
+      b.onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); renderBattle(); };
+    });
+    $$('.b-spd').forEach(function (b) {
+      b.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
+    });
+    $$('.b-quit').forEach(function (b) {
+      b.onclick = function () { if (confirm('タイトルに戻りますか？')) renderTitle(); };
+    });
+  }
+
   function renderBattle() {
     var st = S.st;
     var actor = E.currentActor(st);
@@ -1449,17 +1480,7 @@
 
     var p2name = st.players[1].name, p1name = st.players[0].name;
     app.innerHTML =
-      '<div class="hdr">' +
-        '<span class="t">R' + st.round + '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
-        '<span class="sp" style="flex:1"></span>' +
-        '<button class="btn small ghost ico" id="fs" title="全画面">⛶</button>' +
-        (S.compact
-          ? '<button class="btn small ghost ico" id="disp" title="表示設定">⚙</button>'
-          : '<button class="btn small ghost ico snd' + (S.sound ? '' : ' off') + '" id="snd"' +
-              ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
-            '<button class="btn small ghost ico" id="spd" title="戦闘速度">x' + S.speed + '</button>') +
-        '<button class="btn small ghost ico" id="quit" title="タイトルへ">✕</button>' +
-      '</div>' +
+      '<div class="hdr">' + battleBarHTML(st) + '</div>' +
       '<div class="orderline">' +
         '<span class="lb">行動順</span>' +
         '<span class="lg"><i class="d0"></i>' + sideName(0) + '</span>' +
@@ -1473,9 +1494,7 @@
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
         '<div class="warline">' +
           '<div class="wl-edge top"></div>' +
-          '<div class="wl-mid"><span class="wl-arrow up">▲ ' + sideShort(1) + '</span>' +
-            '<span class="wl-tag">交 戦 ラ イ ン</span>' +
-            '<span class="wl-arrow down">▼ ' + sideShort(0) + '</span></div>' +
+          '<div class="wl-mid"><span class="wl-flow"><i>❯</i><i>❯</i><i>❯</i><i>❯</i></span></div>' +
           '<div class="wl-edge bot"></div>' +
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
@@ -1496,19 +1515,11 @@
     app.classList.toggle('turn0', !!act && act.side === 0);
     app.classList.toggle('turn1', !!act && act.side === 1);
     app.classList.toggle('lp-side', land);
-    var spdb = $('#spd');
-    if (spdb) spdb.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
-    var dispb = $('#disp');
-    if (dispb) dispb.onclick = showDisplayMenu;
-    var fsb = $('#fs');
-    if (fsb) fsb.onclick = toggleFullscreen;
+    bindBattleBar();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
-    var sndb = $('#snd');
-    if (sndb) sndb.onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); renderBattle(); };
     var tb = $('#turnbar'), nowtk = $('.tk.now');
     if (tb && nowtk) tb.scrollLeft = Math.max(0, nowtk.offsetLeft - tb.clientWidth / 2 + 20);
-    $('#quit').onclick = function () { if (confirm('タイトルに戻りますか？')) renderTitle(); };
     $$('[data-order]').forEach(function (o) {
       o.onclick = function () {
         openDetail(E.findUid(st, o.dataset.order).defId,
@@ -1561,7 +1572,12 @@
   /* 操作パネル内の行動順（横向きで余ったスペースに出す） */
   function orderMiniHTML(st) {
     var cur = E.currentActor(st);
-    return '<div class="om-hd">行動順<span>R' + st.round + '</span></div>' +
+    return '<div class="om-hd">行動順' +
+        '<span class="autobtns">' +
+          '<button class="autob" data-auto="one" title="このターンだけAIに任せる">⚡<b>1回</b></button>' +
+          '<button class="autob' + (S.autoPlay ? ' on' : '') + '" data-auto="all"' +
+            ' title="自分の行動をすべてAIに任せる">🤖<b>' + (S.autoPlay ? 'ON' : '全部') + '</b></button>' +
+        '</span></div>' +
       '<div class="om-list">' + st.order.map(function (uid, i) {
         var v = E.findUid(st, uid);
         if (!v) return '';
@@ -1588,25 +1604,49 @@
     } catch (e) { toast('全画面にできませんでした'); }
   }
 
+  /** 行動順の見出しにある「おまかせ」2種を結線する。
+      待機中は押しても何も起きないが、ボタン自体は残して画面のガタつきを防ぐ。 */
+  function bindAutoBtns(autoOnce) {
+    $$('[data-auto]').forEach(function (b) {
+      b.onclick = function () {
+        if (b.dataset.auto === 'one') { if (autoOnce) autoOnce(); return; }
+        S.autoPlay = !S.autoPlay;
+        rememberSettings();
+        if (S.autoPlay) { toast('自分の行動をすべてAIに任せます'); if (autoOnce) autoOnce(); else renderActions(); }
+        else { toast('自分で選ぶモードに戻しました'); renderActions(); }
+      };
+    });
+  }
+
   function renderActions() {
     var st = S.st, panel = $('#actpanel');
     if (!panel) return;
+    /* 骨格（上段バー ＋ 中身 ＋ 行動順）を組み立てる。
+       待機中も骨格は保ち、中身だけ差し替える。 */
+    function shell(inner, st2) {
+      return '<div class="panelbar">' + battleBarHTML(st2) + '</div>' + inner +
+             '<div class="ordmini" id="ordmini">' + orderMiniHTML(st2) + '</div>';
+    }
+    function waitLine(v, msg) {
+      return '<div class="actor-line"><div class="mini">' + ART.portrait(v.defId, v.def.elem) + '</div>' +
+        '<div class="who">' + v.def.name + '<small>' + msg + '</small></div></div>' +
+        '<div class="acts waiting"><div class="waitmsg">' + msg + '</div></div>';
+    }
     if (st.phase === 'ended') { panel.innerHTML = ''; return; }
     var u = E.currentActor(st);
-    if (!u) { panel.innerHTML = '<div class="hint">ラウンド終了処理中…</div>'; return; }
+    if (!u) {
+      panel.innerHTML = shell('<div class="acts waiting"><div class="waitmsg">ラウンド終了処理中…</div></div>', st);
+      bindBattleBar(); bindAutoBtns(null);
+      return;
+    }
 
     $$('.unit').forEach(function (e) { e.classList.toggle('acting', e.dataset.uid === u.uid); });
     app.classList.toggle('turn0', u.side === 0);
     app.classList.toggle('turn1', u.side === 1);
 
-    if (S.busy) {
-      panel.innerHTML = '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-        '<div class="who">' + u.def.name + '<small>行動中…</small></div></div>';
-      return;
-    }
-    if (isAI(u.side)) {
-      panel.innerHTML = '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-        '<div class="who">' + u.def.name + '<small>CPU 思考中…</small></div></div>';
+    if (S.busy || isAI(u.side)) {
+      panel.innerHTML = shell(waitLine(u, S.busy ? '行動中…' : 'CPU 思考中…'), st);
+      bindBattleBar(); bindAutoBtns(null);
       return;
     }
 
@@ -1639,16 +1679,15 @@
     if (guardOpt) btns += '<button class="act' + (S.selAct === 'guard' ? ' on' : '') + '" data-act="guard">' +
       (S.selAct === 'guard' ? '<span class="tapgo">▶</span>' : '') + '防御<small>攻撃できない・被ダメ-2</small></button>';
 
-    panel.innerHTML =
+    panel.innerHTML = shell(
       '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
       '<div class="who">' + u.def.name + '<small>' + (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
       '　HP ' + u.hp + '/' + u.maxHp + '　⚡' + E.getSpd(u, st) + '</small></div>' +
       '<button class="btn small ghost" id="info">詳細</button>' +
       '<button class="btn small ghost" id="auto">おまかせ</button></div>' +
       '<div class="acts">' + btns + '</div>' +
-      '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>' +
-      /* 横向きは操作パネルが縦に余るので、行動順をここに出す */
-      '<div class="ordmini" id="ordmini">' + orderMiniHTML(st) + '</div>';
+      '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>', st);
+    bindBattleBar();
 
     $$('[data-act]').forEach(function (b) {
       b.onclick = function () {
@@ -1669,10 +1708,14 @@
     $('#info').onclick = function () {
       openDetail(u.defId, E.aliveUnits(st, u.side).map(function (v) { return v.defId; }));
     };
-    $('#auto').onclick = function () {
+    function autoOnce() {
       var ch = AI.chooseAction(st, u, 'hard');
       doAction(u, ch.actionKey, ch.target);
-    };
+    }
+    if ($('#auto')) $('#auto').onclick = autoOnce;
+    bindAutoBtns(autoOnce);
+    /* 全自動がONなら、そのまま代わりに動く */
+    if (S.autoPlay && !S.busy) { setTimeout(function () { if (S.autoPlay && !S.busy) autoOnce(); }, 420 / spd()); }
     // 範囲攻撃は既定でダメージ合計が大きい方を選んでおく
     var gkey = u.uid + ':' + S.selAct;
     if (cur && (cur.action.range === 'square' || cur.action.range === 'row') && cur.targets.length) {
@@ -2178,6 +2221,17 @@
       (function (e) { setTimeout(function () { e.remove(); }, 1250 / spd()); })(el);
     }
   }
+  /** 交戦ラインに攻撃方向を流す（どちらからどちらへ攻めているかを示す） */
+  function flowWarline(side) {
+    var wl = $('.warline');
+    if (!wl || side == null) return;
+    wl.classList.remove('flow0', 'flow1');
+    void wl.offsetWidth;
+    wl.classList.add(side === 0 ? 'flow0' : 'flow1');
+    clearTimeout(wl._ft);
+    wl._ft = setTimeout(function () { wl.classList.remove('flow0', 'flow1'); }, 1200 / spd());
+  }
+
   /** 前進の軌跡：移動元から移動先へ伸びる帯 */
   function advanceTrail(from, to) {
     var x1 = from.left + from.width / 2, y1 = from.top + from.height / 2;
@@ -2454,6 +2508,7 @@
       }
 
       case 'attack': {
+        flowWarline(e.src != null ? (E.findUid(st, e.src) || {}).side : null);
         var f = fxOf(e.fx);
         S.fx = f; S.fxName = e.fx; S.hits = 0; S.total = 0; S.multi = e.targets.length > 1;
         SFX.play(e.fx);

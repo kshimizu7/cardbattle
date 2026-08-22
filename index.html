@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="30">
+<meta name="app-version" content="31">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -1562,6 +1562,73 @@ body.shake{animation:shk2 .56s}
   background:linear-gradient(180deg,#ffe08a,#e8ac1c);color:#2a2005;
   box-shadow:0 3px 14px rgba(0,0,0,.6),0 0 20px rgba(242,198,92,.55);
   border:1.5px solid #fff3c8}
+
+/* =========================================================
+   v31: 横持ちのレイアウト整理
+   上段バーを右パネルへ畳み込み、盤面の縦を最大化する
+   ========================================================= */
+/* 縦持ちでは右パネル内のバーは出さない（上段にあるため） */
+.panelbar{display:none}
+
+@media (orientation: landscape) {
+  /* 上段バーは畳む。中身は右パネルの上部へ移動 */
+  #app.land > .hdr{display:none}
+  #app.land{grid-template-areas:"field panel";
+    grid-template-columns:1fr minmax(250px,31vw);grid-template-rows:minmax(0,1fr)}
+  #app.land.lp-side > .field{grid-area:field}
+  #app.land.lp-side > .actpanel{grid-area:panel}
+
+  /* 右パネル上部のバー */
+  #app.land .panelbar{display:flex;align-items:center;gap:5px;
+    padding:4px 4px 7px;border-bottom:1px solid var(--line);margin-bottom:7px}
+  #app.land .panelbar .t{font-size:15px;font-weight:900;letter-spacing:.04em}
+  #app.land .panelbar .btn.ico{padding:5px 8px;font-size:12.5px}
+  #app.land .panelbar .btn.ico.snd{font-size:14px}
+  #app.land .panelbar .btn.ico.snd.off::after{width:16px}
+
+  /* ② 「○体すべてに必ず命中」の行は出さない（赤枠で判別できるため） */
+  #app.land .hint{display:none}
+  /* ③ 行動中キャラの情報行も出さない（盤面で光っているので分かる） */
+  #app.land .actor-line{display:none}
+
+  #app.land .actpanel{padding:6px 9px calc(6px + var(--safe-b));justify-content:flex-start}
+  #app.land .ordmini{margin-top:8px}
+}
+
+/* ③ 行動順の見出し右に「おまかせ」2種 */
+.autobtns{display:flex;gap:5px}
+.autob{appearance:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:3px;
+  font-size:11px;font-weight:900;padding:3px 8px;border-radius:999px;letter-spacing:0;
+  background:linear-gradient(180deg,#1b2338,#121829);border:1px solid #2c3854;color:#a9b8d6;
+  transition:transform .07s,border-color .15s}
+.autob b{font-size:10px;font-weight:900}
+.autob:active{transform:scale(.94)}
+.autob.on{border-color:var(--gold);color:var(--gold);
+  background:linear-gradient(180deg,#2c2412,#171208);
+  box-shadow:0 0 12px rgba(242,198,92,.35)}
+
+/* ④ 交戦ラインは既定で無地。攻撃時だけ方向が流れる */
+.warline .wl-flow{display:flex;gap:3px;opacity:0;transition:opacity .18s}
+.warline .wl-flow i{font-style:normal;font-size:15px;font-weight:900;color:var(--gold);
+  opacity:.25;line-height:1}
+.warline.flow0 .wl-flow,.warline.flow1 .wl-flow{opacity:1}
+.warline.flow0 .wl-flow i{animation:wlflow .75s linear infinite}
+.warline.flow1 .wl-flow i{animation:wlflow .75s linear infinite}
+.warline .wl-flow i:nth-child(2){animation-delay:.10s}
+.warline .wl-flow i:nth-child(3){animation-delay:.20s}
+.warline .wl-flow i:nth-child(4){animation-delay:.30s}
+@keyframes wlflow{0%{opacity:.14}45%{opacity:1;filter:drop-shadow(0 0 7px var(--gold))}100%{opacity:.14}}
+/* 縦持ち：下(P1)→上(P2) は上向き、逆は下向き */
+.warline .wl-flow{transform:rotate(-90deg)}
+.warline.flow1 .wl-flow{transform:rotate(90deg)}
+@media (orientation: landscape){
+  /* 横持ち：左(P1)→右(P2) は右向き、逆は左向き */
+  #app.land .warline .wl-flow{transform:none;flex-direction:column;gap:2px}
+  #app.land .warline.flow1 .wl-flow{transform:rotate(180deg)}
+  #app.land .warline .wl-flow i{transform:rotate(90deg)}
+}
+.acts.waiting{display:flex;align-items:center;justify-content:center;min-height:52px}
+.waitmsg{font-size:12.5px;font-weight:800;color:#7686a6;letter-spacing:.08em}
 
 </style>
 </head>
@@ -4930,7 +4997,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     seenIds: [],
     st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
-    compact: false, sideBySide: false, hintSeen: false
+    compact: false, sideBySide: false, hintSeen: false, autoPlay: false
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
@@ -4967,7 +5034,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       SAVE.setSettings({ sound: S.sound, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
                          compact: S.compact, sideBySide: S.sideBySide,
-                         hintSeen: S.hintSeen });
+                         hintSeen: S.hintSeen, autoPlay: S.autoPlay });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -4982,6 +5049,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       if (typeof g.compact === 'boolean') S.compact = g.compact;
       if (typeof g.sideBySide === 'boolean') S.sideBySide = g.sideBySide;
       if (typeof g.hintSeen === 'boolean') S.hintSeen = g.hintSeen;
+      if (typeof g.autoPlay === 'boolean') S.autoPlay = g.autoPlay;
     } catch (e) {}
   }
 
@@ -6286,6 +6354,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
      ========================================================= */
   function beginBattle() {
     S._saved = false;
+    S.autoPlay = false;
     S.st = E.createState(S.teams[0], S.teams[1], {
       nameA: 'プレイヤー1', nameB: S.mode === 'cpu' ? 'CPU' : 'プレイヤー2'
     });
@@ -6346,6 +6415,35 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
   /* 陣営名の横の数字（生存・HP計・与ダメ）は、盤面を見れば分かるので出さない */
   function sideStats(side) { return ''; }
 
+  /* 戦闘中の共通バー。縦持ちでは画面上段に、横持ちでは右パネルの上部に置く。
+     同じ中身を2箇所に出すため、IDではなくクラスで拾う。 */
+  function battleBarHTML(st) {
+    return '<span class="t">R' + st.round +
+        '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
+      '<span class="sp" style="flex:1"></span>' +
+      '<button class="btn small ghost ico b-fs" title="全画面">⛶</button>' +
+      (S.compact
+        ? '<button class="btn small ghost ico b-disp" title="表示設定">⚙</button>'
+        : '<button class="btn small ghost ico snd b-snd' + (S.sound ? '' : ' off') + '"' +
+            ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
+          '<button class="btn small ghost ico b-spd" title="戦闘速度">x' + S.speed + '</button>') +
+      '<button class="btn small ghost ico b-quit" title="タイトルへ">✕</button>';
+  }
+
+  function bindBattleBar() {
+    $$('.b-fs').forEach(function (b) { b.onclick = toggleFullscreen; });
+    $$('.b-disp').forEach(function (b) { b.onclick = showDisplayMenu; });
+    $$('.b-snd').forEach(function (b) {
+      b.onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); renderBattle(); };
+    });
+    $$('.b-spd').forEach(function (b) {
+      b.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
+    });
+    $$('.b-quit').forEach(function (b) {
+      b.onclick = function () { if (confirm('タイトルに戻りますか？')) renderTitle(); };
+    });
+  }
+
   function renderBattle() {
     var st = S.st;
     var actor = E.currentActor(st);
@@ -6360,17 +6458,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
 
     var p2name = st.players[1].name, p1name = st.players[0].name;
     app.innerHTML =
-      '<div class="hdr">' +
-        '<span class="t">R' + st.round + '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
-        '<span class="sp" style="flex:1"></span>' +
-        '<button class="btn small ghost ico" id="fs" title="全画面">⛶</button>' +
-        (S.compact
-          ? '<button class="btn small ghost ico" id="disp" title="表示設定">⚙</button>'
-          : '<button class="btn small ghost ico snd' + (S.sound ? '' : ' off') + '" id="snd"' +
-              ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
-            '<button class="btn small ghost ico" id="spd" title="戦闘速度">x' + S.speed + '</button>') +
-        '<button class="btn small ghost ico" id="quit" title="タイトルへ">✕</button>' +
-      '</div>' +
+      '<div class="hdr">' + battleBarHTML(st) + '</div>' +
       '<div class="orderline">' +
         '<span class="lb">行動順</span>' +
         '<span class="lg"><i class="d0"></i>' + sideName(0) + '</span>' +
@@ -6384,9 +6472,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
         '<div class="warline">' +
           '<div class="wl-edge top"></div>' +
-          '<div class="wl-mid"><span class="wl-arrow up">▲ ' + sideShort(1) + '</span>' +
-            '<span class="wl-tag">交 戦 ラ イ ン</span>' +
-            '<span class="wl-arrow down">▼ ' + sideShort(0) + '</span></div>' +
+          '<div class="wl-mid"><span class="wl-flow"><i>❯</i><i>❯</i><i>❯</i><i>❯</i></span></div>' +
           '<div class="wl-edge bot"></div>' +
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
@@ -6407,19 +6493,11 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     app.classList.toggle('turn0', !!act && act.side === 0);
     app.classList.toggle('turn1', !!act && act.side === 1);
     app.classList.toggle('lp-side', land);
-    var spdb = $('#spd');
-    if (spdb) spdb.onclick = function () { S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1; rememberSettings(); renderBattle(); };
-    var dispb = $('#disp');
-    if (dispb) dispb.onclick = showDisplayMenu;
-    var fsb = $('#fs');
-    if (fsb) fsb.onclick = toggleFullscreen;
+    bindBattleBar();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
-    var sndb = $('#snd');
-    if (sndb) sndb.onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); renderBattle(); };
     var tb = $('#turnbar'), nowtk = $('.tk.now');
     if (tb && nowtk) tb.scrollLeft = Math.max(0, nowtk.offsetLeft - tb.clientWidth / 2 + 20);
-    $('#quit').onclick = function () { if (confirm('タイトルに戻りますか？')) renderTitle(); };
     $$('[data-order]').forEach(function (o) {
       o.onclick = function () {
         openDetail(E.findUid(st, o.dataset.order).defId,
@@ -6472,7 +6550,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
   /* 操作パネル内の行動順（横向きで余ったスペースに出す） */
   function orderMiniHTML(st) {
     var cur = E.currentActor(st);
-    return '<div class="om-hd">行動順<span>R' + st.round + '</span></div>' +
+    return '<div class="om-hd">行動順' +
+        '<span class="autobtns">' +
+          '<button class="autob" data-auto="one" title="このターンだけAIに任せる">⚡<b>1回</b></button>' +
+          '<button class="autob' + (S.autoPlay ? ' on' : '') + '" data-auto="all"' +
+            ' title="自分の行動をすべてAIに任せる">🤖<b>' + (S.autoPlay ? 'ON' : '全部') + '</b></button>' +
+        '</span></div>' +
       '<div class="om-list">' + st.order.map(function (uid, i) {
         var v = E.findUid(st, uid);
         if (!v) return '';
@@ -6499,25 +6582,49 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     } catch (e) { toast('全画面にできませんでした'); }
   }
 
+  /** 行動順の見出しにある「おまかせ」2種を結線する。
+      待機中は押しても何も起きないが、ボタン自体は残して画面のガタつきを防ぐ。 */
+  function bindAutoBtns(autoOnce) {
+    $$('[data-auto]').forEach(function (b) {
+      b.onclick = function () {
+        if (b.dataset.auto === 'one') { if (autoOnce) autoOnce(); return; }
+        S.autoPlay = !S.autoPlay;
+        rememberSettings();
+        if (S.autoPlay) { toast('自分の行動をすべてAIに任せます'); if (autoOnce) autoOnce(); else renderActions(); }
+        else { toast('自分で選ぶモードに戻しました'); renderActions(); }
+      };
+    });
+  }
+
   function renderActions() {
     var st = S.st, panel = $('#actpanel');
     if (!panel) return;
+    /* 骨格（上段バー ＋ 中身 ＋ 行動順）を組み立てる。
+       待機中も骨格は保ち、中身だけ差し替える。 */
+    function shell(inner, st2) {
+      return '<div class="panelbar">' + battleBarHTML(st2) + '</div>' + inner +
+             '<div class="ordmini" id="ordmini">' + orderMiniHTML(st2) + '</div>';
+    }
+    function waitLine(v, msg) {
+      return '<div class="actor-line"><div class="mini">' + ART.portrait(v.defId, v.def.elem) + '</div>' +
+        '<div class="who">' + v.def.name + '<small>' + msg + '</small></div></div>' +
+        '<div class="acts waiting"><div class="waitmsg">' + msg + '</div></div>';
+    }
     if (st.phase === 'ended') { panel.innerHTML = ''; return; }
     var u = E.currentActor(st);
-    if (!u) { panel.innerHTML = '<div class="hint">ラウンド終了処理中…</div>'; return; }
+    if (!u) {
+      panel.innerHTML = shell('<div class="acts waiting"><div class="waitmsg">ラウンド終了処理中…</div></div>', st);
+      bindBattleBar(); bindAutoBtns(null);
+      return;
+    }
 
     $$('.unit').forEach(function (e) { e.classList.toggle('acting', e.dataset.uid === u.uid); });
     app.classList.toggle('turn0', u.side === 0);
     app.classList.toggle('turn1', u.side === 1);
 
-    if (S.busy) {
-      panel.innerHTML = '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-        '<div class="who">' + u.def.name + '<small>行動中…</small></div></div>';
-      return;
-    }
-    if (isAI(u.side)) {
-      panel.innerHTML = '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-        '<div class="who">' + u.def.name + '<small>CPU 思考中…</small></div></div>';
+    if (S.busy || isAI(u.side)) {
+      panel.innerHTML = shell(waitLine(u, S.busy ? '行動中…' : 'CPU 思考中…'), st);
+      bindBattleBar(); bindAutoBtns(null);
       return;
     }
 
@@ -6550,16 +6657,15 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     if (guardOpt) btns += '<button class="act' + (S.selAct === 'guard' ? ' on' : '') + '" data-act="guard">' +
       (S.selAct === 'guard' ? '<span class="tapgo">▶</span>' : '') + '防御<small>攻撃できない・被ダメ-2</small></button>';
 
-    panel.innerHTML =
+    panel.innerHTML = shell(
       '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
       '<div class="who">' + u.def.name + '<small>' + (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
       '　HP ' + u.hp + '/' + u.maxHp + '　⚡' + E.getSpd(u, st) + '</small></div>' +
       '<button class="btn small ghost" id="info">詳細</button>' +
       '<button class="btn small ghost" id="auto">おまかせ</button></div>' +
       '<div class="acts">' + btns + '</div>' +
-      '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>' +
-      /* 横向きは操作パネルが縦に余るので、行動順をここに出す */
-      '<div class="ordmini" id="ordmini">' + orderMiniHTML(st) + '</div>';
+      '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>', st);
+    bindBattleBar();
 
     $$('[data-act]').forEach(function (b) {
       b.onclick = function () {
@@ -6580,10 +6686,14 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     $('#info').onclick = function () {
       openDetail(u.defId, E.aliveUnits(st, u.side).map(function (v) { return v.defId; }));
     };
-    $('#auto').onclick = function () {
+    function autoOnce() {
       var ch = AI.chooseAction(st, u, 'hard');
       doAction(u, ch.actionKey, ch.target);
-    };
+    }
+    if ($('#auto')) $('#auto').onclick = autoOnce;
+    bindAutoBtns(autoOnce);
+    /* 全自動がONなら、そのまま代わりに動く */
+    if (S.autoPlay && !S.busy) { setTimeout(function () { if (S.autoPlay && !S.busy) autoOnce(); }, 420 / spd()); }
     // 範囲攻撃は既定でダメージ合計が大きい方を選んでおく
     var gkey = u.uid + ':' + S.selAct;
     if (cur && (cur.action.range === 'square' || cur.action.range === 'row') && cur.targets.length) {
@@ -7089,6 +7199,17 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       (function (e) { setTimeout(function () { e.remove(); }, 1250 / spd()); })(el);
     }
   }
+  /** 交戦ラインに攻撃方向を流す（どちらからどちらへ攻めているかを示す） */
+  function flowWarline(side) {
+    var wl = $('.warline');
+    if (!wl || side == null) return;
+    wl.classList.remove('flow0', 'flow1');
+    void wl.offsetWidth;
+    wl.classList.add(side === 0 ? 'flow0' : 'flow1');
+    clearTimeout(wl._ft);
+    wl._ft = setTimeout(function () { wl.classList.remove('flow0', 'flow1'); }, 1200 / spd());
+  }
+
   /** 前進の軌跡：移動元から移動先へ伸びる帯 */
   function advanceTrail(from, to) {
     var x1 = from.left + from.width / 2, y1 = from.top + from.height / 2;
@@ -7365,6 +7486,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       }
 
       case 'attack': {
+        flowWarline(e.src != null ? (E.findUid(st, e.src) || {}).side : null);
         var f = fxOf(e.fx);
         S.fx = f; S.fxName = e.fx; S.hits = 0; S.total = 0; S.multi = e.targets.length > 1;
         SFX.play(e.fx);

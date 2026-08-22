@@ -1550,3 +1550,70 @@ body.shake{animation:shk2 .56s}
   background:linear-gradient(180deg,#ffe08a,#e8ac1c);color:#2a2005;
   box-shadow:0 3px 14px rgba(0,0,0,.6),0 0 20px rgba(242,198,92,.55);
   border:1.5px solid #fff3c8}
+
+/* =========================================================
+   v31: 横持ちのレイアウト整理
+   上段バーを右パネルへ畳み込み、盤面の縦を最大化する
+   ========================================================= */
+/* 縦持ちでは右パネル内のバーは出さない（上段にあるため） */
+.panelbar{display:none}
+
+@media (orientation: landscape) {
+  /* 上段バーは畳む。中身は右パネルの上部へ移動 */
+  #app.land > .hdr{display:none}
+  #app.land{grid-template-areas:"field panel";
+    grid-template-columns:1fr minmax(250px,31vw);grid-template-rows:minmax(0,1fr)}
+  #app.land.lp-side > .field{grid-area:field}
+  #app.land.lp-side > .actpanel{grid-area:panel}
+
+  /* 右パネル上部のバー */
+  #app.land .panelbar{display:flex;align-items:center;gap:5px;
+    padding:4px 4px 7px;border-bottom:1px solid var(--line);margin-bottom:7px}
+  #app.land .panelbar .t{font-size:15px;font-weight:900;letter-spacing:.04em}
+  #app.land .panelbar .btn.ico{padding:5px 8px;font-size:12.5px}
+  #app.land .panelbar .btn.ico.snd{font-size:14px}
+  #app.land .panelbar .btn.ico.snd.off::after{width:16px}
+
+  /* ② 「○体すべてに必ず命中」の行は出さない（赤枠で判別できるため） */
+  #app.land .hint{display:none}
+  /* ③ 行動中キャラの情報行も出さない（盤面で光っているので分かる） */
+  #app.land .actor-line{display:none}
+
+  #app.land .actpanel{padding:6px 9px calc(6px + var(--safe-b));justify-content:flex-start}
+  #app.land .ordmini{margin-top:8px}
+}
+
+/* ③ 行動順の見出し右に「おまかせ」2種 */
+.autobtns{display:flex;gap:5px}
+.autob{appearance:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:3px;
+  font-size:11px;font-weight:900;padding:3px 8px;border-radius:999px;letter-spacing:0;
+  background:linear-gradient(180deg,#1b2338,#121829);border:1px solid #2c3854;color:#a9b8d6;
+  transition:transform .07s,border-color .15s}
+.autob b{font-size:10px;font-weight:900}
+.autob:active{transform:scale(.94)}
+.autob.on{border-color:var(--gold);color:var(--gold);
+  background:linear-gradient(180deg,#2c2412,#171208);
+  box-shadow:0 0 12px rgba(242,198,92,.35)}
+
+/* ④ 交戦ラインは既定で無地。攻撃時だけ方向が流れる */
+.warline .wl-flow{display:flex;gap:3px;opacity:0;transition:opacity .18s}
+.warline .wl-flow i{font-style:normal;font-size:15px;font-weight:900;color:var(--gold);
+  opacity:.25;line-height:1}
+.warline.flow0 .wl-flow,.warline.flow1 .wl-flow{opacity:1}
+.warline.flow0 .wl-flow i{animation:wlflow .75s linear infinite}
+.warline.flow1 .wl-flow i{animation:wlflow .75s linear infinite}
+.warline .wl-flow i:nth-child(2){animation-delay:.10s}
+.warline .wl-flow i:nth-child(3){animation-delay:.20s}
+.warline .wl-flow i:nth-child(4){animation-delay:.30s}
+@keyframes wlflow{0%{opacity:.14}45%{opacity:1;filter:drop-shadow(0 0 7px var(--gold))}100%{opacity:.14}}
+/* 縦持ち：下(P1)→上(P2) は上向き、逆は下向き */
+.warline .wl-flow{transform:rotate(-90deg)}
+.warline.flow1 .wl-flow{transform:rotate(90deg)}
+@media (orientation: landscape){
+  /* 横持ち：左(P1)→右(P2) は右向き、逆は左向き */
+  #app.land .warline .wl-flow{transform:none;flex-direction:column;gap:2px}
+  #app.land .warline.flow1 .wl-flow{transform:rotate(180deg)}
+  #app.land .warline .wl-flow i{transform:rotate(90deg)}
+}
+.acts.waiting{display:flex;align-items:center;justify-content:center;min-height:52px}
+.waitmsg{font-size:12.5px;font-weight:800;color:#7686a6;letter-spacing:.08em}
