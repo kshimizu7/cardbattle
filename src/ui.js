@@ -40,8 +40,10 @@
     var st = S.st;
     return (st && st.players[side] && st.players[side].name) || ('プレイヤー' + (side + 1));
   }
-  /* 卓上対面モードが実際に効いている状態か。ふたり対戦のときだけ意味を持つ */
-  function ttOn() { return S.tabletop && S.mode === 'pvp'; }
+  /* 卓上対面モードが効いているか。
+     本来はふたり対戦のためのものだが、ひとりでも見え方を確かめられるよう
+     CPU戦でも有効にしている。 */
+  function ttOn() { return !!S.tabletop; }
 
   function sideShort(side) {
     if (S.mode === 'cpu') return side === 0 ? '自陣' : '敵陣';
@@ -574,7 +576,16 @@
           '<div class="opt poolopt tgl' + (S.tabletop ? ' on' : '') + '" data-tgl="tabletop">' +
             '<span class="pn">⇅ 卓上対面モード <b>' + (S.tabletop ? 'ON' : 'OFF') + '</b></span>' +
             '<span class="pd">机に置いて<b>向かい合って遊ぶ</b>ための表示。' +
-              '相手側のカードと操作パネルが相手を向きます（ふたり対戦のみ）</span></div>' +
+              '相手側のカードと操作パネルが相手を向きます。' +
+              '<b>CPU戦でも見え方を確かめられます</b></span></div>' +
+          (S.tabletop
+            ? '<div class="opt poolopt tgl sub" data-tgl="ttStyleFlip">' +
+                '<span class="pn">↻ 相手側の回し方 <b>' +
+                  (S.ttStyle === 'text' ? '文字だけ' : 'カードごと') + '</b></span>' +
+                '<span class="pd">' + (S.ttStyle === 'text'
+                  ? 'キャラの絵は正立のまま、名前と数字だけ相手を向きます'
+                  : 'カードを丸ごと180°回します（本物のボードゲームと同じ見え方）') + '</span></div>'
+            : '') +
         '</div></div>' +
         '<button class="btn ghost" id="record" style="width:100%">📊 戦績・記録' +
           (SAVE.gameCount() ? '<span class="rcnt">' + SAVE.gameCount() + '戦</span>' : '') + '</button>' +
@@ -582,7 +593,12 @@
       '</div>';
     $$('[data-pool]').forEach(function (b) { b.onclick = function () { S.pool = b.dataset.pool; E.setPool(S.pool); rememberSettings(); renderTitle(); }; });
     $$('[data-deal]').forEach(function (b) { b.onclick = function () { S.deal = b.dataset.deal; E.setDealMode(S.deal); rememberSettings(); renderTitle(); }; });
-    $$('[data-tgl]').forEach(function (b) { b.onclick = function () { var k = b.dataset.tgl; S[k] = !S[k]; rememberSettings(); renderTitle(); }; });
+    $$('[data-tgl]').forEach(function (b) { b.onclick = function () {
+      var k = b.dataset.tgl;
+      if (k === 'ttStyleFlip') S.ttStyle = (S.ttStyle === 'text') ? 'card' : 'text';
+      else S[k] = !S[k];
+      rememberSettings(); renderTitle();
+    }; });
     $$('[data-mode]').forEach(function (b) { b.onclick = function () { S.mode = b.dataset.mode; rememberSettings(); renderTitle(); }; });
     $$('[data-diff]').forEach(function (b) { b.onclick = function () { S.diff = b.dataset.diff; rememberSettings(); renderTitle(); }; });
     $('#go').onclick = startGame;
@@ -1466,11 +1482,9 @@
           '<button class="dm" data-d="snd">' + (S.sound ? '♪ 音 ON' : '♪ 音 OFF') + '</button>' +
           '<button class="dm" data-d="spd">⏩ 速度 x' + S.speed + '</button>' +
           '<button class="dm wide' + (S.compact ? ' on' : '') + '" data-d="compact">📐 コンパクト表示　' + (S.compact ? 'ON' : 'OFF') + '</button>' +
-          (S.mode === 'pvp'
-            ? '<button class="dm wide' + (S.tabletop ? ' on' : '') + '" data-d="tabletop">⇅ 卓上対面モード　' + (S.tabletop ? 'ON' : 'OFF') + '</button>' +
-              (S.tabletop ? '<button class="dm wide" data-d="ttstyle">↻ 相手側の回し方　<b>' +
-                (S.ttStyle === 'text' ? '文字だけ回す' : 'カードごと回す') + '</b></button>' : '')
-            : '') +
+          '<button class="dm wide' + (S.tabletop ? ' on' : '') + '" data-d="tabletop">⇅ 卓上対面モード　' + (S.tabletop ? 'ON' : 'OFF') + '</button>' +
+          (S.tabletop ? '<button class="dm wide" data-d="ttstyle">↻ 相手側の回し方　<b>' +
+            (S.ttStyle === 'text' ? '文字だけ回す' : 'カードごと回す') + '</b></button>' : '') +
         '</div>' +
         '<button class="btn ghost" id="dmclose" style="width:100%;margin-top:12px">閉じる</button></div>';
       $$('[data-d]', m).forEach(function (b) {
