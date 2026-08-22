@@ -1439,10 +1439,8 @@
       '<div class="hpn">' + Math.max(0, u.hp) + '/' + u.maxHp + '</div></div>';
   }
 
-  function sideStats(side) {
-    var t = E.tally(S.st, side);
-    return '生存' + t.alive + '　HP計' + t.hpLeft + '　与ダメ' + t.dmg;
-  }
+  /* 陣営名の横の数字（生存・HP計・与ダメ）は、盤面を見れば分かるので出さない */
+  function sideStats(side) { return ''; }
 
   function renderBattle() {
     var st = S.st;
@@ -1499,6 +1497,10 @@
     app.classList.toggle('compact', !!S.compact);
     var land = isLandscape();
     app.classList.toggle('land', land);
+    /* いまどちらのプレイヤーが行動しているかを、陣営バー全体を光らせて示す */
+    var act = E.currentActor(st);
+    app.classList.toggle('turn0', !!act && act.side === 0);
+    app.classList.toggle('turn1', !!act && act.side === 1);
     var lp = landPanelPos();
     app.classList.toggle('lp-bottom', land && lp === 'bottom');
     app.classList.toggle('lp-side', land && lp === 'side');
@@ -1607,6 +1609,8 @@
     if (!u) { panel.innerHTML = '<div class="hint">ラウンド終了処理中…</div>'; return; }
 
     $$('.unit').forEach(function (e) { e.classList.toggle('acting', e.dataset.uid === u.uid); });
+    app.classList.toggle('turn0', u.side === 0);
+    app.classList.toggle('turn1', u.side === 1);
 
     if (S.busy) {
       panel.innerHTML = '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
@@ -1764,11 +1768,39 @@
       e.onclick = null;
     });
     $$('.pred,.tmark,.rmark,.rband').forEach(function (e) { e.remove(); });
+    var fld = $('.field'); if (fld) fld.classList.remove('banded');
     var old = document.getElementById('marklayer');
     if (old) old.innerHTML = '';
   }
 
   /** 盤面のマスに直接、範囲選択マーカーを置く */
+  /** 必中の対象をまとめて1つの枠で囲む（1体ずつ枠を出すより範囲が分かりやすい） */
+  function drawFixedBand(units, label, onTap, heal) {
+    var field = $('.field');
+    if (!field || !units.length) return;
+    var l = 1e9, t = 1e9, r = -1e9, b = -1e9, n = 0;
+    units.forEach(function (v) {
+      var el = $('[data-cell="' + v.side + '-' + v.row + '-' + v.col + '"]');
+      if (!el) return;
+      n++;
+      l = Math.min(l, el.offsetLeft); t = Math.min(t, el.offsetTop);
+      r = Math.max(r, el.offsetLeft + el.offsetWidth);
+      b = Math.max(b, el.offsetTop + el.offsetHeight);
+    });
+    if (n < 2) return;
+    field.classList.add('banded');
+    var pad = 4;
+    var band = document.createElement('button');
+    band.className = 'rband fixed' + (heal ? ' heal' : '');
+    band.style.left = (l - pad) + 'px';
+    band.style.top = (t - pad) + 'px';
+    band.style.width = (r - l + pad * 2) + 'px';
+    band.style.height = (b - t + pad * 2) + 'px';
+    band.innerHTML = '<span class="cn">' + label + 'に必中</span>';
+    band.onclick = function (ev) { ev.stopPropagation(); if (S.sound) SFX.play('select'); onTap(); };
+    field.appendChild(band);
+  }
+
   function drawRangeMarkers(u, cur, gi) {
     var st = S.st, foe = 1 - u.side;
     var field = $('.field');
@@ -1920,6 +1952,11 @@
       fixed.forEach(function (pr) {
         markUnit(pr[0], { mode: 'fixed', label: rnd ? 'ランダム' : '命中', val: estimate(pr[0], pr[1]), onTap: go });
       });
+      /* 2体以上に必ず当たるときは、1体ずつ枠を出さずに“ぶち抜き”で囲む */
+      if (fixed.length >= 2) {
+        drawFixedBand(fixed.map(function (pr) { return pr[0]; }),
+                      (rnd ? 'ランダム ' : '') + fixed.length + '体', go);
+      }
       return { mode: 'fixed', count: fixed.length, random: rnd, hits: a.hits || 1, go: go };
     }
     if (a.range === 'all_ally') {
@@ -1929,6 +1966,7 @@
         markUnit(v, { mode: 'fixed', heal: true, label: a.kind === 'heal' ? '回復' : '効果',
                       val: a.kind === 'heal' ? healAmt(v) : null, onTap: goA });
       });
+      if (al.length >= 2) drawFixedBand(al, '味方' + al.length + '体', goA, true);
       return { mode: 'fixed', count: al.length, heal: true, go: goA };
     }
     if (a.kind === 'guard') {
