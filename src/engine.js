@@ -237,7 +237,7 @@ var CB = (function () {
                    selfMod:function(u){ return {atk: Math.min(9, u.counters.charge||0)}; } },
     moonfury:    { name:'月狂い',   text:'ラウンドが進むごとに攻撃+1（最大+5）',
                    selfMod:function(u,st){ return {atk: Math.min(5, st.round)}; } },
-    blessing:    { name:'聖なる加護', text:'味方が受ける回復量+3', aura:function(){ return {healBonus:3}; } },
+    blessing:    { name:'聖なる加護', text:'味方が受ける回復量+2', aura:function(){ return {healBonus:2}; } },
     devotion:    { name:'献身',     text:'味方1体の致死ダメージを1度だけ肩代わりし、HP1で耐えさせる' },
     snipe:       { name:'狙撃',     text:'敵後衛を狙うとダメージ+3' },
     ambush:      { name:'不意打ち', text:'第1ラウンドの攻撃ダメージ+2' },
