@@ -313,18 +313,115 @@
       var p = E.PASSIVES[k];
       return '<div class="pabox"><div class="an">★ ' + p.name + '</div><div class="ad">' + p.text + '</div></div>';
     }).join('');
+    var ln = lineOf(d), L = LINES[ln];
     return '<div class="bigcard' + (d.base ? ' upper' : '') + '">' +
-      '<div class="art">' + ART.portrait(d.id, d.elem) +
-        (isFinite(E.costCap()) ? '<div class="cost">' + d.cost + '</div>' : '') + '</div>' +
-      '<div class="hd"><h3>' + d.name + '</h3><em>' + d.en + '</em>' +
-      (isFinite(E.costCap()) ? '<span class="badge" style="margin-left:auto">コスト ' + d.cost + '</span>' : '') + '</div>' +
-      lineageHTML(d) +
-      pipRow('体力 ' + d.hp, d.hpT, 7, '#7de8a4') +
-      pipRow(ai.label + ' ' + ai.val, ai.tier, 7,
-        ai.kind === 'heal' ? '#7de8a4' : ai.kind === 'mag' ? '#c98cff' : '#ffb36b') +
-      pipRow('素早 ' + d.spd, d.spd, 7, '#7fd0ff') +
-      acts + pas +
+      '<div class="dhead">' +
+        '<div class="art">' + ART.portrait(d.id, d.elem) +
+          (isFinite(E.costCap()) ? '<div class="cost">' + d.cost + '</div>' : '') + '</div>' +
+        '<div class="dmeta">' +
+          '<div class="hd"><h3>' + d.name + '</h3><em>' + d.en + '</em></div>' +
+          '<div class="chiprow">' +
+            '<button class="lnchip" data-line="' + ln + '" style="--lc:' + L.c + '">' +
+              '<i class="lg">' + ln + '</i>' + L.name + '</button>' +
+            tierStripHTML(d) +
+          '</div>' +
+          pipRow('体力 ' + d.hp, d.hpT, 7, '#7de8a4') +
+          pipRow(ai.label + ' ' + ai.val, ai.tier, 7,
+            ai.kind === 'heal' ? '#7de8a4' : ai.kind === 'mag' ? '#c98cff' : '#ffb36b') +
+          pipRow('素早 ' + d.spd, d.spd, 7, '#7fd0ff') +
+        '</div>' +
+      '</div>' +
+      '<div class="dbody">' + acts + pas + '</div>' +
       '<div class="flav">' + d.flavor + '</div></div>';
+  }
+
+  /** そのキャラが属する強化ライン（Tier1→Tier2→…）を、未実装のイメージ枠も含めて並べる */
+  function chainOf(d) {
+    var cur = E.BY_ID[d.id] || E.TEASER_BY_ID[d.id] || d, root = d.id, g = 0;
+    while (cur && cur.base && g++ < 6) {
+      var b = E.BY_ID[cur.base] || E.TEASER_BY_ID[cur.base];
+      if (!b) break;
+      root = cur.base; cur = b;
+    }
+    var out = [], id = root; g = 0;
+    while (id && g++ < 6) {
+      var x = E.BY_ID[id] || E.TEASER_BY_ID[id];
+      if (!x) break;
+      out.push({ id: id, name: x.name, teaser: !E.BY_ID[id] });
+      id = x.up;
+    }
+    return out;
+  }
+
+  /** □□■ 形式の段階表示。強化ラインが1段だけなら ■ 1/1 と出す */
+  function tierStripHTML(d) {
+    var ch = chainOf(d);
+    if (!ch.length) return '';
+    var here = 0;
+    ch.forEach(function (x, i) { if (x.id === d.id) here = i; });
+    var pips = ch.map(function (x, i) {
+      return '<i class="tp' + (i === here ? ' on' : '') + (x.teaser ? ' soon' : '') + '"></i>';
+    }).join('');
+    return '<button class="tiers" data-tiers="' + d.id + '">' + pips +
+      '<b>' + (here + 1) + '/' + ch.length + '</b></button>';
+  }
+
+  /** 系統の説明ポップアップ（詳細画面の「人系」タップで開く） */
+  function openLinePop(ln) {
+    var L = LINES[ln]; if (!L) return;
+    var m = document.createElement('div');
+    m.className = 'modal minipop';
+    m.innerHTML = '<div class="box popbox" style="--lc:' + L.c + '">' +
+      '<div class="pophd"><i class="lg">' + ln + '</i><b>' + L.name + '</b></div>' +
+      '<p class="poptx">' + L.rule + '</p>' +
+      '<button class="btn ghost" data-pc="1">閉じる</button></div>';
+    bindPop(m);
+  }
+
+  /** 段階（Tier）の内訳ポップアップ */
+  function openTierPop(id) {
+    var d = E.BY_ID[id] || E.TEASER_BY_ID[id]; if (!d) return;
+    var ch = chainOf(d), L = LINES[lineOf(d)];
+    var m = document.createElement('div');
+    m.className = 'modal minipop';
+    m.innerHTML = '<div class="box popbox" style="--lc:' + L.c + '">' +
+      '<div class="pophd"><i class="lg">段</i><b>強化の段階</b></div>' +
+      '<div class="tlist">' + ch.map(function (x, i) {
+        return '<div class="tli' + (x.id === id ? ' me' : '') + (x.teaser ? ' soon' : '') + '">' +
+          '<i class="tp' + (x.id === id ? ' on' : '') + (x.teaser ? ' soon' : '') + '"></i>' +
+          '<b>' + x.name + '</b><span>' + (x.teaser ? '近日' : 'Tier ' + (i + 1)) + '</span></div>';
+      }).join('') + '</div>' +
+      '<p class="poptx">下にいくほど強力です。点線の枠は<b>まだ実装されていません</b>。</p>' +
+      '<button class="btn ghost" data-pc="1">閉じる</button></div>';
+    bindPop(m);
+  }
+
+  function bindPop(m) {
+    $('[data-pc]', m).onclick = function (ev) { ev.stopPropagation(); m.remove(); };
+    m.onclick = function (ev) { if (ev.target === m) m.remove(); };
+    document.body.appendChild(m);
+  }
+
+  /** 詳細画面内の「系統チップ」「段階チップ」にタップ動作をつける */
+  function bindDetailChips(root) {
+    $$('[data-line]', root).forEach(function (b) {
+      b.onclick = function (ev) { ev.stopPropagation(); openLinePop(b.dataset.line); };
+    });
+    $$('[data-tiers]', root).forEach(function (b) {
+      b.onclick = function (ev) { ev.stopPropagation(); openTierPop(b.dataset.tiers); };
+    });
+  }
+
+  /** 画面を広く使う。ブラウザのURL欄などを隠す（利用者のタップ内でのみ有効） */
+  function tryFullscreen() {
+    try {
+      var el = document.documentElement;
+      var req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
+        var r = req.call(el);
+        if (r && r.catch) r.catch(function () {});
+      }
+    } catch (e) {}
   }
 
   /** カード詳細に出す「系統」と「ノーマル⇄上位互換」の帯 */
@@ -370,8 +467,10 @@
         };
       });
       var cb = $('#dclose', m); if (cb) cb.onclick = function () { m.remove(); };
+      bindDetailChips(m);
     }
     draw();
+    tryFullscreen();
     m.onclick = function (ev) { if (ev.target === m) m.remove(); };
     // 左右スワイプでも切り替え
     var sx = null;
@@ -418,11 +517,13 @@
       '<div class="lvhd"><b>' + sideName(u.side) + '</b>' +
         (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
         (u.alive ? '' : '<span style="color:var(--bad)">　戦闘不能</span>') + '</div>' +
-      '<div class="lvrow"><span>現在HP</span><b>' + Math.max(0, u.hp) + ' / ' + u.maxHp + '</b></div>' +
-      '<div class="lvrow"><span>いまの' + pwv.labelJP + '</span><b>' + pwv.val +
-        (pwv.dir !== 0 ? '<i>（基本' + pwv.base + '）</i>' : '') + '</b></div>' +
-      '<div class="lvrow"><span>いまの素早さ</span><b>' + spd +
-        (spd !== d.spd ? '<i>（基本' + d.spd + '）</i>' : '') + '</b></div>' +
+      '<div class="lvstats">' +
+        '<span><i>HP</i><b>' + Math.max(0, u.hp) + '<u>/' + u.maxHp + '</u></b></span>' +
+        '<span><i>' + pwv.labelJP + '</i><b>' + pwv.val +
+          (pwv.dir !== 0 ? '<u>(基本' + pwv.base + ')</u>' : '') + '</b></span>' +
+        '<span><i>素早</i><b>' + spd +
+          (spd !== d.spd ? '<u>(基本' + d.spd + ')</u>' : '') + '</b></span>' +
+      '</div>' +
       (mods.length ? '<div class="lvtags">' + mods.map(function (t) { return '<span class="lvt good">' + t + '</span>'; }).join('') + '</div>' : '') +
       (sts.length ? '<div class="lvtags">' + sts.map(function (t) { return '<span class="lvt bad">' + t + '</span>'; }).join('') + '</div>' : '') +
       (cds.length ? '<div class="lvtags">' + cds.map(function (t) { return '<span class="lvt cd">' + t + '</span>'; }).join('') + '</div>' : '') +
@@ -469,6 +570,7 @@
         };
       });
       $('#uclose', m).onclick = function () { m.remove(); };
+      bindDetailChips(m);
     }
     draw();
     m.onclick = function (ev) { if (ev.target === m) m.remove(); };

@@ -1656,3 +1656,128 @@ body.shake{animation:shk2 .56s}
 }
 .btn.on-gold{border-color:var(--gold);color:var(--gold);box-shadow:0 0 10px rgba(242,198,92,.3)}
 .actor-line .stopauto{border-color:#a8455f;color:#ffb9c5}
+
+/* =========================================================
+   v36 — キャラ詳細をスマホ縦1画面に収める
+   ・コスト表示は絵の左上の丸（③）だけに一本化
+   ・その場所に「系統」チップ／「段階」チップを置き、タップで説明を出す
+   ・系統のルール文（毎回は読まない）を常設せず、ポップアップへ移動
+   ========================================================= */
+
+/* URL欄が出ている状態（小さい方のビューポート）でも必ず収まる高さに */
+.modal .box{max-height:88svh}
+.detailbox{padding-top:8px}
+
+/* 上段：キャラ絵（左）と 名前・系統・能力ピップ（右）を横並びにして高さを詰める */
+.dhead{display:flex;gap:9px;align-items:flex-start}
+.dhead .art{flex:0 0 51%;border-radius:12px 0 10px 0;overflow:hidden}
+.dhead .dmeta{flex:1 1 auto;min-width:0;padding:7px 9px 6px 0;display:flex;flex-direction:column;gap:4px}
+.dhead .dmeta .hd{padding:0;display:block}
+.dhead .dmeta .hd h3{font-size:16px;line-height:1.2;overflow-wrap:anywhere}
+.dhead .dmeta .hd em{display:block;font-size:11px;line-height:1.2;letter-spacing:.05em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dhead .dmeta .strow{padding:0;gap:6px}
+.dhead .dmeta .strow .lb{width:auto;flex:1 1 auto;font-size:10.5px;white-space:nowrap}
+.chiprow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:1px 0 3px}
+.dbody{padding-top:2px}
+.lnchip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px 2px 3px;border-radius:999px;
+  background:rgba(4,7,14,.7);border:1px solid var(--lc);color:var(--lc);
+  font-size:11px;font-weight:900;letter-spacing:.04em;cursor:pointer;font-family:inherit}
+.lnchip .lg{width:17px;height:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:900;font-style:normal;color:#0a0d16;background:var(--lc)}
+.lnchip::after{content:"?";font-size:9px;opacity:.65;margin-left:1px}
+
+/* □□■ の段階表示 */
+.tiers{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:999px;
+  background:rgba(4,7,14,.7);border:1px solid #3c4762;cursor:pointer;font-family:inherit}
+.tiers b{font-size:10px;font-weight:900;color:#9fb0d0;margin-left:2px}
+.tp{width:9px;height:9px;border-radius:2px;border:1.5px solid #56628a;background:transparent;
+  display:inline-block;font-style:normal;flex:0 0 auto}
+.tp.on{background:var(--gold);border-color:var(--gold);box-shadow:0 0 6px rgba(242,198,92,.7)}
+.tp.soon{border-style:dashed;border-color:#4a5a80;
+  background:repeating-linear-gradient(45deg,#2b3550 0 2px,transparent 2px 4px)}
+
+/* 特殊能力の説明を通常技と同じ小ささに（縦を詰める） */
+.pabox .an{font-weight:900;font-size:12px;display:flex;gap:6px;align-items:center}
+.pabox .ad{font-size:10.5px;color:var(--dim);margin-top:2px;line-height:1.45}
+
+/* 小さな説明ポップアップ（系統／段階） */
+.modal.minipop{z-index:95;padding:22px}
+.modal.minipop .box{max-width:320px}
+.popbox .pophd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.popbox .pophd .lg{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;
+  justify-content:center;font-size:13px;font-weight:900;font-style:normal;color:#0a0d16;background:var(--lc)}
+.popbox .pophd b{font-size:14.5px;color:var(--lc);letter-spacing:.06em}
+.popbox .poptx{font-size:12px;color:#a8b6d4;line-height:1.65;margin-bottom:12px}
+.popbox .poptx b{color:#dbe4f5}
+.popbox .btn{width:100%}
+.tlist{margin-bottom:10px}
+.tli{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;
+  border:1px solid #263049;background:#0f1424;margin-bottom:4px}
+.tli b{font-size:12.5px;font-weight:800;flex:1}
+.tli span{font-size:10.5px;color:var(--dim);font-weight:800}
+.tli.me{border-color:var(--gold2);background:rgba(242,198,92,.09)}
+.tli.me b{color:#ffeec2}
+.tli.soon{border-style:dashed;opacity:.72}
+
+/* 横持ちのときは 左＝絵と能力／右＝技 の2段組にして、縦の高さを使い切らない */
+@media (orientation: landscape) {
+  /* 箱の高さを縦に配り、あふれる分は「技」の欄だけが受け持つ（ボタンは必ず見える） */
+  .modal .box.detailbox{max-width:min(94vw,680px);display:flex;flex-direction:column;overflow:hidden}
+  .detailbox > .livebox,.detailbox > .navrow,.detailbox > .btn{flex:0 0 auto}
+  .detailbox > .bigcard{flex:1 1 auto;min-height:0;overflow:hidden}
+  .detailbox .bigcard{display:grid;grid-template-columns:minmax(0,44%) minmax(0,1fr);
+    grid-template-rows:auto 1fr;grid-template-areas:"head body" "flav body";align-items:start}
+  .detailbox .dhead{grid-area:head;border-right:1px solid #263049;padding-bottom:4px}
+  .detailbox > .bigcard > .flav{grid-area:flav;border-right:1px solid #263049;
+    margin:0;padding:0 10px 10px}
+  .detailbox .dhead .art{border-radius:12px 0 10px 0}
+  /* 上下に同じ送りボタンが2つ出るので、横持ちでは上側を省いて高さを稼ぐ */
+  .detailbox > .navrow:not(.big){display:none}
+  .detailbox .dbody{grid-area:body;padding:6px 0;overflow-y:auto;min-height:0;
+    -webkit-overflow-scrolling:touch;
+    mask-image:linear-gradient(#000 calc(100% - 16px),transparent);
+    -webkit-mask-image:linear-gradient(#000 calc(100% - 16px),transparent)}
+  .detailbox .dbody .abox,.detailbox .dbody .pabox{margin:5px 9px}
+}
+
+/* 画面の短い縦持ち（iPhone SE / 小型Android）では、余白と絵をもう一段詰める */
+@media (orientation: portrait) and (max-height: 730px) {
+  .dhead .art{flex:0 0 46%}
+  .detailbox .abox,.detailbox .pabox{margin:4px 8px;padding:6px 8px}
+  .detailbox .abox .ad,.detailbox .pabox .ad{line-height:1.4}
+  .detailbox .flav{margin:6px 8px 7px;line-height:1.45}
+  .detailbox .navrow.big{margin-top:7px}
+  .detailbox .dhead .dmeta{padding-top:5px;gap:3px}
+}
+
+/* さらに背の低い端末（360×640 など）向けの最終段 */
+@media (orientation: portrait) and (max-height: 660px) {
+  .dhead .art{flex:0 0 41%}
+  .dhead .dmeta .hd h3{font-size:15px}
+  .detailbox .abox,.detailbox .pabox{margin:3px 8px;padding:5px 8px}
+  .detailbox .abox .an,.detailbox .pabox .an{font-size:11.5px}
+  .detailbox .abox .ad,.detailbox .pabox .ad{font-size:10px;line-height:1.38}
+  .detailbox .flav{font-size:10px;margin:5px 8px 6px;line-height:1.4}
+}
+
+/* 戦闘中の詳細：HP／攻撃（魔力・回復量）／素早さ を1行にまとめて高さを詰める */
+.lvstats{display:flex;gap:6px;margin:2px 0 4px}
+.lvstats span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;
+  gap:1px;padding:4px 4px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid #232d45}
+.lvstats i{font-style:normal;font-size:9.5px;font-weight:800;color:var(--dim);letter-spacing:.04em}
+.lvstats b{font-size:15px;font-weight:900;color:#fff;line-height:1.1;white-space:nowrap}
+.lvstats u{text-decoration:none;font-size:9.5px;color:var(--dim);font-weight:700;margin-left:1px}
+
+/* 横持ちで「戦闘中のキャラ詳細」を開いたときは、上に現在値の欄が乗るぶんさらに詰める */
+@media (orientation: landscape) {
+  .detailbox .livebox{margin-bottom:6px;padding:6px 9px}
+  .detailbox .livebox .lvhd{margin-bottom:3px}
+  .detailbox .livebox .lvstats span{padding:2px 4px}
+  .detailbox .livebox ~ .bigcard .dhead .art{flex:0 0 38%}
+  .detailbox .livebox ~ .bigcard > .flav{display:none}
+  .detailbox .livebox ~ .bigcard .dhead{padding-bottom:8px}
+  /* 上の欄に現在値（基本値つき）が出ているので、素の能力ピップは省く */
+  .detailbox .livebox ~ .bigcard .dmeta .strow{display:none}
+
+}
