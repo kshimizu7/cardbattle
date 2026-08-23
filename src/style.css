@@ -1646,3 +1646,4 @@ body.shake{animation:shk2 .56s}
   #app.land .act small{font-size:12.5px}
   #app.land .panelbar .t{font-size:18px}
 }
+.btn.on-gold{border-color:var(--gold);color:var(--gold);box-shadow:0 0 10px rgba(242,198,92,.3)}

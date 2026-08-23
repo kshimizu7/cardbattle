@@ -483,7 +483,11 @@ var CB = (function () {
   function setAdvanceMode(m) { advanceMode = (m === 'death') ? 'death' : 'turn'; }
   function getAdvanceMode() { return advanceMode; }
 
-  /** 前衛が空いたマスへ、真下の後衛を繰り上げる（倒れた瞬間に呼ぶ） */
+  /** 前衛が空いたマスへ、真下の後衛を繰り上げる（倒れた瞬間に呼ぶ）。
+      盤面の状態はその場で書き換えるが、前進の「演出」はすぐには流さない。
+      複数体に当たる技の途中で挟まると、2体目・3体目へのダメージ表示が
+      前進アニメ（約0.8秒）のたびに止まって見えるため、
+      技の演出がすべて終わってから flushMoves でまとめて流す。 */
   function pullUp(st, side, col) {
     if (unitAt(st, side, 0, col)) return null;         // まだ埋まっている
     var back = unitAt(st, side, 1, col);
@@ -494,9 +498,20 @@ var CB = (function () {
     var corpse = occupantAt(st, side, 0, col);
     back.row = 0;
     if (corpse && corpse !== back) corpse.row = 1;
-    push(st, { type: 'move', uid: back.uid, row: 0, col: col, fromRow: 1, fromCol: col });
-    logMsg(st, back.def.name + ' が前線へ進み出た！');
+    st._mvq = st._mvq || [];
+    st._mvq.push({ type: 'move', uid: back.uid, row: 0, col: col, fromRow: 1, fromCol: col,
+                   name: back.def.name });
     return back;
+  }
+
+  /** 溜めておいた前進の演出を流す。技の締め・ラウンド処理の締めで必ず呼ぶ */
+  function flushMoves(st) {
+    if (!st._mvq || !st._mvq.length) return;
+    st._mvq.forEach(function (ev) {
+      push(st, ev);
+      logMsg(st, ev.name + ' が前線へ進み出た！');
+    });
+    st._mvq = [];
   }
 
   /** 近接ユニットが行動可能か。必要なら前進する */
@@ -510,6 +525,7 @@ var CB = (function () {
         u.row = 0;
         if (corpse2 && corpse2 !== u) corpse2.row = 1;
         push(st, { type: 'move', uid: u.uid, row: 0, col: u.col, fromRow: 1, fromCol: u.col });
+        /* こちらは自分の手番での前進（単独イベント）なので、その場で流してよい */
         logMsg(st, u.def.name + ' が前線へ進み出た！');
       }
       return true;
@@ -911,6 +927,7 @@ var CB = (function () {
   }
 
   function finishAction(st, u, a) {
+    flushMoves(st);
     if (a.cd) u.cd[a.key] = a.cd;
     if (a.uses != null) u.uses[a.key] = (u.uses[a.key] || 0) - 1;
     checkEnd(st);
@@ -981,6 +998,8 @@ var CB = (function () {
         }
       });
     });
+    // 継続ダメージで倒れた分の前進を、ここでまとめて流す
+    flushMoves(st);
     // ステータス経過
     allUnits(st).forEach(function (u) {
       u.statuses = u.statuses.filter(function (s) { s.rounds--; return s.rounds > 0; });

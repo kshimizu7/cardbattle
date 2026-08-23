@@ -1579,8 +1579,10 @@
     return '<div class="om-hd">行動順' +
         '<span class="autobtns">' +
           '<button class="autob" data-auto="one" title="このターンだけAIに任せる">⚡<b>1回</b></button>' +
-          '<button class="autob' + (S.autoPlay ? ' on' : '') + '" data-auto="all"' +
-            ' title="自分の行動をすべてAIに任せる">🤖<b>' + (S.autoPlay ? 'ON' : '全部') + '</b></button>' +
+          (S.mode === 'cpu'
+            ? '<button class="autob' + (S.autoPlay ? ' on' : '') + '" data-auto="all"' +
+                ' title="自分の行動をすべてAIに任せる">🤖<b>' + (S.autoPlay ? 'ON' : '全部') + '</b></button>'
+            : '') +
         '</span></div>' +
       '<div class="om-list">' + st.order.map(function (uid, i) {
         var v = E.findUid(st, uid);
@@ -1688,7 +1690,11 @@
       '<div class="who">' + u.def.name + '<small>' + (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
       '　HP ' + u.hp + '/' + u.maxHp + '　⚡' + E.getSpd(u, st) + '</small></div>' +
       '<button class="btn small ghost" id="info">詳細</button>' +
-      '<button class="btn small ghost" id="auto">おまかせ</button></div>' +
+      '<button class="btn small ghost" id="auto" data-auto="one" title="このターンだけAIに任せる">⚡1回</button>' +
+      (S.mode === 'cpu'
+        ? '<button class="btn small ghost' + (S.autoPlay ? ' on-gold' : '') + '" data-auto="all"' +
+            ' title="自分の行動をすべてAIに任せる">🤖全部</button>'
+        : '') + '</div>' +
       '<div class="acts">' + btns + '</div>' +
       '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>', st);
     bindBattleBar();
@@ -2517,7 +2523,8 @@
         floatTag(el, '前線へ！', mu.side);
         if (S.sound) SFX.play('guard');
         setTimeout(function () { el.classList.remove('advancing'); }, 900 / spd());
-        return 820;
+        /* 次も前進なら、待たずにほぼ同時に動かす（縦横同時の前進で間延びさせない） */
+        return (rest && rest[0] && rest[0].type === 'move') ? 150 : 820;
       }
 
       case 'attack': {

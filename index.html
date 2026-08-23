@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="32">
+<meta name="app-version" content="33">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -1658,6 +1658,7 @@ body.shake{animation:shk2 .56s}
   #app.land .act small{font-size:12.5px}
   #app.land .panelbar .t{font-size:18px}
 }
+.btn.on-gold{border-color:var(--gold);color:var(--gold);box-shadow:0 0 10px rgba(242,198,92,.3)}
 
 </style>
 </head>
@@ -2151,7 +2152,11 @@ var CB = (function () {
   function setAdvanceMode(m) { advanceMode = (m === 'death') ? 'death' : 'turn'; }
   function getAdvanceMode() { return advanceMode; }
 
-  /** 前衛が空いたマスへ、真下の後衛を繰り上げる（倒れた瞬間に呼ぶ） */
+  /** 前衛が空いたマスへ、真下の後衛を繰り上げる（倒れた瞬間に呼ぶ）。
+      盤面の状態はその場で書き換えるが、前進の「演出」はすぐには流さない。
+      複数体に当たる技の途中で挟まると、2体目・3体目へのダメージ表示が
+      前進アニメ（約0.8秒）のたびに止まって見えるため、
+      技の演出がすべて終わってから flushMoves でまとめて流す。 */
   function pullUp(st, side, col) {
     if (unitAt(st, side, 0, col)) return null;         // まだ埋まっている
     var back = unitAt(st, side, 1, col);
@@ -2162,9 +2167,20 @@ var CB = (function () {
     var corpse = occupantAt(st, side, 0, col);
     back.row = 0;
     if (corpse && corpse !== back) corpse.row = 1;
-    push(st, { type: 'move', uid: back.uid, row: 0, col: col, fromRow: 1, fromCol: col });
-    logMsg(st, back.def.name + ' が前線へ進み出た！');
+    st._mvq = st._mvq || [];
+    st._mvq.push({ type: 'move', uid: back.uid, row: 0, col: col, fromRow: 1, fromCol: col,
+                   name: back.def.name });
     return back;
+  }
+
+  /** 溜めておいた前進の演出を流す。技の締め・ラウンド処理の締めで必ず呼ぶ */
+  function flushMoves(st) {
+    if (!st._mvq || !st._mvq.length) return;
+    st._mvq.forEach(function (ev) {
+      push(st, ev);
+      logMsg(st, ev.name + ' が前線へ進み出た！');
+    });
+    st._mvq = [];
   }
 
   /** 近接ユニットが行動可能か。必要なら前進する */
@@ -2178,6 +2194,7 @@ var CB = (function () {
         u.row = 0;
         if (corpse2 && corpse2 !== u) corpse2.row = 1;
         push(st, { type: 'move', uid: u.uid, row: 0, col: u.col, fromRow: 1, fromCol: u.col });
+        /* こちらは自分の手番での前進（単独イベント）なので、その場で流してよい */
         logMsg(st, u.def.name + ' が前線へ進み出た！');
       }
       return true;
@@ -2579,6 +2596,7 @@ var CB = (function () {
   }
 
   function finishAction(st, u, a) {
+    flushMoves(st);
     if (a.cd) u.cd[a.key] = a.cd;
     if (a.uses != null) u.uses[a.key] = (u.uses[a.key] || 0) - 1;
     checkEnd(st);
@@ -2649,6 +2667,8 @@ var CB = (function () {
         }
       });
     });
+    // 継続ダメージで倒れた分の前進を、ここでまとめて流す
+    flushMoves(st);
     // ステータス経過
     allUnits(st).forEach(function (u) {
       u.statuses = u.statuses.filter(function (s) { s.rounds--; return s.rounds > 0; });
@@ -6603,8 +6623,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     return '<div class="om-hd">行動順' +
         '<span class="autobtns">' +
           '<button class="autob" data-auto="one" title="このターンだけAIに任せる">⚡<b>1回</b></button>' +
-          '<button class="autob' + (S.autoPlay ? ' on' : '') + '" data-auto="all"' +
-            ' title="自分の行動をすべてAIに任せる">🤖<b>' + (S.autoPlay ? 'ON' : '全部') + '</b></button>' +
+          (S.mode === 'cpu'
+            ? '<button class="autob' + (S.autoPlay ? ' on' : '') + '" data-auto="all"' +
+                ' title="自分の行動をすべてAIに任せる">🤖<b>' + (S.autoPlay ? 'ON' : '全部') + '</b></button>'
+            : '') +
         '</span></div>' +
       '<div class="om-list">' + st.order.map(function (uid, i) {
         var v = E.findUid(st, uid);
@@ -6712,7 +6734,11 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       '<div class="who">' + u.def.name + '<small>' + (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
       '　HP ' + u.hp + '/' + u.maxHp + '　⚡' + E.getSpd(u, st) + '</small></div>' +
       '<button class="btn small ghost" id="info">詳細</button>' +
-      '<button class="btn small ghost" id="auto">おまかせ</button></div>' +
+      '<button class="btn small ghost" id="auto" data-auto="one" title="このターンだけAIに任せる">⚡1回</button>' +
+      (S.mode === 'cpu'
+        ? '<button class="btn small ghost' + (S.autoPlay ? ' on-gold' : '') + '" data-auto="all"' +
+            ' title="自分の行動をすべてAIに任せる">🤖全部</button>'
+        : '') + '</div>' +
       '<div class="acts">' + btns + '</div>' +
       '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>', st);
     bindBattleBar();
@@ -7541,7 +7567,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
         floatTag(el, '前線へ！', mu.side);
         if (S.sound) SFX.play('guard');
         setTimeout(function () { el.classList.remove('advancing'); }, 900 / spd());
-        return 820;
+        /* 次も前進なら、待たずにほぼ同時に動かす（縦横同時の前進で間延びさせない） */
+        return (rest && rest[0] && rest[0].type === 'move') ? 150 : 820;
       }
 
       case 'attack': {
