@@ -1647,3 +1647,4 @@ body.shake{animation:shk2 .56s}
   #app.land .panelbar .t{font-size:18px}
 }
 .btn.on-gold{border-color:var(--gold);color:var(--gold);box-shadow:0 0 10px rgba(242,198,92,.3)}
+.actor-line .stopauto{border-color:#a8455f;color:#ffb9c5}

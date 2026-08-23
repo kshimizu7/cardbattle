@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="33">
+<meta name="app-version" content="34">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -1659,6 +1659,7 @@ body.shake{animation:shk2 .56s}
   #app.land .panelbar .t{font-size:18px}
 }
 .btn.on-gold{border-color:var(--gold);color:var(--gold);box-shadow:0 0 10px rgba(242,198,92,.3)}
+.actor-line .stopauto{border-color:#a8455f;color:#ffb9c5}
 
 </style>
 </head>
@@ -5063,7 +5064,9 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     seenIds: [],
     st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
-    compact: false, sideBySide: false, hintSeen: false, autoPlay: false
+    compact: false, sideBySide: false, hintSeen: false,
+    /* 全自動は陣営ごとに持つ。PvPでは P1だけ・P2だけ・両方(観戦) を選べる */
+    autoSides: [false, false]
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
@@ -5100,7 +5103,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       SAVE.setSettings({ sound: S.sound, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
                          compact: S.compact, sideBySide: S.sideBySide,
-                         hintSeen: S.hintSeen, autoPlay: S.autoPlay });
+                         hintSeen: S.hintSeen });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -5115,7 +5118,6 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       if (typeof g.compact === 'boolean') S.compact = g.compact;
       if (typeof g.sideBySide === 'boolean') S.sideBySide = g.sideBySide;
       if (typeof g.hintSeen === 'boolean') S.hintSeen = g.hintSeen;
-      if (typeof g.autoPlay === 'boolean') S.autoPlay = g.autoPlay;
     } catch (e) {}
   }
 
@@ -6420,7 +6422,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
      ========================================================= */
   function beginBattle() {
     S._saved = false;
-    S.autoPlay = false;
+    S.autoSides = [false, false];
     S.st = E.createState(S.teams[0], S.teams[1], {
       nameA: 'プレイヤー1', nameB: S.mode === 'cpu' ? 'CPU' : 'プレイヤー2'
     });
@@ -6623,10 +6625,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     return '<div class="om-hd">行動順' +
         '<span class="autobtns">' +
           '<button class="autob" data-auto="one" title="このターンだけAIに任せる">⚡<b>1回</b></button>' +
-          (S.mode === 'cpu'
-            ? '<button class="autob' + (S.autoPlay ? ' on' : '') + '" data-auto="all"' +
-                ' title="自分の行動をすべてAIに任せる">🤖<b>' + (S.autoPlay ? 'ON' : '全部') + '</b></button>'
-            : '') +
+          autoAllBtnHTML(cur ? cur.side : 0, 'autob') +
         '</span></div>' +
       '<div class="om-list">' + st.order.map(function (uid, i) {
         var v = E.findUid(st, uid);
@@ -6654,16 +6653,34 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     } catch (e) { toast('全画面にできませんでした'); }
   }
 
-  /** 行動順の見出しにある「おまかせ」2種を結線する。
-      待機中は押しても何も起きないが、ボタン自体は残して画面のガタつきを防ぐ。 */
+  /** 「🤖全部」ボタン。押した時点の手番プレイヤーの陣営に効く。
+      CPU戦では自軍のみ。PvPでは P1の番に押せばP1が、P2の番に押せばP2が自動になる。
+      両方ONにすれば観戦モード。 */
+  function autoAllBtnHTML(side, cls) {
+    var on = S.autoSides[side];
+    var who = S.mode === 'pvp' ? 'P' + (side + 1) : '';
+    return '<button class="' + cls + (on ? (cls.indexOf('autob') === 0 ? ' on' : ' on-gold') : '') + '"' +
+      ' data-auto="all" data-side="' + side + '"' +
+      ' title="' + (S.mode === 'pvp' ? 'プレイヤー' + (side + 1) : '自分') + 'の行動をすべてAIに任せる">' +
+      '🤖' + (cls.indexOf('autob') === 0 ? '<b>' + who + (on ? 'ON' : '全部') + '</b>' : who + '全部') + '</button>';
+  }
+
+  /** おまかせ2種の結線。待機中も押せる（自動の解除ができるように）。 */
   function bindAutoBtns(autoOnce) {
     $$('[data-auto]').forEach(function (b) {
       b.onclick = function () {
-        if (b.dataset.auto === 'one') { if (autoOnce) autoOnce(); return; }
-        S.autoPlay = !S.autoPlay;
-        rememberSettings();
-        if (S.autoPlay) { toast('自分の行動をすべてAIに任せます'); if (autoOnce) autoOnce(); else renderActions(); }
-        else { toast('自分で選ぶモードに戻しました'); renderActions(); }
+        var k = b.dataset.auto;
+        if (k === 'one') { if (autoOnce) autoOnce(); return; }
+        if (k === 'stopall') {
+          S.autoSides = [false, false];
+          toast('自動を停止しました。自分で選んでください');
+          renderActions(); return;
+        }
+        var sd = +(b.dataset.side || 0);
+        S.autoSides[sd] = !S.autoSides[sd];
+        var who = S.mode === 'pvp' ? 'プレイヤー' + (sd + 1) : '自分';
+        if (S.autoSides[sd]) { toast(who + 'の行動をすべてAIに任せます'); if (autoOnce) autoOnce(); else renderActions(); }
+        else { toast(who + 'は自分で選ぶモードに戻りました'); renderActions(); }
       };
     });
   }
@@ -6678,8 +6695,10 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
              '<div class="ordmini" id="ordmini">' + orderMiniHTML(st2) + '</div>';
     }
     function waitLine(v, msg) {
+      var stop = (S.autoSides[0] || S.autoSides[1])
+        ? '<button class="btn small ghost stopauto" data-auto="stopall">■ 自動を停止</button>' : '';
       return '<div class="actor-line"><div class="mini">' + ART.portrait(v.defId, v.def.elem) + '</div>' +
-        '<div class="who">' + v.def.name + '<small>' + msg + '</small></div></div>' +
+        '<div class="who">' + v.def.name + '<small>' + msg + '</small></div>' + stop + '</div>' +
         '<div class="acts waiting"><div class="waitmsg">' + msg + '</div></div>';
     }
     if (st.phase === 'ended') { panel.innerHTML = ''; return; }
@@ -6735,10 +6754,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       '　HP ' + u.hp + '/' + u.maxHp + '　⚡' + E.getSpd(u, st) + '</small></div>' +
       '<button class="btn small ghost" id="info">詳細</button>' +
       '<button class="btn small ghost" id="auto" data-auto="one" title="このターンだけAIに任せる">⚡1回</button>' +
-      (S.mode === 'cpu'
-        ? '<button class="btn small ghost' + (S.autoPlay ? ' on-gold' : '') + '" data-auto="all"' +
-            ' title="自分の行動をすべてAIに任せる">🤖全部</button>'
-        : '') + '</div>' +
+      autoAllBtnHTML(u.side, 'btn small ghost') + '</div>' +
       '<div class="acts">' + btns + '</div>' +
       '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>', st);
     bindBattleBar();
@@ -6769,7 +6785,9 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     if ($('#auto')) $('#auto').onclick = autoOnce;
     bindAutoBtns(autoOnce);
     /* 全自動がONなら、そのまま代わりに動く */
-    if (S.autoPlay && !S.busy) { setTimeout(function () { if (S.autoPlay && !S.busy) autoOnce(); }, 420 / spd()); }
+    if (S.autoSides[u.side] && !S.busy) {
+      setTimeout(function () { if (S.autoSides[u.side] && !S.busy) autoOnce(); }, 420 / spd());
+    }
     // 範囲攻撃は既定でダメージ合計が大きい方を選んでおく
     var gkey = u.uid + ':' + S.selAct;
     if (cur && (cur.action.range === 'square' || cur.action.range === 'row') && cur.targets.length) {
