@@ -1,0 +1,335 @@
+<title>広告を買ってブーストできるか</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --paper:#fdfdfc; --card:#ffffff; --ink:#14181f; --ink-2:#39424f; --muted:#6b7482;
+  --rule:#e3e6ea; --rule-2:#eef0f3;
+  --gold:#8f6412; --gold-soft:#f5edda;
+  --green:#1c6647; --green-soft:#e6f1ec;
+  --rust:#9d3f24; --rust-soft:#f7eae5;
+  --shadow:0 1px 2px rgba(20,24,31,.05),0 8px 24px rgba(20,24,31,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1218; --card:#161b23; --ink:#e7eaef; --ink-2:#c2c9d4; --muted:#8d97a5;
+    --rule:#28303b; --rule-2:#1e2530;
+    --gold:#e0b055; --gold-soft:#2a2213;
+    --green:#6fd3a4; --green-soft:#12271e;
+    --rust:#e8927a; --rust-soft:#2a1710;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f1218; --card:#161b23; --ink:#e7eaef; --ink-2:#c2c9d4; --muted:#8d97a5;
+  --rule:#28303b; --rule-2:#1e2530;
+  --gold:#e0b055; --gold-soft:#2a2213;
+  --green:#6fd3a4; --green-soft:#12271e;
+  --rust:#e8927a; --rust-soft:#2a1710;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper); color:var(--ink); margin:0; padding:0 0 96px;
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px; line-height:1.9; font-feature-settings:"palt" 1; -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+.mast{padding:56px 0 30px;border-bottom:2px solid var(--ink)}
+.eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;
+  letter-spacing:.22em;color:var(--gold);text-transform:uppercase;margin:0 0 14px}
+h1{font-family:"Shippori Mincho","Hiragino Mincho ProN",serif;font-weight:700;
+  font-size:clamp(28px,6vw,40px);line-height:1.35;letter-spacing:.02em;margin:0 0 14px;text-wrap:balance}
+.dek{font-size:14.5px;color:var(--ink-2);margin:0;max-width:60ch}
+.stamp{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);margin-top:18px;letter-spacing:.04em}
+
+h2{font-family:"Shippori Mincho","Hiragino Mincho ProN",serif;font-weight:700;
+  font-size:clamp(20px,4vw,25px);line-height:1.45;letter-spacing:.02em;
+  margin:60px 0 6px;padding-top:26px;border-top:1px solid var(--rule);text-wrap:balance}
+h2 .n{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;
+  color:var(--gold);letter-spacing:.14em;display:block;margin-bottom:8px}
+h3{font-size:15.5px;font-weight:700;margin:34px 0 8px;letter-spacing:.02em;text-wrap:balance}
+p{margin:0 0 16px;max-width:64ch}
+a{color:var(--gold);text-underline-offset:3px}
+
+.verdict{background:var(--card);border:1px solid var(--rule);border-radius:4px;
+  padding:26px 26px 10px;margin:30px 0 0;box-shadow:var(--shadow)}
+.verdict h2{margin:0 0 16px;padding:0;border:0;font-size:19px}
+.vlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px}
+.vlist li{display:flex;gap:14px;align-items:flex-start}
+.vlist .k{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;color:var(--gold);
+  border:1px solid var(--gold);border-radius:2px;padding:2px 7px;flex:0 0 auto;margin-top:4px;letter-spacing:.08em}
+.vlist .t{margin:0;font-size:14.5px;line-height:1.85}
+
+/* 対比バー */
+.gap{background:var(--card);border:1px solid var(--rule);border-radius:4px;padding:24px;margin:26px 0;
+  box-shadow:var(--shadow)}
+.gap .row{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.gap .row:last-of-type{margin-bottom:0}
+.gap .lb{flex:0 0 92px;font-size:12px;color:var(--muted);line-height:1.5}
+.gap .bar{flex:1 1 auto;height:26px;border-radius:2px;position:relative;min-width:0}
+.gap .bar b{position:absolute;left:0;top:0;bottom:0;border-radius:2px}
+.gap .bar .lv{background:var(--green)}
+.gap .bar .cpi{background:var(--rust)}
+.gap .amt{flex:0 0 auto;font-family:"IBM Plex Mono",monospace;font-size:14px;font-weight:600;
+  font-variant-numeric:tabular-nums}
+.gap .amt.good{color:var(--green)}
+.gap .amt.warn{color:var(--rust)}
+.gap .cap{font-size:12.5px;color:var(--muted);margin:16px 0 0;padding-top:14px;border-top:1px solid var(--rule-2);line-height:1.8}
+
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:4px;margin:26px 0;overflow:hidden}
+.fig{background:var(--card);padding:20px 18px}
+.fig .lb{font-size:11.5px;color:var(--muted);letter-spacing:.06em;margin:0 0 6px;line-height:1.6}
+.fig .v{font-family:"IBM Plex Mono",monospace;font-size:23px;font-weight:600;line-height:1.2;
+  font-variant-numeric:tabular-nums;margin:0;letter-spacing:-.01em}
+.fig .v.warn{color:var(--rust)}
+.fig .v.good{color:var(--green)}
+.fig .sub{font-size:11.5px;color:var(--muted);margin:6px 0 0;line-height:1.65}
+
+.tw{overflow-x:auto;margin:22px 0;border:1px solid var(--rule);border-radius:4px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:460px;font-size:13.5px}
+caption{text-align:left;font-size:12px;color:var(--muted);padding:12px 16px 0;caption-side:top;line-height:1.7}
+th,td{padding:11px 16px;text-align:right;border-bottom:1px solid var(--rule-2);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;
+  border-bottom:1px solid var(--rule);background:var(--rule-2)}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:"IBM Plex Mono",monospace;font-weight:500}
+td.good{color:var(--green);font-weight:600}
+td.warn{color:var(--rust);font-weight:600}
+
+.flag{border:1px solid var(--rust);background:var(--rust-soft);border-radius:4px;padding:20px 22px;margin:26px 0}
+.flag .h{font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;letter-spacing:.14em;
+  color:var(--rust);margin:0 0 10px}
+.flag p{margin:0 0 10px;font-size:14px}
+.flag p:last-child{margin-bottom:0}
+
+.note{border-left:2px solid var(--gold);background:var(--gold-soft);padding:16px 20px;margin:24px 0;
+  border-radius:0 4px 4px 0}
+.note p{margin:0 0 10px;font-size:13.5px;color:var(--ink-2)}
+.note p:last-child{margin-bottom:0}
+
+.prio{list-style:none;counter-reset:s;margin:26px 0;padding:0;display:flex;flex-direction:column;gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.prio li{counter-increment:s;background:var(--card);padding:20px 22px;display:flex;gap:16px;align-items:flex-start}
+.prio li::before{content:counter(s);font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;
+  color:var(--paper);background:var(--ink);width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:3px}
+.prio .b{margin:0;flex:1 1 auto;min-width:0}
+.prio .t{font-weight:700;font-size:14.5px;display:block;margin-bottom:4px}
+.prio .d{font-size:13.5px;color:var(--ink-2);margin:0;line-height:1.85}
+.prio .tag{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;
+  border:1px solid var(--rule);border-radius:2px;padding:1px 7px;color:var(--muted);
+  display:inline-block;margin-left:8px;vertical-align:2px}
+.prio .tag.free{color:var(--green);border-color:var(--green)}
+
+ul.plain{margin:0 0 18px;padding-left:1.15em}
+ul.plain li{margin-bottom:9px;max-width:62ch}
+
+.src{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.8}
+.src a{color:var(--muted)}
+
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--rule);
+  font-size:12.5px;color:var(--muted);line-height:1.9}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">事業計画メモ・続編</p>
+  <h1>広告を買ってブーストできるか</h1>
+  <p class="dek">3ヶ月うまくいったとして、次に有料広告でダウンロードを買うべきか。いくらかけるべきか。結論から言うと、このゲームの収益構造では買ってはいけません。その代わりに何をするかまで書きました。</p>
+  <p class="stamp">2026年8月23日 ／ 為替 1ドル＝150円で換算</p>
+</header>
+
+<div class="verdict">
+  <h2>先に結論</h2>
+  <ul class="vlist">
+    <li><span class="k">A</span><p class="t"><strong>広告収益だけのゲームで、インストールを買うのは数学的に成立しません。</strong>日本のインストール単価は約300〜800円。一方このゲームの1人あたり生涯収益は約15円。<strong>20倍以上の赤字</strong>になります。</p></li>
+    <li><span class="k">B</span><p class="t"><strong>そもそも最低出稿額が月15万〜45万円です。</strong>Google の公式推奨は「1日の予算＝目標インストール単価の50倍」。月1万〜10万円という予算帯は、機械学習が回らず単価が2〜4割高いまま張り付く領域です。</p></li>
+    <li><span class="k">C</span><p class="t"><strong>お金を使うより先に、無料で効く順番があります。</strong>最優先は広告でもASOでもなく<strong>クラッシュ率</strong>です。一定値を超えるとGoogle Playの露出面から除外され、他の努力が全部無効になります。</p></li>
+  </ul>
+</div>
+
+<h2><span class="n">01 — なぜ成立しないか</span>買う金額と、返ってくる金額</h2>
+
+<p>有料広告が成立するかどうかは、たったひとつの比較で決まります。<strong>1インストールを買う値段（CPI）と、その人が生涯にもたらす金額（LTV）</strong>のどちらが大きいか。</p>
+
+<div class="gap">
+  <div class="row">
+    <span class="lb">返ってくる<br>1人あたり</span>
+    <span class="bar"><b class="lv" style="width:5%"></b></span>
+    <span class="amt good">約15円</span>
+  </div>
+  <div class="row">
+    <span class="lb">買う値段<br>1人あたり</span>
+    <span class="bar"><b class="cpi" style="width:100%"></b></span>
+    <span class="amt warn">約300円</span>
+  </div>
+  <p class="cap">バーの長さは実際の比率です。買う値段のほうが<strong>20倍</strong>。しかも300円というのは、日本のミッドコアゲームの実勢レンジ（$2.5〜6.0＝375〜900円）の下限より低い、かなり甘く見た数字です。</p>
+</div>
+
+<h3>日本のインストール単価</h3>
+
+<div class="figs">
+  <div class="fig"><p class="lb">日本・カジュアルゲーム</p><p class="v warn">$5.46</p><p class="sub">≒820円（Liftoff 2022年調査）</p></div>
+  <div class="fig"><p class="lb">Tier-1・Android全般</p><p class="v warn">$2.97</p><p class="sub">≒445円（Segwise 2026年）</p></div>
+  <div class="fig"><p class="lb">ミッドコアRPG・Android</p><p class="v warn">$2.5〜6.0</p><p class="sub">≒375〜900円（Admiral Media）</p></div>
+</div>
+
+<p>ターン制カードバトルという細かいジャンルの単価は公開されていないので、ミッドコアRPGとストラテジーの中間と見るのが妥当です。加えて<strong>ゲームのインストール単価は2025年に前年比+30%</strong>と上昇しています。</p>
+
+<p>もうひとつ日本特有の事情があります。ふつう iOS は Android より3〜5割高いのですが、<strong>日本ではiOSとAndroidの単価にほとんど差がありません</strong>。Android を選んだことによる単価のメリットが、日本では効かないということです。</p>
+
+<h3>広告収入で回収するには何回見せる必要があるか</h3>
+
+<p>逆算してみます。損益分岐（買った金額と同額を回収）に必要な1人あたり生涯収益は300円。日本のインタースティシャル広告の単価は1,000回表示で$7.20（≒1,080円）です。つまり——</p>
+
+<div class="flag">
+<p class="h">回収に必要な広告表示回数</p>
+<p><strong>ひとりあたり、生涯で約278回。</strong>リワード動画だけで賄っても185回です。</p>
+<p>これが不可能な理由は、続けて遊んでくれる人の割合にあります。日本のゲームの<strong>30日後の残存率は3%</strong>。1回のプレイで3回広告を見て、1日2回起動して、それを30日間毎日続けても180回にしかなりません。しかもそこまで続ける人は100人に3人です。</p>
+<p>健全とされる3倍（LTV:CAC = 3:1）を目指すなら、必要な生涯収益は900円。<strong>今の60倍</strong>です。</p>
+</div>
+
+<p class="src">出典：<a href="https://gamedevreports.substack.com/p/adjust-and-liftoff-mobile-gaming">Liftoff 日本市場レポート</a>／<a href="https://segwise.ai/blog/cpi-ipm-roas-benchmarks-optimizing-ad-spend">Segwise 2026 CPIベンチマーク</a>／<a href="https://admiral.media/mobile-game-marketing-benchmarks/">Admiral Media ゲームマーケティングベンチマーク</a>／<a href="https://business.mistplay.com/resources/mobile-ads-ecpm">Mistplay（Appodeal Q4 2024データ）</a></p>
+
+<h2><span class="n">02 — 予算</span>そもそもいくらから出せるのか</h2>
+
+<p>仮に成立するとしても、次の壁があります。<strong>各媒体には「これ以下だと機械学習が回らない」という下限</strong>があり、それが想像よりずっと高いのです。</p>
+
+<div class="tw">
+<table>
+  <caption>主要チャネルの最低出稿ライン</caption>
+  <thead><tr><th>チャネル</th><th>条件</th><th>月額換算</th></tr></thead>
+  <tbody>
+    <tr><td>Google App Campaigns</td><td>日予算＝目標CPIの50倍<br><span style="font-size:12px;color:var(--muted)">目標300円の場合</span></td><td class="num warn">約45万円</td></tr>
+    <tr><td>Google App Campaigns</td><td>同上<br><span style="font-size:12px;color:var(--muted)">目標100円の場合</span></td><td class="num warn">約15万円</td></tr>
+    <tr><td>TikTok Ads</td><td>キャンペーン $50/日（規約上のハードリミット）</td><td class="num warn">約22.5万円</td></tr>
+    <tr><td>Meta（Facebook / Instagram）</td><td>学習を抜けるのに週50件のインストールが必要</td><td class="num warn">約13.5〜34万円</td></tr>
+    <tr><td>ironSource</td><td colspan="2" style="text-align:left;color:var(--muted)">2026年4月30日に広告主向けサービス終了。選択肢から外れました</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>Google はさらに「予算や目標単価を一度に20%を超えて変えない」「変更後7〜14日は安定化を待つ」「判断は30日単位で行う」としています。<strong>月1万〜10万円で細かく出したり止めたりする使い方は、そもそも想定されていません。</strong></p>
+
+<p class="src">出典：<a href="https://support.google.com/google-ads/answer/9176652">Google 広告ヘルプ：アプリキャンペーンのヒント</a>／<a href="https://ads.tiktok.com/help/article/budget">TikTok Ads Manager 予算について</a>／<a href="https://unity.com/products/ironsource-ads-sunset">Unity：ironSource Ads 終了のお知らせ</a></p>
+
+<div class="flag">
+<p class="h">「月1万円で1,000DL買えた」の裏側</p>
+<p>日本の個人開発者が Google 広告を試した実例が公開されています。<strong>日予算1,500円を10日間、費用15,675円でAndroid 689インストール、単価は約23円。</strong>これだけ見ると「安く買える」と思えます。</p>
+<p>しかし著者自身が指摘しているとおり、<strong>配信が南アジア・西アジアに大きく偏っていました。</strong>23円は日本の単価ではなく、インドやパキスタンの単価です。そしてそれらの地域の広告収入は日本の数分の1から10分の1。<strong>安いインストールには安い理由があります。</strong>配信地域を日本に絞れば、単価は一桁変わります。</p>
+<p>別の実例では、iOSで単価40円で回っていたアプリが、予算を増やすにつれ60円→100円→数倍へと上昇し、<strong>獲得すればするほど赤字</strong>になったと報告されています。少額で見えた良い単価は、そのままではスケールしません。</p>
+</div>
+
+<p class="src">出典：<a href="https://note.com/studiopsg/n/nea083451ba95">note：Google広告に低予算短期間でアプリ広告を出してみた</a>／<a href="https://note.com/marketing_genit/n/n2fb6687269a5">note：CPI40円の神アプリが予算を上げたら赤字転落した話</a></p>
+
+<h2><span class="n">03 — 代わりにやること</span>効く順番</h2>
+
+<p>お金をかけない集客も、効果には大きな差があります。実測データのある順に並べました。<strong>上から順にやってください。</strong>順番が重要です。</p>
+
+<ol class="prio">
+  <li><p class="b"><span class="t">クラッシュ率とANR率を基準内に収める<span class="tag free">無料</span></span><span class="d"><strong>これが最優先です。</strong>Google Play は<strong>クラッシュ率1.09%・ANR率0.47%</strong>を超えたアプリを、検索や「おすすめ」などの<strong>発見面から除外します</strong>。端末別に8%を超えると、ストアページに「この端末では正常に動作しない可能性があります」という警告まで出ます。ここを外していると、以下の努力がすべて無効になります。</span></p></li>
+
+  <li><p class="b"><span class="t">英語に対応する<span class="tag free">無料</span></span><span class="d">Google Play でフィーチャーされたアプリの<strong>99%が2言語以上に対応</strong>しています。加えて米国の広告単価は日本の1.4〜1.8倍。<strong>同じ1ダウンロードでも、稼ぐ金額が違います。</strong>いまのゲームはテキスト量が多くないので、2言語化の負担は比較的軽いはずです。</span></p></li>
+
+  <li><p class="b"><span class="t">ストアページを整える（ASO）<span class="tag free">無料</span></span><span class="d">これが<strong>唯一、複利で効く投資</strong>です。SNSのバズは瞬間的にしか流入を生みませんが、ストア内検索は毎日流入し続けます。ただし初期はA/Bテストをしないでください。判定にはパターンごとに1,000インストールが必要で、月数百DLだと数ヶ月かかり、その間に季節変動が結果を汚します。<strong>初期はジャンル上位のスクリーンショット構成を素直に真似るほうが期待値が高い</strong>です。</span></p></li>
+
+  <li><p class="b"><span class="t">ゲームメディアにプレスリリースを送る<span class="tag free">無料</span></span><span class="d">実例では<strong>4Gamer掲載で約1,000ダウンロード増</strong>。ただし媒体選びが効きます。ある開発者の比較では、<strong>AUTOMATON（フォロワー8.8万）が、ファミ通.com（79.7万）より圧倒的に効きました</strong>。理由は記事を独自に書いてくれるかどうかの差です。フォロワー数と効果は逆相関していました。</span></p></li>
+
+  <li><p class="b"><span class="t">X（Twitter）で見せる<span class="tag free">無料</span></span><span class="d">効果はありますが、<strong>持続しません</strong>。ある個人開発アプリの実測では、バズった翌日600ダウンロード、その後60→29→13→13→<strong>5日目には7</strong>。ランキングは圏外から50位まで上がりました。<strong>初動の山を作る手段であって、流入源ではない</strong>と割り切ってください。</span></p></li>
+
+  <li><p class="b"><span class="t">実況者に個別に声をかける<span class="tag">条件つき</span></span><span class="d">有償の相場は<strong>登録者数×1.5〜4円</strong>（5万人なら7.5万〜20万円）。試算すると獲得単価は1,000〜2,000円になり、Google広告より高くつきます。ただし<strong>動画は残り続けるので流入がストックになる</strong>という違いはあります。無償なら、ジャンルが完全に合う中小の実況者に個別連絡するのが確実。一括送信サービスの無料枠は「成果ゼロ」という報告が複数あります。</span></p></li>
+</ol>
+
+<div class="note">
+<p><strong>Google Play にフィーチャーされたときの効果。</strong>「New + Updated Games」枠に載ると<strong>週間ダウンロードが約3倍</strong>、トップのバナー枠で約2倍という実測があります。ただし<strong>バナー枠の78%は累計100万DL超の大手</strong>に配分されており、狙って取れるものではありません。応募できる公式ルートは Google Play Accelerator Japan（個人開発者も対象、2026年募集は締切済み）などに限られます。</p>
+<p>なお日本の「インディーゲームフェスティバル」は2024年に中止されており、再開の告知は確認できませんでした。</p>
+</div>
+
+<p class="src">出典：<a href="https://android-developers.googleblog.com/2022/10/raising-bar-on-technical-quality-on-google-play.html">Android Developers Blog：技術品質の基準</a>／<a href="https://appfigures.com/resources/guides/how-to-get-featured-google-play">Appfigures：フィーチャーされる条件</a>／<a href="https://sensortower.com/blog/google-play-featuring-impact">Sensor Tower：フィーチャーの効果</a>／<a href="https://note.yokoichi.jp/n/n5f2c9dd4d6f7">note：バズ投稿で1日600DL</a>／<a href="https://togetter.com/li/1658437">Togetter：プレスリリースを送ってみた結果</a></p>
+
+<h2><span class="n">04 — 例外</span>有料広告を使っていい場面</h2>
+
+<p>ひとつだけ、少額の有料広告に意味がある使い方があります。<strong>ユーザーを獲得するためではなく、テスト用の人を買うため</strong>です。</p>
+
+<ul class="plain">
+  <li><strong>ストアページのA/Bテストを回すための流入を確保する。</strong>判定に必要な1,000インストールを、自然流入だけで待つと数ヶ月かかります</li>
+  <li><strong>スクリーンショットや動画のどれが押されるかを比べる。</strong>表示あたりのインストール率で優劣が出ます</li>
+  <li><strong>翌日・7日後の継続率を測る。</strong>そもそも遊び続けてもらえるゲームなのかを、少ない人数で確かめられます</li>
+</ul>
+
+<p>予算は<strong>日1,000〜1,500円を1〜2週間</strong>、つまり<strong>1回あたり1万〜2万円</strong>。前述の個人開発者もこの使い方をしていました。「獲得したユーザーで黒字にする」という発想は完全に捨てて、<strong>調査費として使い切る前提</strong>で組んでください。</p>
+
+<h3>将来、本当に広告を買えるようになる条件</h3>
+
+<p>買えるようにするには、収益構造そのものを変える必要があります。買う値段が300円なら、1人あたりの生涯収益を<strong>450〜900円</strong>まで引き上げなければなりません。いまの15円から30〜60倍です。</p>
+
+<div class="tw">
+<table>
+  <caption>課金を入れた場合に、損益分岐へ必要な課金率</caption>
+  <thead><tr><th>課金の単価</th><th>損益分岐に必要な課金率</th><th>健全（3倍）に必要な課金率</th></tr></thead>
+  <tbody>
+    <tr><td>480円（広告除去）</td><td class="num warn">60%</td><td class="num warn">不可能</td></tr>
+    <tr><td>600円（フル解放）</td><td class="num warn">48%</td><td class="num warn">不可能</td></tr>
+    <tr><td>1,200円</td><td class="num warn">24%</td><td class="num warn">74%</td></tr>
+    <tr><td>3,000円</td><td class="num">9.5%</td><td class="num warn">29.5%</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>一般的なゲームの課金率は数%です。<strong>単発の買い切り課金（500〜1,500円）では、どう設計しても有料広告は成立しません。</strong>成立するのは、継続課金やガチャなど、課金する人ひとりが数千円から数万円を使う構造を持つゲームだけです。</p>
+
+<div class="note">
+<p><strong>ただし、これは「課金を入れる意味がない」ということではありません。</strong>目的を「広告を買えるようにすること」ではなく、<strong>「自然に来てくれた1人の価値を上げること」</strong>に置き換えてください。自然流入の獲得コストはゼロなので、1人あたりの収益が15円から150円になれば、それだけで収益は10倍です。参考までに、ハイブリッド収益化に成功した事例では1人あたり約107円に達しています。</p>
+</div>
+
+<h2><span class="n">05 — 市場</span>日本と海外、どちらを向くか</h2>
+
+<p>日本市場には、広告収益型にとって<strong>最悪の組み合わせ</strong>があります。</p>
+
+<div class="figs">
+  <div class="fig"><p class="lb">インストール単価</p><p class="v warn">世界最高水準</p><p class="sub">日本のカジュアルゲーム $5.46</p></div>
+  <div class="fig"><p class="lb">広告の単価</p><p class="v">米国の6〜7割</p><p class="sub">リワード $10.80 vs 米国 $15.15</p></div>
+  <div class="fig"><p class="lb">Android広告収益シェア</p><p class="v">日本 5%</p><p class="sub">米国は32%</p></div>
+</div>
+
+<p><strong>買うのは高く、売るのは安い。</strong>日本は「ダウンロード数を稼ぐ市場」ではなく「課金を稼ぐ市場」で、日本のパブリッシャーは課金収益の68〜69%を国内で得ている一方、インストールは16〜17%しか国内から来ていません。</p>
+
+<p>さらに2点、直視しておくべきことがあります。</p>
+
+<ul class="plain">
+  <li><strong>Android専用は、日本では若年層をほぼ捨てることになります。</strong>日本全体では Android 51.4% と過半ですが、<strong>20代女性のiPhone率は81.0%、10代女性は73.7%</strong>。逆に60代男性はAndroid 65.0%。ファンタジー系カードバトルの狙う層が若年なら、これは効きます</li>
+  <li><strong>日本のターン制RPGは市場が縮小しています</strong>（前年比 -14%）。「カードバトラー +305%」という数字もありますが、これは Pokémon TCG Pocket 1本による牽引で、ジャンル全体の追い風ではありません</li>
+</ul>
+
+<p>だからこそ<strong>英語対応の優先度が高い</strong>のです。英語圏はストア内検索という「複利で効く流入」が大きく、広告単価も高い。日本語圏はプレスとXで初動の山を作る場所、英語圏はASOで長く流入を積む場所、と役割を分けるのが現実的だと思います。</p>
+
+<p class="src">出典：<a href="https://mmdlabo.jp/investigation/detail_2496.html">MMD研究所：2025年9月スマートフォンOSシェア調査（n=40,000）</a>／<a href="https://gamedevreports.substack.com/p/sensor-tower-japan-gaming-market">Sensor Tower：日本のゲーム市場 2025</a>／<a href="https://tenjin.com/blog/ad-mon-gaming-2026/">Tenjin：広告収益化ベンチマーク 2026</a></p>
+
+<h2><span class="n">06 — 見立て</span>3ヶ月後にやること</h2>
+
+<p>3ヶ月やってみて「うまくいった」と判断できたとき、私なら順にこう進めます。</p>
+
+<ul class="plain">
+  <li><strong>まずクラッシュ率を確認する。</strong>Play Console の Android vitals で数字が見られます。基準を超えていたら、他は何もせずここだけ直します</li>
+  <li><strong>次に英語版を出す。</strong>コストはほぼ翻訳の手間だけで、露出の上限と1人あたりの収益が同時に上がります</li>
+  <li><strong>ストアページを、同ジャンル上位の構成に寄せる。</strong>自己流でA/Bテストするより先に、勝っている型を借ります</li>
+  <li><strong>AUTOMATONと4Gamerにプレスリリースを送る。</strong>実測で効果が確認できている、数少ない無料の手段です</li>
+  <li><strong>有料広告は、調査費として1回1万〜2万円だけ。</strong>継続率と、どのスクリーンショットが押されるかを測るために使い、獲得目的では使いません</li>
+</ul>
+
+<p>身も蓋もない言い方になりますが、<strong>このゲームで一番効く「広告」は、ゲームそのものの完成度です。</strong>前述のバズ事例で、ストアページに来た人の<strong>7割以上がインストールしていました</strong>。見つけてもらえれば選ばれる状態はすでに作れている。足りないのは見つけてもらう仕組みで、それはお金では買えない領域にあります。</p>
+
+<footer>
+<p>この試算は公開データにもとづく見積もりで、実際の結果は大きく振れます。金額はすべて税引き前、1ドル＝150円換算。私は広告運用の専門家でも投資助言者でもないので、実際に出稿する際は媒体の最新の規約と、ご自身の数字で再計算してください。</p>
+<p>調査で数字が見つからなかった項目：日本 × Android × カードバトルジャンルのインストール単価（ジャンル特化の公開データが存在しません。ミッドコアRPG／ストラテジーの数値を代理値としています）／2024年以降の日本単独のゲームCPI（各社とも有料レポート内でのみ開示）／ASOのA/Bテストの改善率の分布（ツールベンダーの成功事例のみで、母集団データが非公開）／AppLovin・Unity Ads の広告主側の最低出稿金額（非公開）／ゲーム実況者に特化した案件相場（一般的なYouTuber相場のみ）。</p>
+</footer>
+
+</div>

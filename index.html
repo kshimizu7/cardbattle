@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="38">
+<meta name="app-version" content="39">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -6008,6 +6008,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
      ========================================================= */
   function renderTitle() {
     app.classList.remove('land', 'lp-bottom', 'lp-side');
+    S.gen = (S.gen || 0) + 1;
     S.screen = 'title';
     app.innerHTML =
       '<div id="screen-title">' +
@@ -6639,6 +6640,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
 
   function renderDraft() {
     app.classList.remove('land', 'lp-bottom', 'lp-side');
+    S.gen = (S.gen || 0) + 1;
     S.screen = 'draft';
     var side = S.draftIdx;
     var team = S.teams[side], hand = S.hands[side];
@@ -6851,6 +6853,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     setTimeout(function () { b.remove(); }, 1100);
   }
   function banner(msg, cls) {
+    $$('.banner').forEach(function (o) { o.remove(); });   // 前のバナーと重ならないように
     var b = document.createElement('div');
     b.className = 'banner';
     b.innerHTML = '<span' + (cls ? ' style="' + cls + '"' : '') + '>' + msg + '</span>';
@@ -6867,6 +6870,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     S.st = E.createState(S.teams[0], S.teams[1], {
       nameA: 'プレイヤー1', nameB: S.mode === 'cpu' ? 'CPU' : 'プレイヤー2'
     });
+    S.gen = (S.gen || 0) + 1;
     S.screen = 'battle';
     renderBattle();
     SFX.play('start');
@@ -7227,7 +7231,16 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     bindAutoBtns(autoOnce);
     /* 全自動がONなら、そのまま代わりに動く */
     if (S.autoSides[u.side] && !S.busy) {
-      setTimeout(function () { if (S.autoSides[u.side] && !S.busy) autoOnce(); }, 420 / spd());
+      var agen = S.gen, auid = u.uid;
+      setTimeout(function () {
+        /* 描き直しのたびに予約が積まれるので、
+           世代・手番・実行中かどうかを見て、古い予約は捨てる */
+        if (agen !== S.gen || S.busy || S.screen !== 'battle') return;
+        if (!S.autoSides[u.side]) return;
+        var now = E.currentActor(S.st);
+        if (!now || now.uid !== auid) return;
+        autoOnce();
+      }, 420 / spd());
     }
     // 範囲攻撃は既定でダメージ合計が大きい方を選んでおく
     var gkey = u.uid + ':' + S.selAct;
@@ -7567,12 +7580,14 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
 
   /* ---------- 行動実行と演出 ---------- */
   function doAction(u, key, target) {
-    if (S.busy) return;
+    if (S.busy || S.screen !== 'battle') return;
+    var gen = S.gen;
     S.busy = true;
     clearMarks();
     renderActions();
     var evs = E.performAction(S.st, u, key, target);
     playEvents(evs.slice(), function () {
+      if (gen !== S.gen) return;
       S.busy = false;
       S.selAct = null;
       if (S.st.phase === 'ended') { showResult(); return; }
@@ -7591,7 +7606,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
   }
 
   function step() {
-    if (!S.st || S.st.phase === 'ended') return;
+    if (!S.st || S.st.phase === 'ended' || S.screen !== 'battle') return;
     var u = E.currentActor(S.st);
     if (!u) {
       var evs2 = E.endRound(S.st);
@@ -7891,8 +7906,29 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
   }
 
   /* --- 大きな数字 --- */
+  /* 直前に出したダメージ数字の位置を覚えておき、同じ場所に重ならないようにずらす。
+     多段ヒット（メテオ・三連矢など）や、同じ相手に続けて当たったときに
+     「同じ数字が2つ重なって見える」のを防ぐ。 */
+  var numSlots = [];
+  function offsetNum(x, y) {
+    var now = Date.now();
+    numSlots = numSlots.filter(function (s) { return now - s.t < 1600; });
+    var n = 0;
+    while (n < 6 && numSlots.some(function (s) {
+      return Math.abs(s.x - x) < 26 && Math.abs(s.y - y) < 26;
+    })) {
+      /* 右上 → 左上 → 右下 … と順にずらす */
+      x += (n % 2 ? -1 : 1) * (26 + n * 5);
+      y -= 15 + n * 4;
+      n++;
+    }
+    numSlots.push({ x: x, y: y, t: now });
+    return { x: x, y: y };
+  }
+
   function bigNumber(x, y, txt, o) {
     o = o || {};
+    var pos = offsetNum(x, y); x = pos.x; y = pos.y;
     var d = document.createElement('div');
     d.className = 'bignum k-' + (o.kind || 'phys') + (o.crit ? ' crit' : '');
     d.style.left = x + 'px'; d.style.top = y + 'px';
@@ -7901,7 +7937,8 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     d.innerHTML = (o.pre ? '<i>' + o.pre + '</i>' : '') + '<span class="n">' + txt + '</span>' +
                   (o.tag ? '<em>' + o.tag + '</em>' : '');
     fxl.appendChild(d);
-    var dur = (o.dur || 1750) / spd();
+    /* 2倍・4倍速でも数字が一瞬で消えないよう、下限を設ける */
+    var dur = Math.max(620, (o.dur || 1750) / spd());
     var frames = (o.kind === 'heal')
       ? [{ transform: 'translate(-50%,-35%) scale(.45)', opacity: 0 },
          { transform: 'translate(-50%,-76%) scale(1.42)', opacity: 1, offset: .18 },
@@ -7920,7 +7957,19 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
 
   /* --- 技名カットイン --- */
   function techRibbon(who, tech, color, big, at) {
-    $$('.techrib').forEach(function (o) { o.remove(); });   // 前の技名が残って重ならないように
+    /* 前の技名は即座に消さず、短く溶かして消す。
+       連続行動（凱歌など）や高速再生のときに「出た瞬間に消える」ように
+       見えていたのを、切り替わりとして分かる動きにする。 */
+    $$('.techrib').forEach(function (o) {
+      if (o._fading) { o.remove(); return; }
+      o._fading = true;
+      try {
+        o.getAnimations().forEach(function (a) { a.cancel(); });
+        o.animate([{ opacity: 1 }, { opacity: 0, transform: 'translate(-50%,-14px) scale(.96)' }],
+          { duration: 150, fill: 'forwards' });
+      } catch (e) {}
+      setTimeout(function () { o.remove(); }, 160);
+    });
     var d = document.createElement('div');
     d.className = 'techrib' + (big ? ' big' : '') + (at ? ' dtl' : '');
     d.style.setProperty('--c', color);
@@ -7935,12 +7984,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
       { transform: 'translate(-50%,0) scale(1)', opacity: 1, offset: .14 },
       { transform: 'translate(-50%,0) scale(1)', opacity: 1, offset: .88 },
       { transform: 'translate(-50%,-20px) scale(.97)', opacity: 0 }
-    ], { duration: 2600 / spd(), easing: 'cubic-bezier(.2,.9,.3,1)' });
+    ], { duration: Math.max(1000, 2600 / spd()), easing: 'cubic-bezier(.2,.9,.3,1)' });
     var sh = d.lastChild;
     sh.animate([{ transform: 'translateX(-130%) skewX(-18deg)' },
                 { transform: 'translateX(130%) skewX(-18deg)' }],
       { duration: 900 / spd(), delay: 180 / spd(), easing: 'cubic-bezier(.3,.1,.2,1)' });
-    setTimeout(function () { d.remove(); }, 2660 / spd());
+    setTimeout(function () { d.remove(); }, Math.max(1060, 2660 / spd()));
   }
 
   /* --- パッシブ（特殊能力）発動の明示 --- */
@@ -7979,7 +8028,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
   }
 
   function playEvents(evs, done) {
+    /* 画面を離れた（タイトルに戻った・決着した・新しい戦闘を始めた）あとも
+       古い再生が走り続け、勝手に盤面を描き直してしまうことがあった。
+       開始時の世代番号と食い違ったら、その場で打ち切る。 */
+    var gen = S.gen;
     function next() {
+      if (gen !== S.gen) return;
       if (!evs.length) { done(); return; }
       var e = evs.shift();
       var delay = 60;
@@ -8276,6 +8330,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
 
   function showResult() {
     var st = S.st, r = st.result;
+    S.gen = (S.gen || 0) + 1;
     S.screen = 'result';
     /* 横並びレイアウトは戦闘画面専用。結果画面では必ず解除する
        （グリッド指定が残ると中身が置き場を失って真っ黒になる） */

@@ -1,0 +1,403 @@
+<title>アルカナ・クラッシュ Android収支試算</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@600;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --paper:#fdfdfc;
+  --card:#ffffff;
+  --ink:#14181f;
+  --ink-2:#39424f;
+  --muted:#6b7482;
+  --rule:#e3e6ea;
+  --rule-2:#eef0f3;
+  --gold:#8f6412;
+  --gold-soft:#f5edda;
+  --green:#1c6647;
+  --green-soft:#e6f1ec;
+  --rust:#9d3f24;
+  --rust-soft:#f7eae5;
+  --shadow:0 1px 2px rgba(20,24,31,.05),0 8px 24px rgba(20,24,31,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1218;
+    --card:#161b23;
+    --ink:#e7eaef;
+    --ink-2:#c2c9d4;
+    --muted:#8d97a5;
+    --rule:#28303b;
+    --rule-2:#1e2530;
+    --gold:#e0b055;
+    --gold-soft:#2a2213;
+    --green:#6fd3a4;
+    --green-soft:#12271e;
+    --rust:#e8927a;
+    --rust-soft:#2a1710;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f1218;
+  --card:#161b23;
+  --ink:#e7eaef;
+  --ink-2:#c2c9d4;
+  --muted:#8d97a5;
+  --rule:#28303b;
+  --rule-2:#1e2530;
+  --gold:#e0b055;
+  --gold-soft:#2a2213;
+  --green:#6fd3a4;
+  --green-soft:#12271e;
+  --rust:#e8927a;
+  --rust-soft:#2a1710;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 10px 28px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  margin:0;
+  padding:0 0 96px;
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Noto Sans JP",system-ui,sans-serif;
+  font-size:15px;
+  line-height:1.9;
+  font-feature-settings:"palt" 1;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+
+/* ── 見出し ───────────────────────────── */
+.mast{padding:56px 0 30px;border-bottom:2px solid var(--ink)}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;
+  letter-spacing:.22em;color:var(--gold);text-transform:uppercase;margin:0 0 14px;
+}
+h1{
+  font-family:"Shippori Mincho","Hiragino Mincho ProN",serif;font-weight:700;
+  font-size:clamp(28px,6vw,40px);line-height:1.35;letter-spacing:.02em;
+  margin:0 0 14px;text-wrap:balance;
+}
+.dek{font-size:14.5px;color:var(--ink-2);margin:0;max-width:60ch}
+.stamp{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);
+  margin-top:18px;letter-spacing:.04em;
+}
+
+h2{
+  font-family:"Shippori Mincho","Hiragino Mincho ProN",serif;font-weight:700;
+  font-size:clamp(20px,4vw,25px);line-height:1.45;letter-spacing:.02em;
+  margin:60px 0 6px;padding-top:26px;border-top:1px solid var(--rule);text-wrap:balance;
+}
+h2 .n{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;
+  color:var(--gold);letter-spacing:.14em;display:block;margin-bottom:8px;
+}
+h3{
+  font-size:15.5px;font-weight:700;margin:34px 0 8px;letter-spacing:.02em;
+  color:var(--ink);text-wrap:balance;
+}
+p{margin:0 0 16px;max-width:64ch}
+strong{font-weight:700}
+a{color:var(--gold);text-underline-offset:3px}
+
+/* ── 結論ボックス ─────────────────────── */
+.verdict{
+  background:var(--card);border:1px solid var(--rule);border-radius:4px;
+  padding:26px 26px 10px;margin:30px 0 0;box-shadow:var(--shadow);
+}
+.verdict h2{margin:0 0 16px;padding:0;border:0;font-size:19px}
+.vlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:16px}
+.vlist li{display:flex;gap:14px;align-items:flex-start}
+.vlist .k{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;color:var(--gold);
+  border:1px solid var(--gold);border-radius:2px;padding:2px 7px;flex:0 0 auto;margin-top:4px;
+  letter-spacing:.08em;
+}
+.vlist .t{margin:0;font-size:14.5px;line-height:1.85}
+
+/* ── 数字カード ───────────────────────── */
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:4px;margin:26px 0;overflow:hidden}
+.fig{background:var(--card);padding:20px 18px}
+.fig .lb{font-size:11.5px;color:var(--muted);letter-spacing:.06em;margin:0 0 6px;line-height:1.6}
+.fig .v{
+  font-family:"IBM Plex Mono",monospace;font-size:23px;font-weight:600;line-height:1.2;
+  font-variant-numeric:tabular-nums;margin:0;letter-spacing:-.01em;
+}
+.fig .v.good{color:var(--green)}
+.fig .v.warn{color:var(--rust)}
+.fig .sub{font-size:11.5px;color:var(--muted);margin:6px 0 0;line-height:1.65}
+
+/* ── 表 ───────────────────────────────── */
+.tw{overflow-x:auto;margin:22px 0;border:1px solid var(--rule);border-radius:4px;background:var(--card)}
+table{border-collapse:collapse;width:100%;min-width:480px;font-size:13.5px}
+caption{
+  text-align:left;font-size:12px;color:var(--muted);padding:12px 16px 0;caption-side:top;line-height:1.7;
+}
+th,td{padding:11px 16px;text-align:right;border-bottom:1px solid var(--rule-2);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{
+  font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;
+  border-bottom:1px solid var(--rule);background:var(--rule-2);
+}
+tbody tr:last-child td{border-bottom:0}
+td.num{font-family:"IBM Plex Mono",monospace;font-weight:500}
+td.good{color:var(--green);font-weight:600}
+td.warn{color:var(--rust);font-weight:600}
+tr.total td{border-top:1px solid var(--rule);font-weight:700;background:var(--rule-2)}
+
+/* ── 注意ブロック ─────────────────────── */
+.flag{
+  border:1px solid var(--rust);background:var(--rust-soft);border-radius:4px;
+  padding:20px 22px;margin:26px 0;
+}
+.flag .h{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;letter-spacing:.14em;
+  color:var(--rust);margin:0 0 10px;
+}
+.flag p{margin:0 0 10px;font-size:14px}
+.flag p:last-child{margin-bottom:0}
+
+.note{
+  border-left:2px solid var(--gold);background:var(--gold-soft);
+  padding:16px 20px;margin:24px 0;border-radius:0 4px 4px 0;
+}
+.note p{margin:0;font-size:13.5px;color:var(--ink-2)}
+
+/* ── 実例リスト ───────────────────────── */
+.cases{list-style:none;margin:24px 0;padding:0;display:flex;flex-direction:column;gap:1px;
+  background:var(--rule);border:1px solid var(--rule);border-radius:4px;overflow:hidden}
+.cases li{background:var(--card);padding:18px 20px}
+.cases .top{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+.cases .nm{font-weight:700;font-size:14.5px}
+.cases .dl{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:600;color:var(--gold);
+  font-variant-numeric:tabular-nums}
+.cases .mode{font-size:11px;color:var(--muted);border:1px solid var(--rule);
+  border-radius:2px;padding:1px 7px;letter-spacing:.04em}
+.cases .d{font-size:13px;color:var(--ink-2);margin:0;line-height:1.8}
+
+/* ── 手順 ─────────────────────────────── */
+.steps{list-style:none;counter-reset:s;margin:26px 0;padding:0;
+  display:flex;flex-direction:column;gap:22px}
+.steps li{counter-increment:s;display:flex;gap:16px;align-items:flex-start}
+.steps li::before{
+  content:counter(s);font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;
+  color:var(--paper);background:var(--ink);width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;margin-top:3px;
+}
+.steps .b{margin:0}
+.steps .b .t{font-weight:700;display:block;margin-bottom:2px}
+.steps .b .d{font-size:13.5px;color:var(--ink-2);margin:0}
+
+ul.plain{margin:0 0 18px;padding-left:1.15em}
+ul.plain li{margin-bottom:8px;max-width:62ch}
+
+.src{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.8}
+.src a{color:var(--muted)}
+
+footer{margin-top:64px;padding-top:24px;border-top:1px solid var(--rule);
+  font-size:12.5px;color:var(--muted);line-height:1.9}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">事業計画メモ</p>
+  <h1>アルカナ・クラッシュを<br>Androidで出したら、いくらかかっていくら入るか</h1>
+  <p class="dek">Google Play に出す場合の実費、ユーザーのデータ保存を足したときのサーバー代、そして広告・買い切り・プレミアム会員それぞれの売上見込みを、保守的に見積もりました。</p>
+  <p class="stamp">2026年8月23日 ／ 為替 1ドル＝159円で換算</p>
+</header>
+
+<div class="verdict">
+  <h2>先に結論</h2>
+  <ul class="vlist">
+    <li><span class="k">A</span><p class="t"><strong>出すだけなら、実費は約4,000円（1回きり）で済みます。</strong>広告だけで収益化するなら Google Play への手数料はゼロ、年額費用もゼロです。開発ツールもすべて無料。</p></li>
+    <li><span class="k">B</span><p class="t"><strong>ボトルネックは収益率ではなく、遊んでくれる人の数です。</strong>月1万円を超えるにはアクティブユーザー1,000人の維持が要ります。宣伝なしの個人開発でこれは軽くない壁です。</p></li>
+    <li><span class="k">C</span><p class="t"><strong>ひとつだけ、順序を間違えると取り返しがつかない項目があります。</strong>個人アカウントで課金を有効にすると、自宅住所が全世界に公開され、あとから取り消せません。<a href="#trap">後述</a>。</p></li>
+  </ul>
+</div>
+
+<h2><span class="n">01 — 初期コスト</span>出すのにいくらかかるか</h2>
+
+<p>アルカナ・クラッシュは HTML と JavaScript だけでできた400KBの1ファイルで、オフラインで完結します。これは Android 化のうえでかなり有利な条件です。ネイティブに作り直す必要がなく、<strong>Capacitor</strong>（MITライセンス・無料）でそのまま包めます。</p>
+
+<div class="tw">
+<table>
+  <caption>広告収益型・データ保存なしの最小構成</caption>
+  <thead><tr><th>項目</th><th>費用</th><th>頻度</th></tr></thead>
+  <tbody>
+    <tr><td>Google Play デベロッパー登録料</td><td class="num">約4,000円</td><td>1回きり</td></tr>
+    <tr><td>Capacitor（アプリ化ツール）</td><td class="num good">0円</td><td>—</td></tr>
+    <tr><td>Android Studio・JDK</td><td class="num good">0円</td><td>—</td></tr>
+    <tr><td>プライバシーポリシー掲載（GitHub Pages）</td><td class="num good">0円</td><td>—</td></tr>
+    <tr><td>コンテンツレーティング（IARC）取得</td><td class="num good">0円</td><td>—</td></tr>
+    <tr><td>ストア素材（アイコン・スクリーンショット）</td><td class="num good">0円</td><td>自作の場合</td></tr>
+    <tr><td>Google Play 手数料</td><td class="num good">0円</td><td>広告のみなら課金取引が無いため</td></tr>
+    <tr class="total"><td>初年度 合計</td><td class="num">約4,000円</td><td>2年目以降 0円</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p class="src">出典：<a href="https://support.google.com/googleplay/android-developer/answer/6112435?hl=en">Google Play Console ヘルプ（登録料US$25・1回限り）</a>／<a href="https://capacitorjs.com/">Capacitor 公式（MITライセンス）</a></p>
+
+<h3>お金はかからないが、手間がかかる関門が2つ</h3>
+
+<p><strong>12人×14日のクローズドテスト。</strong>2023年11月13日以降に作った個人アカウントは、本番公開の前に「12人以上のテスターが14日間連続でオプトインし続ける」ことが必須です。途中で抜けた人はカウントされません。当初20人だったものが2024年12月に12人へ緩和されましたが、<strong>2026年現在も撤廃されていません</strong>。離脱を見込むと15〜20人に声をかけるのが現実的です。</p>
+
+<p><strong>target API level 36 への対応。</strong>2026年8月31日までに Android 16 相当への対応が必須です。Capacitor を最新版で使えば自動的に満たせますが、期限は意識しておく必要があります。</p>
+
+<p class="src">出典：<a href="https://support.google.com/googleplay/android-developer/answer/14151465?hl=en">クローズドテスト要件</a>／<a href="https://support.google.com/googleplay/android-developer/answer/11926878?hl=en">target API level requirements</a></p>
+
+<div class="note">
+<p><strong>朗報がひとつ。</strong>Google Play の手数料が、<strong>2026年9月30日から日本で引き下げ</strong>られます。年間売上100万ドル以下（＝個人開発者はほぼ全員ここ）は、これまでの15%から<strong>10%</strong>に。将来課金を入れる場合の前提が有利になりました。<span class="src" style="display:block;margin-top:6px">出典：<a href="https://support.google.com/googleplay/android-developer/answer/16954621?hl=ja">Google Play サービス手数料の引き下げについて</a></span></p>
+</div>
+
+<h2><span class="n">02 — 運用コスト</span>データ保存を足すといくらか</h2>
+
+<p>対戦履歴や戦績をサーバーに保存する機能を入れると、初めて月額費用が発生します。<strong>ただし、思っているより桁違いに安いです。</strong>1ユーザーあたり約50KB（プロフィール＋直近100戦の履歴）、1日あたり読み取り30回・書き込み6回という、やや多めの前提で試算しました。</p>
+
+<div class="tw">
+<table>
+  <caption>月額のサーバー費用。DAU/MAU比15%、東京リージョンを前提</caption>
+  <thead><tr><th>月間アクティブユーザー</th><th>Firebase</th><th>Supabase</th></tr></thead>
+  <tbody>
+    <tr><td>1,000人</td><td class="num good">0円</td><td class="num good">0円</td></tr>
+    <tr><td>10,000人</td><td class="num good">0〜160円</td><td class="num">約4,000円</td></tr>
+    <tr><td>100,000人</td><td class="num warn">950円 〜 44,700円</td><td class="num">約4,000円</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p><strong>1万人までは実質タダです。</strong>Firebase の無料枠（1日5万回読み取り・2万回書き込み・1GB保存）に収まります。ここは何も心配いりません。</p>
+
+<div class="flag">
+<p class="h">見落としやすい落とし穴</p>
+<p>10万人規模になったとき、<strong>費用の大半はデータベースではなく「ログイン機能」です。</strong>Firebase Authentication は5万人までは無料ですが、それを超えると1人あたり月$0.0055。10万人なら<strong>月275ドル（約44,000円）</strong>がログイン機能だけでかかります。データベース代は同じ規模でわずか約950円なので、<strong>46倍の差</strong>です。</p>
+<p>回避策は2つ。<strong>匿名認証＋自動クリーンアップ</strong>を使えば人数にカウントされず実質無料になります（ただし機種変更時の引き継ぎができなくなる）。あるいは <strong>Supabase の定額プラン月$25</strong>に切り替えれば、10万人でも約4,000円で収まり、請求額が読めます。</p>
+</div>
+
+<p class="src">出典：<a href="https://cloud.google.com/firestore/pricing">Firestore 料金（東京リージョン）</a>／<a href="https://cloud.google.com/identity-platform/pricing">Identity Platform 料金</a>／<a href="https://supabase.com/pricing">Supabase Pricing</a></p>
+
+<h2><span class="n">03 — 売上</span>どのモデルでいくら入るか</h2>
+
+<h3>モデル①　広告収入（無料アプリ）</h3>
+
+<p>まず前提となる単価から。日本の広告単価は、実測データでこの水準です。</p>
+
+<div class="figs">
+  <div class="fig"><p class="lb">バナー広告 eCPM</p><p class="v">$0.10</p><p class="sub">1,000回表示あたり 約16円</p></div>
+  <div class="fig"><p class="lb">インタースティシャル</p><p class="v">$7.20</p><p class="sub">画面切り替え時の全画面広告</p></div>
+  <div class="fig"><p class="lb">リワード動画</p><p class="v">$10.80</p><p class="sub">見ると報酬がもらえる形式</p></div>
+</div>
+
+<p>ここから、1人が1日に「バナー15回＋全画面3回＋リワード0.3回」を見る想定で計算し、さらに個人開発で広告配信の最適化ができていないぶんを<strong>半分に割り引いて</strong>、1人1日あたり約2.1円としました。控えめな数字です。</p>
+
+<div class="tw">
+<table>
+  <caption>広告のみ。手数料はかからないので、ほぼそのまま手取り</caption>
+  <thead><tr><th>月間アクティブユーザー</th><th>1日の利用者</th><th>月間の広告収入</th></tr></thead>
+  <tbody>
+    <tr><td>1,000人</td><td class="num">150人</td><td class="num">約 9,500円</td></tr>
+    <tr><td>10,000人</td><td class="num">1,500人</td><td class="num good">約 95,000円</td></tr>
+    <tr><td>100,000人</td><td class="num">15,000人</td><td class="num good">約 950,000円</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>別の角度からも検算しておきます。<strong>ダウンロード1件が生涯にもたらす広告収入は $0.05〜0.15（8〜24円）</strong>程度が現実的な目安です。上位のハイパーカジュアル100タイトルですら、課金収入は1ダウンロードあたり$0.14でした。つまり——</p>
+
+<ul class="plain">
+  <li><strong>累計1,000ダウンロード</strong> → 生涯で 8,000〜24,000円。AdMob の支払い最低額（8,000円）にようやく届く水準です</li>
+  <li><strong>累計10,000ダウンロード</strong> → 生涯で 8万〜24万円。数年かけての金額です</li>
+</ul>
+
+<p class="src">出典：<a href="https://business.mistplay.com/resources/mobile-ads-ecpm">Mistplay（データ元：Appodeal Q4 2024 eCPMレポート）</a>／<a href="https://biz.moneyforward.com/tax_return/basic/81242/">マネーフォワード クラウド（日本語の独立試算とも整合）</a></p>
+
+<h3>モデル②　買い切り</h3>
+
+<p>類似ジャンルの実売価格は <strong>400〜600円</strong>あたりです。ただしこのモデルには構造的な不利があります。<strong>Google Play の有料アプリは全体のわずか3.4%</strong>しかなく、無料アプリと比べてダウンロード数が一桁変わります。</p>
+
+<p>後述する実例でも、買い切りの Meteorfall が23万ダウンロードなのに対し、無料モデルの3本は130万〜300万ダウンロードでした。<strong>5〜13倍の差</strong>です。1本あたりの単価が高くても、母数がこれだけ違うと総額で逆転しにくくなります。</p>
+
+<h3>モデル③　プレミアム会員・単一課金</h3>
+
+<p>課金してくれる人の割合は、カードゲームで <strong>1.2%</strong>（7日時点）、サブスクリプション形式のゲームで <strong>1.0%</strong>（35日時点の中央値）です。仮に1万ダウンロードで600円のフル解放を売った場合、1%が買って100人 × 600円 ＝ <strong>6万円</strong>（手数料10%を引いて約5.4万円）。これに無料部分の広告収入が乗ります。</p>
+
+<div class="flag">
+<p class="h">課金アプリの現実</p>
+<p>課金機能を実装したアプリの<strong>収益中央値は、公開12ヶ月後で月$72（約11,000円）</strong>です。月16万円に到達するのは17.3%、月160万円は4.6%。5本に4本は月16万円に届きません。</p>
+<p>ただし<strong>ゲームは全カテゴリで最も当たりやすいジャンル</strong>でもあります。月160万円到達率はゲームだけ8.9%と突出しており、月16万円に到達するまでの日数も中央値32日と最速です。裾野は厳しいが、伸びるときは伸びる、という分布です。</p>
+</div>
+
+<p class="src">出典：<a href="https://www.revenuecat.com/state-of-subscription-apps">RevenueCat: State of Subscription Apps 2026</a>（11.5万アプリ・160億ドルの実績データ）／<a href="https://www.businessofapps.com/insights/paying-user-and-rolling-retention-rate-benchmarks-across-game-genres-study/">Business of Apps（MyTracker調査・1.2億インストール）</a></p>
+
+<h2><span class="n">04 — 実例</span>似たゲームは実際どうだったか</h2>
+
+<p>ファンタジー系・簡単操作・ターン制カードバトルで、個人〜数人規模の開発チームが出した Android ゲームを4本。すべて実在のタイトルで、数字は公開されているものです。</p>
+
+<ul class="cases">
+  <li>
+    <div class="top"><span class="nm">Slice &amp; Dice</span><span class="dl">200万DL</span><span class="mode">無料＋単一課金で全解放</span></div>
+    <p class="d">ダイスとユニット編成のターン制バトル。実質ひとりの開発者。★4.7、レビュー2.2万件。無料で遊べる範囲を広く取り、フル解放を1回の買い切りで売る形。収益は非公開。</p>
+  </li>
+  <li>
+    <div class="top"><span class="nm">Dungeon Cards</span><span class="dl">300万DL</span><span class="mode">無料＋広告</span></div>
+    <p class="d">3×3のマス目でカードを動かすローグライト。2018年公開で、いまも1日1,700ダウンロード。<strong>カード系はロングテールが効く</strong>ことを示す例です。</p>
+  </li>
+  <li>
+    <div class="top"><span class="nm">Card Crawl</span><span class="dl">130万DL</span><span class="mode">買い切り → 無料化</span></div>
+    <p class="d">ソロ開発。元は買い切りでしたが2021年に無料＋広告＋課金へ転換。その結果<strong>ダウンロード+280%、収益+41%</strong>（同作単体では+168%）。買い切りから無料化して増えた、実データのある珍しい例です。</p>
+  </li>
+  <li>
+    <div class="top"><span class="nm">Meteorfall: Journeys</span><span class="dl">23万DL</span><span class="mode">買い切り 約600円</span></div>
+    <p class="d">ソロ開発のデッキ構築ローグライク。発売初週で外注費（アート・音楽 $5,000〜10,000）を回収。開発465時間に対して初週ベースの時給換算は約$15。<strong>収益構成は iOS 80% / Android 20%</strong>。</p>
+  </li>
+</ul>
+
+<div class="note">
+<p>この4本から読み取れることが3つあります。<strong>成功例はすべて無料モデル</strong>であること。<strong>Android の収益はiOS込みの2割程度</strong>だということ（Android単独リリースなら、よそで見る数字を5で割って考える必要があります）。そして<strong>カード系は公開後も長く遊ばれる</strong>こと。</p>
+</div>
+
+<h2 id="trap"><span class="n">05 — 注意</span>順序を間違えると戻せないこと</h2>
+
+<div class="flag">
+<p class="h">最重要・不可逆</p>
+<p><strong>個人アカウントでアプリ内課金または有料アプリを有効にすると、登録した住所がストアに全世界公開されます。</strong>無料アプリだけなら公開されません。しかし一度課金を有効にすると「販売アカウント」扱いになり、<strong>課金アイテムを全部削除しても住所の公開義務は外れません。</strong></p>
+<p>回避するには、最初から<strong>組織（Organization）アカウント</strong>で登録し、バーチャルオフィスの住所を使います。ただし開業届と D-U-N-S ナンバーの取得が必要で、手続きに約3週間、住所の維持に月1,000円程度かかります。</p>
+<p><strong>「まず無料で出して、様子を見てから課金を足す」つもりなら、アカウントの種類だけは先に決めてください。</strong>あとから移すことはできません。</p>
+</div>
+
+<p>そのほか、把握しておくべきものを挙げます。</p>
+
+<ul class="plain">
+  <li><strong>プライバシーポリシーは必須です。</strong>データを一切集めないアプリでも提出が要ります。PDFは不可で、常時アクセスできるURLが必要（GitHub Pages で無料）。</li>
+  <li><strong>コンテンツレーティングの取得も必須。</strong>無料の質問票に答えるだけですが、未取得だとストアから削除されます。</li>
+  <li><strong>ガチャを入れるなら排出確率の開示が義務です。</strong>Google Play は2019年から義務化。日本では景品表示法も絡み、コンプガチャは全面禁止。<strong>ゲーム内通貨が課金で買えるなら、無料ガチャでも規制対象</strong>になります。</li>
+  <li><strong>消費税は自己申告です。</strong>日本在住の開発者は、日本のユーザーへの販売分の消費税を自分で計算・納付する責任があります（海外在住ならGoogleが代行）。</li>
+  <li><strong>AdMob の支払いは8,000円から。</strong>それ未満は振り込まれません。累計1,000ダウンロード規模だと、ここに届くまでが最初の関門です。</li>
+</ul>
+
+<h2><span class="n">06 — 見立て</span>私ならこう進めます</h2>
+
+<p>数字を並べたうえでの意見です。<strong>いまこのゲームでいちばん割に合わないのは、収益化の設計に時間を使うことだと思います。</strong>広告単価も課金率も、業界平均から大きく外れることはありません。差がつくのは遊んでくれる人の数だけで、そこは収益モデルをいじっても増えません。</p>
+
+<ol class="steps">
+  <li><p class="b"><span class="t">アカウントの種類だけ先に決める</span><span class="d">将来ほんの少しでも課金の可能性があるなら、組織アカウントで登録。無料のまま貫くと決めるなら個人アカウントで4,000円。ここだけは戻せません。</span></p></li>
+  <li><p class="b"><span class="t">広告なしの無料アプリとして出す</span><span class="d">まず「遊んでもらえるか」だけを見ます。実費4,000円、月額ゼロ。この段階では広告すら入れなくていいと思います。入れると審査項目（データセーフティ申告）が増えるので。</span></p></li>
+  <li><p class="b"><span class="t">3ヶ月の数字を見る</span><span class="d">判断材料は継続率とダウンロードの伸び方です。月間アクティブが数百人で頭打ちなら、収益化しても月数千円。ここで見切るか続けるかを決めます。</span></p></li>
+  <li><p class="b"><span class="t">伸びたら、広告 → 単一課金の順で足す</span><span class="d">成功している類似ゲーム4本のうち3本がこの形です。サブスクは、毎月遊ぶ理由（イベント・ランキング）を作り続ける必要があるので、ひとりで運用するには重すぎます。</span></p></li>
+</ol>
+
+<div class="note">
+<p><strong>データ保存機能について。</strong>1万人までタダなので、コストは判断材料になりません。むしろ<strong>「サーバーに繋いだ瞬間、審査の難易度が上がる」</strong>ほうが効きます。実際に、審査環境からの通信が失敗して8回連続でリジェクトされた個人開発者の記録があります（解決策はテスト用アカウントでオフライン動作するデモモードの実装でした）。いまのオフライン完結という強みは、思っている以上に価値があります。</p>
+</div>
+
+<footer>
+<p>この試算は公開データにもとづく見積もりで、実際の結果は大きく振れます。特にダウンロード数の予測は当てになりません（世界で月100万ダウンロードを超えるアプリは全カテゴリ合計でわずか1,305本です）。金額はすべて税引き前、1ドル＝159円換算。私は税理士でも投資助言者でもないので、税務や資金計画の判断は専門家に確認してください。</p>
+<p>調査で数字が見つからなかった項目：インディーゲームのダウンロード数の中央値（公開している一次ソースが存在しません）／日本のAndroid単独の広告単価（国別データはiOSとの平均のみ公開）／2026年9月30日以降、日本に5%の課金手数料が適用されるかどうか（Google が「今後発表」としており未確定）。</p>
+</footer>
+
+</div>
