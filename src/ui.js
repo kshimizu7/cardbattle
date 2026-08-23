@@ -287,7 +287,7 @@
 
   function detailHTML(d) {
     var ai = atkInfo(d);
-    var acts = d.actions.map(function (a) {
+    var acts = d.actions.map(function (a, ai2) {
       var t = '';
       if (a.kind === 'dmg') t = 'ダメージ ' + (a.power != null ? a.power : d.atk) + '　範囲：' + E.RANGE_TEXT[a.range];
       else if (a.kind === 'heal') t = '回復 ' + a.value + '　対象：' + E.RANGE_TEXT[a.range];
@@ -306,7 +306,7 @@
       if (a.burn) t += '　＋燃焼' + a.burn + '(2R継続ダメージ)';
       if (a.drain) t += '　＋与ダメの半分を吸収';
       if (a.backRatio != null) t += '　後方へは' + Math.round(a.backRatio * 100) + '%';
-      return '<div class="abox"><div class="an">▸ ' + a.name +
+      return '<div class="abox" data-play="' + ai2 + '"><div class="an">▸ ' + a.name +
         (lim.length ? '<span class="badge">' + lim.join(' / ') + '</span>' : '') + '</div><div class="ad">' + t + '</div></div>';
     }).join('');
     var pas = d.passives.map(function (k) {
@@ -314,25 +314,47 @@
       return '<div class="pabox"><div class="an">★ ' + p.name + '</div><div class="ad">' + p.text + '</div></div>';
     }).join('');
     var ln = lineOf(d), L = LINES[ln];
+    var wep = (ART.ART && ART.ART[d.id] ? ART.ART[d.id].wep : null) || 'sword';
     return '<div class="bigcard' + (d.base ? ' upper' : '') + '">' +
       '<div class="dhead">' +
-        '<div class="art">' + ART.portrait(d.id, d.elem) +
-          (isFinite(E.costCap()) ? '<div class="cost">' + d.cost + '</div>' : '') + '</div>' +
-        '<div class="dmeta">' +
-          '<div class="hd"><h3>' + d.name + '</h3><em>' + d.en + '</em></div>' +
-          '<div class="chiprow">' +
-            '<button class="lnchip" data-line="' + ln + '" style="--lc:' + L.c + '">' +
-              '<i class="lg">' + ln + '</i>' + L.name + '</button>' +
-            tierStripHTML(d) +
+        '<div class="art" data-play="0">' +
+          '<div class="unit" data-wep="' + wep + '"><div class="pic">' +
+            portraitTop(d.id, d.elem) + '</div></div>' +
+          (isFinite(E.costCap()) ? '<div class="cost">' + d.cost + '</div>' : '') +
+          '<div class="ovbox">' +
+            '<div class="hd"><h3>' + d.name + '</h3><em>' + d.en + '</em></div>' +
+            '<div class="chiprow">' +
+              '<button class="lnchip" data-line="' + ln + '" style="--lc:' + L.c + '">' +
+                '<i class="lg">' + ln + '</i>' + L.name + '<span class="ic">i</span></button>' +
+              tierStripHTML(d) +
+            '</div>' +
           '</div>' +
-          pipRow('体力 ' + d.hp, d.hpT, 7, '#7de8a4') +
-          pipRow(ai.label + ' ' + ai.val, ai.tier, 7,
+        '</div>' +
+        '<div class="dmeta">' +
+          statRow('体力', d.hp, d.hpT, '#7de8a4') +
+          statRow(ai.label, ai.val, ai.tier,
             ai.kind === 'heal' ? '#7de8a4' : ai.kind === 'mag' ? '#c98cff' : '#ffb36b') +
-          pipRow('素早 ' + d.spd, d.spd, 7, '#7fd0ff') +
+          statRow('素早', d.spd, d.spd, '#7fd0ff') +
         '</div>' +
       '</div>' +
-      '<div class="dbody">' + acts + pas + '</div>' +
-      '<div class="flav">' + d.flavor + '</div></div>';
+      '<div class="dbody">' + acts + pas +
+        '<div class="flav">' + d.flavor + '</div></div></div>';
+  }
+
+  /** 立ち絵は上そろえで切り抜く。横長に潰れても頭が切れない */
+  function portraitTop(id, elem) {
+    return ART.portrait(id, elem)
+      .replace('preserveAspectRatio="xMidYMid slice"', 'preserveAspectRatio="xMidYMin slice"');
+  }
+
+  /** 詳細画面の能力1行：ラベル・数値・段階ピップ。上限（STAT_MAX）は将来7→10でも崩れない */
+  var STAT_MAX = 7;
+  function statRow(label, num, val, color) {
+    var p = '';
+    for (var i = 1; i <= STAT_MAX; i++) p += '<span class="pip' + (i <= val ? ' on' : '') + '"></span>';
+    return '<div class="strow z"><span class="lb">' + label + '</span>' +
+      '<span class="nv">' + num + '</span>' +
+      '<span class="pips" style="color:' + color + '">' + p + '</span></div>';
   }
 
   /** そのキャラが属する強化ライン（Tier1→Tier2→…）を、未実装のイメージ枠も含めて並べる */
@@ -353,17 +375,19 @@
     return out;
   }
 
-  /** □□■ 形式の段階表示。強化ラインが1段だけなら ■ 1/1 と出す */
+  /** 「Tier □■□ ⓘ」の段階表示。強化ラインが1段だけなら「Tier 独立系 ⓘ」 */
   function tierStripHTML(d) {
     var ch = chainOf(d);
     if (!ch.length) return '';
     var here = 0;
     ch.forEach(function (x, i) { if (x.id === d.id) here = i; });
-    var pips = ch.map(function (x, i) {
-      return '<i class="tp' + (i === here ? ' on' : '') + (x.teaser ? ' soon' : '') + '"></i>';
-    }).join('');
-    return '<button class="tiers" data-tiers="' + d.id + '">' + pips +
-      '<b>' + (here + 1) + '/' + ch.length + '</b></button>';
+    var inner = ch.length < 2
+      ? '<span class="solo">独立系</span>'
+      : ch.map(function (x, i) {
+          return '<i class="tp' + (i === here ? ' on' : '') + (x.teaser ? ' soon' : '') + '"></i>';
+        }).join('');
+    return '<button class="tiers" data-tiers="' + d.id + '">' +
+      '<span class="tw">Tier</span>' + inner + '<span class="ic">i</span></button>';
   }
 
   /** 系統の説明ポップアップ（詳細画面の「人系」タップで開く） */
@@ -400,6 +424,101 @@
     $('[data-pc]', m).onclick = function (ev) { ev.stopPropagation(); m.remove(); };
     m.onclick = function (ev) { if (ev.target === m) m.remove(); };
     document.body.appendChild(m);
+  }
+
+  /** 詳細カードの共通動作：技の欄のはみ出し表示と、タップでの技の再生 */
+  function bindDetailCard(root, def) {
+    var card = $('.bigcard', root), body = $('.dbody', root);
+    if (!card || !body) return;
+
+    /* 技の欄からあふれている件数を数えて、下端のチップに出す */
+    var chip = $('.morechip', root), mc = $('.mc', root);
+    if (chip && mc) {
+      var boxes = $$('.abox,.pabox', body);
+      var upd = function () {
+        var br = body.getBoundingClientRect(), n = 0;
+        boxes.forEach(function (x) { if (x.getBoundingClientRect().bottom > br.bottom + 4) n++; });
+        mc.textContent = n;
+        chip.style.display = n > 0 ? 'flex' : 'none';
+        card.classList.toggle('more', n > 0);
+      };
+      body.addEventListener('scroll', upd, { passive: true });
+      setTimeout(upd, 40); setTimeout(upd, 260);
+      chip.onclick = function (ev) {
+        ev.stopPropagation();
+        body.scrollBy({ top: body.clientHeight * 0.85, behavior: 'smooth' });
+      };
+    }
+
+    /* キャラ絵と技の欄をタップすると、その技をその場で再生する */
+    if (!def || !def.actions) return;
+    $$('[data-play]', root).forEach(function (el) {
+      el.onclick = function (ev) {
+        ev.stopPropagation();
+        playDetailSkill(root, def, def.actions[+el.dataset.play] || def.actions[0],
+                        el.classList.contains('abox') ? el : null);
+      };
+    });
+  }
+
+  /** 詳細画面で技を1つ再生する。戦闘中と同じモーション・音・エフェクトを使う */
+  function playDetailSkill(root, d, a, boxEl) {
+    if (!a) return;
+    var card = $('.bigcard', root), art = $('.art', root);
+    var unit = art && $('.unit', art);
+    if (!card || !art || !unit) return;
+
+    var fx = a.fx || (a.kind === 'heal' ? 'heal' : a.kind === 'ward' ? 'ward' : 'slash');
+    var f = fxOf(fx);
+    var isCast = (f.k === 'magic' || f.k === 'heal' || f.k === 'buff');
+    var isSound = (fx === 'discord' || fx === 'screech' || fx === 'frostroar');
+    if (S.sound) SFX.play(fx);
+
+    /* 技名は「絵の下＝能力の上」に。横持ちでは右の技の欄の頭に出す（絵に被せない） */
+    var land = isLandscape();
+    var bd = $('.dbody', root).getBoundingClientRect();
+    var dm = $('.dmeta', root).getBoundingClientRect();
+    techRibbon(d.name, a.name, f.c, false, land
+      ? { x: bd.left + bd.width / 2, y: bd.top + 12, w: bd.width - 18 }
+      : { x: dm.left + dm.width / 2, y: dm.top - 2, w: dm.width - 14 });
+
+    /* 再生中は、絵に重ねた文字をいったん消してアニメに集中させる */
+    card.classList.add('anim');
+    clearTimeout(card._animT);
+    card._animT = setTimeout(function () { card.classList.remove('anim'); }, 1150);
+    if (boxEl) {
+      boxEl.classList.add('playing');
+      setTimeout(function () { boxEl.classList.remove('playing'); }, 900);
+    }
+
+    var swing = motionPlay(unit, isCast ? 'cast' : 'attack');
+    var r = art.getBoundingClientRect();
+    var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    var tx = isCast ? cx : r.left + r.width * 0.76, ty = isCast ? cy : r.top + r.height * 0.48;
+    var t = function (ms) { return ms / spd(); };
+
+    if (isSound) {
+      [0, 130, 260].forEach(function (dl, k) {
+        setTimeout(function () { ringWave(cx, cy, f.c, 90 + k * 40, 4); }, t(swing + dl));
+      });
+      setTimeout(function () { particles(tx, ty, f.c, 8, f.p); }, t(swing + 120));
+      return;
+    }
+    if (f.k === 'proj') {
+      setTimeout(function () {
+        glowBall(tx, ty, f.c, 80); burstRays(tx, ty, f.c, 9, 100); particles(tx, ty, f.c, 9, f.p);
+      }, t(swing + 220));
+    } else if (f.k === 'heal' || f.k === 'buff') {
+      setTimeout(function () { ringWave(cx, cy, f.c, 80, 4); particles(cx, cy, f.c, 10, f.p); }, t(swing + 60));
+    } else if (f.k === 'magic') {
+      setTimeout(function () {
+        ringWave(tx, ty, f.c, 90, 5); burstRays(tx, ty, f.c, 10, 110); particles(tx, ty, f.c, 11, f.p);
+      }, t(swing + 60));
+    } else {
+      setTimeout(function () {
+        slashArc(tx, ty, f.c); burstRays(tx, ty, '#fff', 8, 100); particles(tx, ty, f.c, 11, f.p);
+      }, t(swing + 30));
+    }
   }
 
   /** 詳細画面内の「系統チップ」「段階チップ」にタップ動作をつける */
@@ -445,16 +564,12 @@
     function draw() {
       var cid = list[idx];
       m.innerHTML = '<div class="box detailbox">' +
+        '<div class="cardwrap">' + detailHTML(E.BY_ID[cid]) +
+          '<button class="morechip">▼ あと<b class="mc"></b>件</button></div>' +
         (list.length > 1
-          ? '<div class="navrow">' +
-            '<button class="navb" data-nav="-1">◀</button>' +
-            '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +
-            '<button class="navb" data-nav="1">▶</button></div>'
-          : '') +
-        detailHTML(E.BY_ID[cid]) +
-        (list.length > 1
-          ? '<div class="navrow big">' +
+          ? '<div class="navrow big merged">' +
             '<button class="navb wide" data-nav="-1">◀ 前のカード</button>' +
+            '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +
             '<button class="navb wide" data-nav="1">次のカード ▶</button></div>'
           : '') +
         '<button class="btn ghost" id="dclose" style="width:100%;margin-top:8px">閉じる</button></div>';
@@ -468,6 +583,7 @@
       });
       var cb = $('#dclose', m); if (cb) cb.onclick = function () { m.remove(); };
       bindDetailChips(m);
+      bindDetailCard(m, E.BY_ID[cid]);
     }
     draw();
     tryFullscreen();
@@ -552,13 +668,12 @@
     function draw() {
       var u = list[idx];
       m.innerHTML = '<div class="box detailbox">' +
-        '<div class="navrow">' +
-          '<button class="navb" data-nav="-1">◀</button>' +
-          '<span class="navpos">盤面 ' + (idx + 1) + ' / ' + list.length + '</span>' +
-          '<button class="navb" data-nav="1">▶</button></div>' +
-        liveStatHTML(u) + detailHTML(u.def) +
-        '<div class="navrow big">' +
+        liveStatHTML(u) +
+        '<div class="cardwrap">' + detailHTML(u.def) +
+          '<button class="morechip">▼ あと<b class="mc"></b>件</button></div>' +
+        '<div class="navrow big merged">' +
           '<button class="navb wide" data-nav="-1">◀ 前のキャラ</button>' +
+          '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +
           '<button class="navb wide" data-nav="1">次のキャラ ▶</button></div>' +
         '<button class="btn ghost" id="uclose" style="width:100%;margin-top:8px">閉じる</button></div>';
       $$('[data-nav]', m).forEach(function (b) {
@@ -571,6 +686,7 @@
       });
       $('#uclose', m).onclick = function () { m.remove(); };
       bindDetailChips(m);
+      bindDetailCard(m, u.def);
     }
     draw();
     m.onclick = function (ev) { if (ev.target === m) m.remove(); };
@@ -2535,11 +2651,13 @@
   }
 
   /* --- 技名カットイン --- */
-  function techRibbon(who, tech, color, big) {
+  function techRibbon(who, tech, color, big, at) {
     $$('.techrib').forEach(function (o) { o.remove(); });   // 前の技名が残って重ならないように
     var d = document.createElement('div');
-    d.className = 'techrib' + (big ? ' big' : '');
+    d.className = 'techrib' + (big ? ' big' : '') + (at ? ' dtl' : '');
     d.style.setProperty('--c', color);
+    /* at が来たときは、画面中央ではなく指定の位置に小さく出す（詳細画面用） */
+    if (at) { d.style.left = at.x + 'px'; d.style.top = at.y + 'px'; d.style.maxWidth = at.w + 'px'; }
     d.innerHTML = '<span class="w">' + who + '</span><span class="t">' + tech + '</span>' +
                   '<span class="shine"></span>';
     fxl.appendChild(d);

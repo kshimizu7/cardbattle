@@ -1658,55 +1658,129 @@ body.shake{animation:shk2 .56s}
 .actor-line .stopauto{border-color:#a8455f;color:#ffb9c5}
 
 /* =========================================================
-   v36 — キャラ詳細をスマホ縦1画面に収める
-   ・コスト表示は絵の左上の丸（③）だけに一本化
-   ・その場所に「系統」チップ／「段階」チップを置き、タップで説明を出す
-   ・系統のルール文（毎回は読まない）を常設せず、ポップアップへ移動
+   v37 — キャラ詳細を「カード1枚が浮かぶ」形に作り替え
+   ・キャラ絵を全幅に戻し、名前・系統・段階は絵の下端に重ねる
+   ・外枠をなくしてカードだけを浮かせ、左右の幅をめいっぱい使う
+   ・キャラ絵と能力は固定、スクロールするのは技の欄だけ
+   ・送りボタンと閉じるは最下段に固定、はみ出しは「▼あと◯件」で伝える
+   ・キャラ絵／技の欄をタップすると、その技をその場で再生する
    ========================================================= */
 
-/* URL欄が出ている状態（小さい方のビューポート）でも必ず収まる高さに */
-.modal .box{max-height:88svh}
-.detailbox{padding-top:8px}
+/* 外枠を消してカードだけを浮かせる。ボタンは常に最下段 */
+.modal .box{max-height:92svh}
+.modal .box.detailbox{display:flex;flex-direction:column;overflow:hidden;
+  background:transparent;border:0;padding:0;max-width:380px}
+.detailbox .cardwrap{flex:0 1 auto;min-height:0;position:relative;display:flex;flex-direction:column}
+.detailbox .cardwrap > .bigcard{flex:0 1 auto;min-height:0;overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 20px 46px rgba(0,0,0,.8),0 0 26px rgba(242,198,92,.13)}
+.detailbox > .navrow,.detailbox > .btn,.detailbox > .livebox{flex:0 0 auto}
+.detailbox .navrow.big.merged{margin-top:12px;display:flex;align-items:center;gap:8px}
+.detailbox .navrow.big.merged .navb{flex:1 1 0;min-width:0}
+.detailbox .navrow.big.merged .navpos{flex:0 0 auto;font-size:12px;font-weight:900;color:var(--dim);
+  min-width:52px;text-align:center}
 
-/* 上段：キャラ絵（左）と 名前・系統・能力ピップ（右）を横並びにして高さを詰める */
-.dhead{display:flex;gap:9px;align-items:flex-start}
-.dhead .art{flex:0 0 51%;border-radius:12px 0 10px 0;overflow:hidden}
-.dhead .dmeta{flex:1 1 auto;min-width:0;padding:7px 9px 6px 0;display:flex;flex-direction:column;gap:4px}
-.dhead .dmeta .hd{padding:0;display:block}
-.dhead .dmeta .hd h3{font-size:16px;line-height:1.2;overflow-wrap:anywhere}
-.dhead .dmeta .hd em{display:block;font-size:11px;line-height:1.2;letter-spacing:.05em;
-  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dhead .dmeta .strow{padding:0;gap:6px}
-.dhead .dmeta .strow .lb{width:auto;flex:1 1 auto;font-size:10.5px;white-space:nowrap}
-.chiprow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:1px 0 3px}
-.dbody{padding-top:2px}
-.lnchip{display:inline-flex;align-items:center;gap:4px;padding:2px 8px 2px 3px;border-radius:999px;
+/* キャラ絵・名前・能力は固定。動くのは技の欄だけ */
+.detailbox .dhead{flex:0 0 auto;display:block;position:relative}
+.detailbox .dbody{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none;
+  -webkit-overflow-scrolling:touch;padding-bottom:2px}
+.detailbox .dbody::-webkit-scrollbar{display:none}
+
+/* キャラ絵（全幅）と、その下端に重ねる名前・系統・段階 */
+.detailbox .dhead .art{width:100%;aspect-ratio:1/0.86;border-radius:12px 12px 0 0;
+  overflow:hidden;position:relative;cursor:pointer}
+.detailbox .dhead .art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:58%;
+  background:linear-gradient(transparent,rgba(6,9,17,.55) 42%,rgba(6,9,17,.94));
+  pointer-events:none;z-index:1}
+.detailbox .art .ovbox{position:absolute;left:0;right:0;bottom:0;padding:0 11px 8px;z-index:2;
+  pointer-events:none}
+.detailbox .art .ovbox .lnchip,.detailbox .art .ovbox .tiers{pointer-events:auto}
+.detailbox .art .ovbox .hd{display:flex;align-items:baseline;gap:7px;padding:0}
+.detailbox .art .ovbox .hd h3{font-size:19px;font-weight:900;text-shadow:0 2px 8px rgba(0,0,0,.9)}
+.detailbox .art .ovbox .hd em{display:inline;font-size:12px;font-style:normal;font-weight:800;
+  color:#9fb0d0;letter-spacing:.05em;text-shadow:0 2px 6px rgba(0,0,0,.9)}
+.detailbox .art .ovbox .chiprow{margin:5px 0 0;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+
+/* キャラ絵の中で行動モーションを再生する */
+.detailbox .dhead .art .unit{position:static;width:100%;height:100%;display:block;
+  transform-origin:50% 78%}
+.detailbox .dhead .art .unit .pic,
+.detailbox .dhead .art .unit .pic svg{width:100%;height:100%;display:block}
+
+/* コスト表示（案A：「コスト 5」の帯） */
+.detailbox .art .cost{width:auto;height:auto;border-radius:999px;padding:3px 10px 3px 8px;
+  display:flex;align-items:center;gap:5px;font-size:14px;z-index:3}
+.detailbox .art .cost::before{content:"コスト";font-size:9.5px;font-weight:900;
+  letter-spacing:.08em;opacity:.8}
+
+/* 能力3行（行間は詰める。上限が増えてもピップが自動で細くなる） */
+.detailbox .dhead .dmeta{padding:6px 11px;display:flex;flex-direction:column;gap:0}
+.detailbox .strow.z{display:flex;align-items:center;gap:7px;padding:0;font-size:11px;
+  font-weight:800;line-height:1.2}
+.detailbox .strow.z > *{line-height:1.2}
+.detailbox .strow.z .lb{width:34px;flex:0 0 auto;color:var(--dim);white-space:nowrap}
+.detailbox .strow.z .nv{min-width:20px;text-align:right;font-size:11.5px;font-weight:900;
+  color:var(--ink);font-variant-numeric:tabular-nums;flex:0 0 auto}
+.detailbox .pips{flex:1 1 auto;min-width:0;gap:2px;align-items:center}
+.detailbox .pips .pip{flex:1 1 0;width:auto;height:auto;aspect-ratio:1;max-width:11px;min-width:3px}
+
+/* 系統チップ（ⓘ でタップできることを示す）と 段階チップ */
+.lnchip{display:inline-flex;align-items:center;gap:4px;padding:2px 6px 2px 3px;border-radius:999px;
   background:rgba(4,7,14,.7);border:1px solid var(--lc);color:var(--lc);
   font-size:11px;font-weight:900;letter-spacing:.04em;cursor:pointer;font-family:inherit}
-.lnchip .lg{width:17px;height:17px;border-radius:5px;display:flex;align-items:center;justify-content:center;
-  font-size:11px;font-weight:900;font-style:normal;color:#0a0d16;background:var(--lc)}
-.lnchip::after{content:"?";font-size:9px;opacity:.65;margin-left:1px}
-
-/* □□■ の段階表示 */
+.lnchip .lg{width:17px;height:17px;border-radius:5px;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:900;font-style:normal;
+  color:#0a0d16;background:var(--lc)}
+.lnchip .ic,.tiers .ic{font-size:9px;font-weight:900;font-style:italic;width:13px;height:13px;
+  border-radius:50%;border:1.2px solid currentColor;opacity:.8;display:flex;
+  align-items:center;justify-content:center;margin-left:2px;flex:0 0 auto}
 .tiers{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:999px;
   background:rgba(4,7,14,.7);border:1px solid #3c4762;cursor:pointer;font-family:inherit}
-.tiers b{font-size:10px;font-weight:900;color:#9fb0d0;margin-left:2px}
+.tiers .tw{font-size:9.5px;font-weight:900;color:#8fa0c0;letter-spacing:.08em}
+.tiers .solo{font-size:10.5px;font-weight:900;color:#a8b6d4;white-space:nowrap}
+.tiers .ic{color:#8fa0c0;border-color:#56628a;opacity:1}
 .tp{width:9px;height:9px;border-radius:2px;border:1.5px solid #56628a;background:transparent;
   display:inline-block;font-style:normal;flex:0 0 auto}
 .tp.on{background:var(--gold);border-color:var(--gold);box-shadow:0 0 6px rgba(242,198,92,.7)}
 .tp.soon{border-style:dashed;border-color:#4a5a80;
   background:repeating-linear-gradient(45deg,#2b3550 0 2px,transparent 2px 4px)}
 
-/* 特殊能力の説明を通常技と同じ小ささに（縦を詰める） */
+/* 特殊能力の説明を通常技と同じ小ささに */
 .pabox .an{font-weight:900;font-size:12px;display:flex;gap:6px;align-items:center}
 .pabox .ad{font-size:10.5px;color:var(--dim);margin-top:2px;line-height:1.45}
+.detailbox .abox{cursor:pointer}
+.detailbox .abox.playing{border-color:var(--gold);
+  box-shadow:0 0 0 1px rgba(242,198,92,.4),0 0 18px rgba(242,198,92,.18)}
 
-/* 小さな説明ポップアップ（系統／段階） */
+/* 技がまだ続いていることを伝える「▼ あと◯件」 */
+.detailbox .bigcard.more .dbody{mask-image:linear-gradient(#000 calc(100% - 34px),transparent);
+  -webkit-mask-image:linear-gradient(#000 calc(100% - 34px),transparent)}
+.detailbox .morechip{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);z-index:6;
+  font-size:11px;font-weight:900;color:#0a0d16;background:var(--gold);display:none;
+  padding:5px 13px;border-radius:999px;box-shadow:0 3px 14px rgba(0,0,0,.6);
+  border:0;font-family:inherit;cursor:pointer;align-items:center;gap:5px}
+
+/* 再生中は、絵に重ねた文字をいったん消してアニメに集中させる */
+.detailbox .art .ovbox,.detailbox .art .cost,
+.detailbox .art::after,.detailbox .dmeta{transition:opacity .16s ease}
+.detailbox .bigcard.anim .art .ovbox,.detailbox .bigcard.anim .art .cost,
+.detailbox .bigcard.anim .art::after{opacity:0}
+.detailbox .bigcard.anim .dmeta{opacity:.18}
+
+/* 技名カットインは、詳細画面ではカードに収まる大きさで出す */
+.techrib.dtl{min-width:0;padding:8px 16px;gap:4px;border-top-width:2px;border-bottom-width:2px;
+  box-shadow:0 0 24px rgba(0,0,0,.75),0 0 26px var(--c);z-index:90}
+.techrib.dtl .w{font-size:10px;letter-spacing:.16em}
+.techrib.dtl .t{font-size:19px;letter-spacing:.06em;
+  text-shadow:0 0 10px var(--c),0 0 22px var(--c),0 3px 8px #000}
+
+/* 系統・段階の説明ポップアップ */
 .modal.minipop{z-index:95;padding:22px}
 .modal.minipop .box{max-width:320px}
 .popbox .pophd{display:flex;align-items:center;gap:8px;margin-bottom:8px}
 .popbox .pophd .lg{width:24px;height:24px;border-radius:7px;display:flex;align-items:center;
-  justify-content:center;font-size:13px;font-weight:900;font-style:normal;color:#0a0d16;background:var(--lc)}
+  justify-content:center;font-size:13px;font-weight:900;font-style:normal;
+  color:#0a0d16;background:var(--lc)}
 .popbox .pophd b{font-size:14.5px;color:var(--lc);letter-spacing:.06em}
 .popbox .poptx{font-size:12px;color:#a8b6d4;line-height:1.65;margin-bottom:12px}
 .popbox .poptx b{color:#dbe4f5}
@@ -1720,64 +1794,78 @@ body.shake{animation:shk2 .56s}
 .tli.me b{color:#ffeec2}
 .tli.soon{border-style:dashed;opacity:.72}
 
-/* 横持ちのときは 左＝絵と能力／右＝技 の2段組にして、縦の高さを使い切らない */
+/* 横持ち：左＝キャラ絵だけ／右＝技。名前は絵の上、能力は絵の下に重ねる。
+   絵が縦の余りをぜんぶ吸うので、絵の下に空きスペースができない */
 @media (orientation: landscape) {
-  /* 箱の高さを縦に配り、あふれる分は「技」の欄だけが受け持つ（ボタンは必ず見える） */
-  .modal .box.detailbox{max-width:min(94vw,680px);display:flex;flex-direction:column;overflow:hidden}
-  .detailbox > .livebox,.detailbox > .navrow,.detailbox > .btn{flex:0 0 auto}
-  .detailbox > .bigcard{flex:1 1 auto;min-height:0;overflow:hidden}
-  .detailbox .bigcard{display:grid;grid-template-columns:minmax(0,44%) minmax(0,1fr);
-    grid-template-rows:auto 1fr;grid-template-areas:"head body" "flav body";align-items:start}
-  .detailbox .dhead{grid-area:head;border-right:1px solid #263049;padding-bottom:4px}
-  .detailbox > .bigcard > .flav{grid-area:flav;border-right:1px solid #263049;
-    margin:0;padding:0 10px 10px}
-  .detailbox .dhead .art{border-radius:12px 0 10px 0}
-  /* 上下に同じ送りボタンが2つ出るので、横持ちでは上側を省いて高さを稼ぐ */
-  .detailbox > .navrow:not(.big){display:none}
-  .detailbox .dbody{grid-area:body;padding:6px 0;overflow-y:auto;min-height:0;
-    -webkit-overflow-scrolling:touch;
-    mask-image:linear-gradient(#000 calc(100% - 16px),transparent);
-    -webkit-mask-image:linear-gradient(#000 calc(100% - 16px),transparent)}
+  .modal .box.detailbox{max-width:min(94vw,720px)}
+  .detailbox .cardwrap > .bigcard{display:grid;
+    grid-template-columns:minmax(0,40%) minmax(0,1fr);align-items:stretch}
+  .detailbox .dhead{grid-area:auto;display:grid;grid-template-areas:"a";min-height:0;
+    border-right:1px solid #263049;overflow:hidden}
+  .detailbox .dhead .art{grid-area:a;min-height:90px;aspect-ratio:auto;height:100%;
+    border-radius:12px 0 0 0}
+  .detailbox .dhead .dmeta{grid-area:a;align-self:end;z-index:3;position:relative;
+    padding:14px 11px 9px;
+    background:linear-gradient(transparent,rgba(6,9,17,.72) 34%,rgba(6,9,17,.95))}
+  .detailbox .art::after{height:34%}
+  .detailbox .art::before{content:"";position:absolute;left:0;right:0;top:0;height:44%;
+    background:linear-gradient(rgba(6,9,17,.9),rgba(6,9,17,.5) 55%,transparent);
+    pointer-events:none;z-index:1}
+  .detailbox .art .ovbox{top:0;bottom:auto;padding:8px 11px 0}
+  .detailbox .art .ovbox .hd h3{font-size:17px}
+  .detailbox .art .cost{left:auto;right:8px;top:8px}
+  .detailbox .dbody{padding:6px 0 4px}
   .detailbox .dbody .abox,.detailbox .dbody .pabox{margin:5px 9px}
+  .detailbox .dbody .flav{margin:7px 9px 6px}
+  .detailbox .morechip{left:70%}
+  .detailbox .navrow.big.merged{margin-top:9px}
+  .detailbox .bigcard.anim .art::before{opacity:0}
+  .detailbox .bigcard.anim .dmeta{opacity:0}
 }
 
-/* 画面の短い縦持ち（iPhone SE / 小型Android）では、余白と絵をもう一段詰める */
+/* 背の低い端末（iPhone SE / 小型Android）では、余白と文字をもう一段詰める */
 @media (orientation: portrait) and (max-height: 730px) {
-  .dhead .art{flex:0 0 46%}
+  .detailbox .art .ovbox .hd h3{font-size:17px}
+  .detailbox .dhead .dmeta{padding:5px 10px}
   .detailbox .abox,.detailbox .pabox{margin:4px 8px;padding:6px 8px}
   .detailbox .abox .ad,.detailbox .pabox .ad{line-height:1.4}
   .detailbox .flav{margin:6px 8px 7px;line-height:1.45}
-  .detailbox .navrow.big{margin-top:7px}
-  .detailbox .dhead .dmeta{padding-top:5px;gap:3px}
+  .detailbox .navrow.big.merged{margin-top:8px}
 }
-
-/* さらに背の低い端末（360×640 など）向けの最終段 */
 @media (orientation: portrait) and (max-height: 660px) {
-  .dhead .art{flex:0 0 41%}
-  .dhead .dmeta .hd h3{font-size:15px}
+  .detailbox .dhead .art{aspect-ratio:1/0.74}
+  .detailbox .art .ovbox .hd h3{font-size:16px}
   .detailbox .abox,.detailbox .pabox{margin:3px 8px;padding:5px 8px}
   .detailbox .abox .an,.detailbox .pabox .an{font-size:11.5px}
   .detailbox .abox .ad,.detailbox .pabox .ad{font-size:10px;line-height:1.38}
   .detailbox .flav{font-size:10px;margin:5px 8px 6px;line-height:1.4}
 }
 
-/* 戦闘中の詳細：HP／攻撃（魔力・回復量）／素早さ を1行にまとめて高さを詰める */
+/* 戦闘中の詳細：HP／攻撃（魔力・回復量）／素早さ を1行にまとめる */
 .lvstats{display:flex;gap:6px;margin:2px 0 4px}
 .lvstats span{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;
-  gap:1px;padding:4px 4px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid #232d45}
+  gap:1px;padding:4px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid #232d45}
 .lvstats i{font-style:normal;font-size:9.5px;font-weight:800;color:var(--dim);letter-spacing:.04em}
 .lvstats b{font-size:15px;font-weight:900;color:#fff;line-height:1.1;white-space:nowrap}
 .lvstats u{text-decoration:none;font-size:9.5px;color:var(--dim);font-weight:700;margin-left:1px}
 
-/* 横持ちで「戦闘中のキャラ詳細」を開いたときは、上に現在値の欄が乗るぶんさらに詰める */
+/* 横持ちで「戦闘中のキャラ詳細」を開いたときは、上に現在値の欄が乗るぶん
+   カードが低くなる。キャラ絵が横に潰れないよう、左列をさらに細くする */
 @media (orientation: landscape) {
-  .detailbox .livebox{margin-bottom:6px;padding:6px 9px}
-  .detailbox .livebox .lvhd{margin-bottom:3px}
+  /* 現在値の欄は1行にたたんで、カードに高さを譲る */
+  .detailbox .livebox{margin-bottom:6px;padding:5px 9px;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .detailbox .livebox .lvhd{margin:0;flex:0 0 auto}
+  .detailbox .livebox .lvstats{margin:0;flex:1 1 240px;min-width:210px}
   .detailbox .livebox .lvstats span{padding:2px 4px}
-  .detailbox .livebox ~ .bigcard .dhead .art{flex:0 0 38%}
-  .detailbox .livebox ~ .bigcard > .flav{display:none}
-  .detailbox .livebox ~ .bigcard .dhead{padding-bottom:8px}
-  /* 上の欄に現在値（基本値つき）が出ているので、素の能力ピップは省く */
-  .detailbox .livebox ~ .bigcard .dmeta .strow{display:none}
-
+  .detailbox .livebox .lvstats b{font-size:14px}
+  .detailbox .livebox .lvtags{margin:0;flex:1 1 auto}
+  .detailbox .livebox .lvrow{padding:0;flex:0 0 auto;gap:8px}
+  .detailbox .livebox ~ .cardwrap > .bigcard{grid-template-columns:minmax(0,31%) minmax(0,1fr)}
+  /* 上の欄に現在値（基本値つき）が出ているので、素の能力ピップは省いて絵を広く見せる */
+  .detailbox .livebox ~ .cardwrap .dmeta{display:none}
+  .detailbox .livebox ~ .cardwrap .art .ovbox .hd h3{font-size:14.5px}
+  .detailbox .livebox ~ .cardwrap .art .ovbox .hd em{display:none}
+  .detailbox .livebox ~ .cardwrap .art .ovbox{padding:6px 8px 0}
+  .detailbox .livebox ~ .cardwrap .dmeta{padding:12px 8px 7px}
 }
