@@ -757,7 +757,7 @@ var CB = (function () {
 
     if (a.kind === 'guard') {
       addStatus(u, 'guard', 2, 1);
-      push(st, { type: 'cast', uid: u.uid, fx: 'guard' });
+      push(st, { type: 'cast', uid: u.uid, fx: 'guard', name: '防御' });
       logMsg(st, u.def.name + ' は身構えた（次の被ダメージ-2）');
       return finishAction(st, u, a);
     }
@@ -765,7 +765,7 @@ var CB = (function () {
     if (a.kind === 'cover') {
       var ally = findUid(st, target && target.uid);
       if (!ally || !ally.alive) ally = adjacentAllies(st, u)[0];
-      push(st, { type: 'cast', uid: u.uid, fx: a.fx || 'aegis' });
+      push(st, { type: 'cast', uid: u.uid, fx: a.fx || 'aegis', name: a.name });
       if (ally) {
         // 同時に庇えるのは1人だけ
         allUnits(st).forEach(function (v) { if (v.flags.coverBy === u.uid) v.flags.coverBy = null; });
@@ -779,7 +779,7 @@ var CB = (function () {
     }
 
     if (a.kind === 'buff') {
-      push(st, { type: 'cast', uid: u.uid, fx: a.fx || 'ward' });
+      push(st, { type: 'cast', uid: u.uid, fx: a.fx || 'ward', name: a.name });
       var key = a.stat === 'spd' ? 'haste' : 'might';
       aliveUnits(st, u.side).forEach(function (v) {
         addStatus(v, key, a.value, (a.rounds || 1) + 1);
@@ -791,7 +791,7 @@ var CB = (function () {
     }
 
     if (a.kind === 'ward') {
-      push(st, { type: 'cast', uid: u.uid, fx: 'ward' });
+      push(st, { type: 'cast', uid: u.uid, fx: 'ward', name: a.name });
       aliveUnits(st, u.side).forEach(function (v) {
         addStatus(v, 'ward', a.value, a.rounds || 1);
         push(st, { type: 'buffFx', uid: v.uid, fx: 'ward' });
@@ -801,7 +801,7 @@ var CB = (function () {
     }
 
     if (a.kind === 'heal') {
-      push(st, { type: 'cast', uid: u.uid, fx: 'heal' });
+      push(st, { type: 'cast', uid: u.uid, fx: 'heal', name: a.name });
       var tgts = [];
       if (a.range === 'ally1') { var t = findUid(st, target.uid); if (t) tgts = [t]; }
       else tgts = aliveUnits(st, u.side);
@@ -813,7 +813,7 @@ var CB = (function () {
 
     if (a.kind === 'revive') {
       var dead = findUid(st, target.uid);
-      push(st, { type: 'cast', uid: u.uid, fx: 'revive' });
+      push(st, { type: 'cast', uid: u.uid, fx: 'revive', name: a.name });
       if (dead) {
         dead.alive = true;
         dead.hp = Math.max(1, Math.floor(dead.maxHp / 2));

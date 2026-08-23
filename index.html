@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="34">
+<meta name="app-version" content="35">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -1357,7 +1357,7 @@ body.shake{animation:shk2 .56s}
 #app.compact .turnbar,
 #app.compact .loglast{display:none}
 #app.compact .field{padding:6px 7px}
-#app.compact .unit .nm{font-size:12px}
+#app.compact .unit .nm{font-size:12px;bottom:21px}
 #app.compact .unit .hpb{height:16px}
 #app.compact .unit .spb,#app.compact .unit .atb{font-size:12.5px}
 
@@ -1610,31 +1610,39 @@ body.shake{animation:shk2 .56s}
   box-shadow:0 0 12px rgba(242,198,92,.35)}
 
 /* ④ 交戦ラインは既定で無地。攻撃時だけ方向が流れる */
-.warline .wl-flow{display:flex;gap:3px;opacity:0;transition:opacity .18s}
-.warline .wl-flow i{font-style:normal;font-size:15px;font-weight:900;color:var(--gold);
+.warline .wl-flow{display:flex;gap:4px;opacity:0;transition:opacity .18s}
+.warline .wl-flow i{font-style:normal;font-size:22px;font-weight:900;color:var(--gold);
   opacity:.25;line-height:1}
+/* 攻めている側の色で光らせる（P1=青 / P2=赤） */
+.warline.flow0 .wl-flow i{color:var(--p1)}
+.warline.flow1 .wl-flow i{color:var(--p2)}
+.warline.flow0{box-shadow:inset 0 0 22px rgba(95,168,255,.5)}
+.warline.flow1{box-shadow:inset 0 0 22px rgba(255,95,118,.5)}
 .warline.flow0 .wl-flow,.warline.flow1 .wl-flow{opacity:1}
 .warline.flow0 .wl-flow i{animation:wlflow .75s linear infinite}
 .warline.flow1 .wl-flow i{animation:wlflow .75s linear infinite}
 .warline .wl-flow i:nth-child(2){animation-delay:.10s}
 .warline .wl-flow i:nth-child(3){animation-delay:.20s}
 .warline .wl-flow i:nth-child(4){animation-delay:.30s}
-@keyframes wlflow{0%{opacity:.14}45%{opacity:1;filter:drop-shadow(0 0 7px var(--gold))}100%{opacity:.14}}
+@keyframes wlflow{0%{opacity:.1;transform:scale(.85)}
+  45%{opacity:1;transform:scale(1.25);filter:drop-shadow(0 0 12px currentColor)}
+  100%{opacity:.1;transform:scale(.85)}}
 /* 縦持ち：下(P1)→上(P2) は上向き、逆は下向き */
 .warline .wl-flow{transform:rotate(-90deg)}
 .warline.flow1 .wl-flow{transform:rotate(90deg)}
 @media (orientation: landscape){
-  /* 横持ち：左(P1)→右(P2) は右向き、逆は左向き */
-  #app.land .warline .wl-flow{transform:none;flex-direction:column;gap:2px}
+  /* 横持ち：❯は元から右向きなので回さない（以前は余計に90°回して上下を向いていた）。
+     P1(左)→P2(右) はそのまま右向き、P2→P1 は全体を180°回して左向きに */
+  #app.land .warline .wl-flow{transform:none;flex-direction:column;gap:6px}
   #app.land .warline.flow1 .wl-flow{transform:rotate(180deg)}
-  #app.land .warline .wl-flow i{transform:rotate(90deg)}
+  #app.land .warline .wl-flow i{font-size:26px}
 }
 .acts.waiting{display:flex;align-items:center;justify-content:center;min-height:52px}
 .waitmsg{font-size:12.5px;font-weight:800;color:#7686a6;letter-spacing:.08em}
 
 /* ===== v32: 横持ちの文字を読みやすく ===== */
 @media (orientation: landscape) {
-  #app.land .unit .nm{font-size:14px;letter-spacing:-.01em}
+  #app.land .unit .nm{font-size:14px;letter-spacing:-.01em;bottom:25px}
   #app.land .unit .hpb{height:19px;font-size:13.5px}
   #app.land .unit .spb,#app.land .unit .atb{font-size:14px;padding:2px 6px}
   #app.land .unit .rng,#app.land .unit .lnb{font-size:11px}
@@ -1647,7 +1655,7 @@ body.shake{animation:shk2 .56s}
 }
 /* 画面が広い横持ち（iPad系）はもう一段大きく */
 @media (orientation: landscape) and (min-width: 1000px) {
-  #app.land .unit .nm{font-size:16.5px}
+  #app.land .unit .nm{font-size:16.5px;bottom:30px}
   #app.land .unit .hpb{height:23px;font-size:16px}
   #app.land .unit .spb,#app.land .unit .atb{font-size:16.5px;padding:3px 8px}
   #app.land .unit .rng,#app.land .unit .lnb{font-size:12.5px}
@@ -2427,7 +2435,7 @@ var CB = (function () {
 
     if (a.kind === 'guard') {
       addStatus(u, 'guard', 2, 1);
-      push(st, { type: 'cast', uid: u.uid, fx: 'guard' });
+      push(st, { type: 'cast', uid: u.uid, fx: 'guard', name: '防御' });
       logMsg(st, u.def.name + ' は身構えた（次の被ダメージ-2）');
       return finishAction(st, u, a);
     }
@@ -2435,7 +2443,7 @@ var CB = (function () {
     if (a.kind === 'cover') {
       var ally = findUid(st, target && target.uid);
       if (!ally || !ally.alive) ally = adjacentAllies(st, u)[0];
-      push(st, { type: 'cast', uid: u.uid, fx: a.fx || 'aegis' });
+      push(st, { type: 'cast', uid: u.uid, fx: a.fx || 'aegis', name: a.name });
       if (ally) {
         // 同時に庇えるのは1人だけ
         allUnits(st).forEach(function (v) { if (v.flags.coverBy === u.uid) v.flags.coverBy = null; });
@@ -2449,7 +2457,7 @@ var CB = (function () {
     }
 
     if (a.kind === 'buff') {
-      push(st, { type: 'cast', uid: u.uid, fx: a.fx || 'ward' });
+      push(st, { type: 'cast', uid: u.uid, fx: a.fx || 'ward', name: a.name });
       var key = a.stat === 'spd' ? 'haste' : 'might';
       aliveUnits(st, u.side).forEach(function (v) {
         addStatus(v, key, a.value, (a.rounds || 1) + 1);
@@ -2461,7 +2469,7 @@ var CB = (function () {
     }
 
     if (a.kind === 'ward') {
-      push(st, { type: 'cast', uid: u.uid, fx: 'ward' });
+      push(st, { type: 'cast', uid: u.uid, fx: 'ward', name: a.name });
       aliveUnits(st, u.side).forEach(function (v) {
         addStatus(v, 'ward', a.value, a.rounds || 1);
         push(st, { type: 'buffFx', uid: v.uid, fx: 'ward' });
@@ -2471,7 +2479,7 @@ var CB = (function () {
     }
 
     if (a.kind === 'heal') {
-      push(st, { type: 'cast', uid: u.uid, fx: 'heal' });
+      push(st, { type: 'cast', uid: u.uid, fx: 'heal', name: a.name });
       var tgts = [];
       if (a.range === 'ally1') { var t = findUid(st, target.uid); if (t) tgts = [t]; }
       else tgts = aliveUnits(st, u.side);
@@ -2483,7 +2491,7 @@ var CB = (function () {
 
     if (a.kind === 'revive') {
       var dead = findUid(st, target.uid);
-      push(st, { type: 'cast', uid: u.uid, fx: 'revive' });
+      push(st, { type: 'cast', uid: u.uid, fx: 'revive', name: a.name });
       if (dead) {
         dead.alive = true;
         dead.hp = Math.max(1, Math.floor(dead.maxHp / 2));
@@ -7598,7 +7606,14 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
         techRibbon(au ? au.def.name : '', e.name, f.c, S.multi || f.sh >= 12);
         var src = rectOf(e.uid);
         var swing = src ? motionPlay(src.el, 'attack') : 0;   // 振り抜くまでの時間
-        if (f.k === 'magic') setTimeout(function () { tintScreen(f.c, e.targets.length > 2 ? 0.34 : 0.2); }, swing / spd());
+        var isSound = (e.fx === 'discord' || e.fx === 'screech');
+        if (f.k === 'magic' && !isSound) setTimeout(function () { tintScreen(f.c, e.targets.length > 2 ? 0.34 : 0.2); }, swing / spd());
+        if (isSound && src) {
+          /* 音波：術者から大きな同心円を3重に放つ */
+          [0, 130, 260].forEach(function (dl, k) {
+            setTimeout(function () { ringWave(src.x, src.y, f.c, 150 + k * 70, 5); }, (swing + dl) / spd());
+          });
+        }
         e.targets.forEach(function (tid, i) {
           var t = rectOf(tid); if (!t) return;
           var d0 = swing + 30 + i * 130;                 // 振り抜いた瞬間に当たる／範囲は1体ずつ
@@ -7624,6 +7639,12 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
               glowBall(t.x, t.y, f.c, 175); ringWave(t.x, t.y, '#fff', 100, 6);
               burstRays(t.x, t.y, f.c, 16, 210);
               particles(t.x, t.y, f.c, 18, f.p);
+            }, d0 / spd());
+          } else if (isSound) {
+            /* 音系：まぶしい玉や白閃光は使わず、波紋と音符粒子だけで当てる */
+            setTimeout(function () {
+              ringWave(t.x, t.y, f.c, 96, 5);
+              particles(t.x, t.y, f.c, 10, f.p);
             }, d0 / spd());
           } else {
             setTimeout(function () {
@@ -7754,7 +7775,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
         var rc = rectOf(e.uid);
         if (rc) motionPlay(rc.el, 'cast');
         var ua = E.findUid(st, e.uid);
-        if (ua && e.fx !== 'guard') techRibbon(ua.def.name, ({ heal: '詠唱', ward: '結界', revive: '殉教', guard: '防御' })[e.fx] || '詠唱', fc.c);
+        if (ua && e.fx !== 'guard') techRibbon(ua.def.name, e.name || '詠唱', fc.c);
         if (rc) { ringWave(rc.x, rc.y, fc.c, 96, 4); burstRays(rc.x, rc.y, fc.c, 10, 140);
                   particles(rc.x, rc.y, fc.c, 11, fc.p); }
         return 620;

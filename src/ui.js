@@ -2553,7 +2553,14 @@
         techRibbon(au ? au.def.name : '', e.name, f.c, S.multi || f.sh >= 12);
         var src = rectOf(e.uid);
         var swing = src ? motionPlay(src.el, 'attack') : 0;   // 振り抜くまでの時間
-        if (f.k === 'magic') setTimeout(function () { tintScreen(f.c, e.targets.length > 2 ? 0.34 : 0.2); }, swing / spd());
+        var isSound = (e.fx === 'discord' || e.fx === 'screech');
+        if (f.k === 'magic' && !isSound) setTimeout(function () { tintScreen(f.c, e.targets.length > 2 ? 0.34 : 0.2); }, swing / spd());
+        if (isSound && src) {
+          /* 音波：術者から大きな同心円を3重に放つ */
+          [0, 130, 260].forEach(function (dl, k) {
+            setTimeout(function () { ringWave(src.x, src.y, f.c, 150 + k * 70, 5); }, (swing + dl) / spd());
+          });
+        }
         e.targets.forEach(function (tid, i) {
           var t = rectOf(tid); if (!t) return;
           var d0 = swing + 30 + i * 130;                 // 振り抜いた瞬間に当たる／範囲は1体ずつ
@@ -2579,6 +2586,12 @@
               glowBall(t.x, t.y, f.c, 175); ringWave(t.x, t.y, '#fff', 100, 6);
               burstRays(t.x, t.y, f.c, 16, 210);
               particles(t.x, t.y, f.c, 18, f.p);
+            }, d0 / spd());
+          } else if (isSound) {
+            /* 音系：まぶしい玉や白閃光は使わず、波紋と音符粒子だけで当てる */
+            setTimeout(function () {
+              ringWave(t.x, t.y, f.c, 96, 5);
+              particles(t.x, t.y, f.c, 10, f.p);
             }, d0 / spd());
           } else {
             setTimeout(function () {
@@ -2709,7 +2722,7 @@
         var rc = rectOf(e.uid);
         if (rc) motionPlay(rc.el, 'cast');
         var ua = E.findUid(st, e.uid);
-        if (ua && e.fx !== 'guard') techRibbon(ua.def.name, ({ heal: '詠唱', ward: '結界', revive: '殉教', guard: '防御' })[e.fx] || '詠唱', fc.c);
+        if (ua && e.fx !== 'guard') techRibbon(ua.def.name, e.name || '詠唱', fc.c);
         if (rc) { ringWave(rc.x, rc.y, fc.c, 96, 4); burstRays(rc.x, rc.y, fc.c, 10, 140);
                   particles(rc.x, rc.y, fc.c, 11, fc.p); }
         return 620;
