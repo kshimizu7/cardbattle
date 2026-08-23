@@ -338,7 +338,8 @@
         '</div>' +
       '</div>' +
       '<div class="dbody">' + acts + pas +
-        '<div class="flav">' + d.flavor + '</div></div></div>';
+        '<div class="flav">' + d.flavor + '</div></div>' +
+      '<button class="morechip">▼ あと<b class="mc"></b>件</button></div>';
   }
 
   /** 立ち絵は上そろえで切り抜く。横長に潰れても頭が切れない */
@@ -564,8 +565,7 @@
     function draw() {
       var cid = list[idx];
       m.innerHTML = '<div class="box detailbox">' +
-        '<div class="cardwrap">' + detailHTML(E.BY_ID[cid]) +
-          '<button class="morechip">▼ あと<b class="mc"></b>件</button></div>' +
+        '<div class="cardwrap">' + detailHTML(E.BY_ID[cid]) + '</div>' +
         (list.length > 1
           ? '<div class="navrow big merged">' +
             '<button class="navb wide" data-nav="-1">◀ 前のカード</button>' +
@@ -669,8 +669,7 @@
       var u = list[idx];
       m.innerHTML = '<div class="box detailbox">' +
         liveStatHTML(u) +
-        '<div class="cardwrap">' + detailHTML(u.def) +
-          '<button class="morechip">▼ あと<b class="mc"></b>件</button></div>' +
+        '<div class="cardwrap">' + detailHTML(u.def) + '</div>' +
         '<div class="navrow big merged">' +
           '<button class="navb wide" data-nav="-1">◀ 前のキャラ</button>' +
           '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +

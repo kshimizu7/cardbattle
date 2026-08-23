@@ -1666,12 +1666,15 @@ body.shake{animation:shk2 .56s}
    ・キャラ絵／技の欄をタップすると、その技をその場で再生する
    ========================================================= */
 
-/* 外枠を消してカードだけを浮かせる。ボタンは常に最下段 */
+/* 外枠を消してカードだけを浮かせる。
+   箱の高さを画面いっぱいに固定し、送りボタンと閉じるは常に画面の最下段に置く。
+   こうするとカードの長さが変わってもタップ位置が動かず、連続でめくれる */
 .modal .box{max-height:92svh}
 .modal .box.detailbox{display:flex;flex-direction:column;overflow:hidden;
-  background:transparent;border:0;padding:0;max-width:380px}
-.detailbox .cardwrap{flex:0 1 auto;min-height:0;position:relative;display:flex;flex-direction:column}
-.detailbox .cardwrap > .bigcard{flex:0 1 auto;min-height:0;overflow:hidden;
+  background:transparent;border:0;padding:0;max-width:380px;height:92svh}
+.detailbox .cardwrap{flex:1 1 auto;min-height:0;position:relative;
+  display:flex;flex-direction:column;justify-content:center}
+.detailbox .cardwrap > .bigcard{flex:0 1 auto;min-height:0;overflow:hidden;position:relative;
   display:flex;flex-direction:column;
   box-shadow:0 20px 46px rgba(0,0,0,.8),0 0 26px rgba(242,198,92,.13)}
 .detailbox > .navrow,.detailbox > .btn,.detailbox > .livebox{flex:0 0 auto}
