@@ -36,6 +36,9 @@ ${R('save.js')}
 ${R('sfx.js')}
 </script>
 <script>
+${R('bgm.js')}
+</script>
+<script>
 ${R('art.js')}
 </script>
 <script>

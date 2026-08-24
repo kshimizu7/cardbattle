@@ -9,7 +9,7 @@ while (true) {
   const b = src.indexOf('\n</script>', a);
   blocks.push(src.slice(a + 9, b)); pos = b;
 }
-if (blocks.length !== 6) throw new Error('scriptブロックが6つではない: ' + blocks.length);
+if (blocks.length !== 7) throw new Error('scriptブロックが7つではない: ' + blocks.length);
 fs.writeFileSync(__dirname + '/src/style.css', css);
-['engine.js','ai.js','save.js','sfx.js','art.js','ui.js'].forEach((n, i) => fs.writeFileSync(__dirname + '/src/' + n, blocks[i]));
-console.log('復元:', blocks.map((b,i)=>['engine','ai','save','sfx','art','ui'][i]+':'+b.length).join(' '));
+['engine.js','ai.js','save.js','sfx.js','bgm.js','art.js','ui.js'].forEach((n, i) => fs.writeFileSync(__dirname + '/src/' + n, blocks[i]));
+console.log('復元:', blocks.map((b,i)=>['engine','ai','save','sfx','bgm','art','ui'][i]+':'+b.length).join(' '));

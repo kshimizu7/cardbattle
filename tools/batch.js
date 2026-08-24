@@ -1,4 +1,4 @@
-const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
+const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch();
   const N = +process.argv[2] || 8;

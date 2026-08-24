@@ -335,13 +335,40 @@ var BGM = (function () {
   }
 
   /* =========================================================
-     再生（小節を先読みして予約する）
+     再生
+     曲ごとに専用の出力（voice）を作り、切り替え時は古いほうを
+     フェードして捨てる。こうしないと、先読みで予約済みの音が
+     次の曲に重なって鳴ってしまう。
      ========================================================= */
+  var voice = null;
+
+  function newVoice() {
+    var g = ctx.createGain();  g.gain.value = 0.0001; g.connect(master);
+    var rv = ctx.createGain(); rv.gain.value = 0.0001; rv.connect(conv);
+    var t = ctx.currentTime;
+    g.gain.linearRampToValueAtTime(1, t + 0.35);
+    rv.gain.linearRampToValueAtTime(1, t + 0.35);
+    return { g: g, rv: rv };
+  }
+
+  function killVoice(v, fade) {
+    if (!v) return;
+    var t = ctx.currentTime;
+    [v.g, v.rv].forEach(function (n) {
+      n.gain.cancelScheduledValues(t);
+      n.gain.setValueAtTime(n.gain.value, t);
+      n.gain.linearRampToValueAtTime(0.0001, t + fade);
+    });
+    setTimeout(function () {
+      try { v.g.disconnect(); v.rv.disconnect(); } catch (e) {}
+    }, (fade + 1.5) * 1000);
+  }
+
   function tick() {
-    if (!cur) return;
+    if (!cur || !voice) return;
     var song = SONGS[cur.song];
     while (nextTime < ctx.currentTime + 0.7) {
-      nextTime += scheduleBar(song, cur.tone, nextBar, nextTime, master, conv);
+      nextTime += scheduleBar(song, cur.tone, nextBar, nextTime, voice.g, voice.rv);
       nextBar++;
     }
   }
@@ -349,9 +376,13 @@ var BGM = (function () {
   function play(songId, tone) {
     init();
     if (ctx.state === 'suspended') ctx.resume();
-    stop();
+    if (timer) { clearInterval(timer); timer = null; }
+    killVoice(voice, 0.35);
     cur = { song: songId in SONGS ? songId : 'up', tone: tone === 'chip' ? 'chip' : 'orch' };
-    revWet.gain.value = cur.tone === 'orch' ? 0.32 : 0.1;
+    revWet.gain.setValueAtTime(cur.tone === 'orch' ? 0.32 : 0.1, ctx.currentTime);
+    master.gain.cancelScheduledValues(ctx.currentTime);
+    master.gain.setValueAtTime(vol, ctx.currentTime);
+    voice = newVoice();
     nextBar = 0;
     nextTime = ctx.currentTime + 0.12;
     tick();
@@ -361,21 +392,17 @@ var BGM = (function () {
 
   function stop() {
     if (timer) { clearInterval(timer); timer = null; }
+    killVoice(voice, 0.5);
+    voice = null;
     cur = null;
-    if (master) {
-      var t = ctx.currentTime;
-      master.gain.cancelScheduledValues(t);
-      master.gain.setValueAtTime(master.gain.value, t);
-      master.gain.linearRampToValueAtTime(0.0001, t + 0.25);
-      setTimeout(function () {
-        if (!cur && master) master.gain.setValueAtTime(vol, ctx.currentTime);
-      }, 320);
-    }
   }
 
   function setVolume(v) {
     vol = Math.max(0, Math.min(1, v));
-    if (master && cur) master.gain.setValueAtTime(vol, ctx.currentTime);
+    if (master) {
+      master.gain.cancelScheduledValues(ctx.currentTime);
+      master.gain.setValueAtTime(vol, ctx.currentTime);
+    }
   }
 
   function isPlaying() { return !!cur; }

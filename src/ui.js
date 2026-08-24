@@ -17,7 +17,7 @@
     screen: 'title', mode: 'cpu', diff: 'normal', speed: 1,
     hands: [null, null], teams: [[], []], draftIdx: 0, mulligan: [true, true],
     seenIds: [],
-    st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, pool: 'tutorial',
+    st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, bgm: true, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
     compact: false, sideBySide: false, hintSeen: false,
     /* 全自動は陣営ごとに持つ。PvPでは P1だけ・P2だけ・両方(観戦) を選べる */
@@ -25,7 +25,11 @@
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
-  document.addEventListener('pointerdown', function () { if (S.sound) SFX.unlock(); }, { passive: true });
+  /* ブラウザは最初のタップまで音を鳴らせない。1回目の操作で両方を起こす。 */
+  document.addEventListener('pointerdown', function () {
+    if (S.sound) SFX.unlock();
+    if (S.bgm) syncBgm();
+  }, { passive: true });
   document.addEventListener('click', function (ev) {
     if (!S.sound) return;
     var t = ev.target;
@@ -52,10 +56,26 @@
     return 'P' + (side + 1);
   }
 
+  /* ---------- BGM ----------
+     画面に応じて曲を切り替える。同じ曲が鳴っているときは何もしないので、
+     再描画のたびに頭から鳴り直すことはない。
+     音色はオーケストラ風で固定。 */
+  var BGM_FOR = { battle: 'up', title: 'mid', draft: 'mid', ready: 'mid',
+                  pass: 'mid', result: 'mid' };
+  var BGM_VOL = 0.3;               // 効果音より一段下げる
+  function syncBgm() {
+    if (typeof BGM === 'undefined') return;
+    var want = S.bgm ? BGM_FOR[S.screen] : null;
+    var now = BGM.current();
+    if (!want) { if (now) BGM.stop(); return; }
+    if (now && now.song === want) return;
+    try { BGM.setVolume(BGM_VOL); BGM.play(want, 'orch'); } catch (e) {}
+  }
+
   /* ---------- 設定の記憶 ---------- */
   function rememberSettings() {
     try {
-      SAVE.setSettings({ sound: S.sound, speed: S.speed, pool: S.pool, deal: S.deal,
+      SAVE.setSettings({ sound: S.sound, bgm: S.bgm, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
                          compact: S.compact, sideBySide: S.sideBySide,
                          hintSeen: S.hintSeen });
@@ -740,7 +760,7 @@
   function renderTitle() {
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
-    S.screen = 'title';
+    S.screen = 'title'; syncBgm();
     app.innerHTML =
       '<div id="screen-title">' +
         '<div><div class="title-logo" style="font-size:34px">ARCANA<br>CLASH</div>' +
@@ -788,7 +808,8 @@
         '<div style="display:flex;gap:8px">' +
           '<button class="btn ghost" id="rules" style="flex:1">📖 ルール</button>' +
           '<button class="btn ghost" id="gallery" style="flex:1">🗂 カード図鑑</button>' +
-          '<button class="btn ghost" id="snd0" style="flex:0 0 72px">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
+          '<button class="btn ghost" id="snd0" style="flex:0 0 66px">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
+          '<button class="btn ghost" id="bgm0" style="flex:0 0 78px">' + (S.bgm ? '🎵 曲 ON' : '🎵 曲 OFF') + '</button>' +
         '</div>' +
         '<div class="opt-group"><div class="opt-label">画面表示</div><div class="opt-col">' +
           '<div class="opt poolopt tgl' + (S.compact ? ' on' : '') + '" data-tgl="compact">' +
@@ -818,6 +839,7 @@
     $('#rules').onclick = showRules;
     $('#gallery').onclick = showGallery;
     $('#snd0').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderTitle(); };
+    $('#bgm0').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderTitle(); };
     $('#record').onclick = showRecord;
   }
 
@@ -1265,7 +1287,7 @@
 
   function renderPass(side, next) {
     app.classList.remove('land', 'lp-bottom', 'lp-side');
-    S.screen = 'pass';
+    S.screen = 'pass'; syncBgm();
     app.innerHTML = '<div id="screen-pass">' +
       '<div class="pass-icon">📱</div>' +
       '<h2 style="color:' + (side === 0 ? 'var(--p1)' : 'var(--p2)') + '">プレイヤー' + (side + 1) + ' の番です</h2>' +
@@ -1277,7 +1299,7 @@
   /* 編成が済んだあと、端末を横にしてもらうための画面。
      横向きになるとボタンが光る。縦のままでも押せる（強制はしない）。 */
   function renderReady() {
-    S.screen = 'ready';
+    S.screen = 'ready'; syncBgm();
     var land = isLandscape();
     var vs = S.mode === 'cpu' ? 'CPU' : 'プレイヤー2';
     app.innerHTML =
@@ -1372,7 +1394,7 @@
   function renderDraft() {
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
-    S.screen = 'draft';
+    S.screen = 'draft'; syncBgm();
     var side = S.draftIdx;
     var team = S.teams[side], hand = S.hands[side];
     var cap = E.costCap(), noCost = !isFinite(cap);
@@ -1602,7 +1624,7 @@
       nameA: 'プレイヤー1', nameB: S.mode === 'cpu' ? 'CPU' : 'プレイヤー2'
     });
     S.gen = (S.gen || 0) + 1;
-    S.screen = 'battle';
+    S.screen = 'battle'; syncBgm();
     renderBattle();
     SFX.play('start');
     banner('BATTLE START', 'font-size:22px');
@@ -1768,6 +1790,7 @@
           '<button class="dm" data-d="order">🔢 行動順を見る</button>' +
           '<button class="dm" data-d="log">📜 戦闘ログ</button>' +
           '<button class="dm" data-d="snd">' + (S.sound ? '♪ 音 ON' : '♪ 音 OFF') + '</button>' +
+          '<button class="dm" data-d="bgm">' + (S.bgm ? '🎵 曲 ON' : '🎵 曲 OFF') + '</button>' +
           '<button class="dm" data-d="spd">⏩ 速度 x' + S.speed + '</button>' +
           '<button class="dm wide' + (S.compact ? ' on' : '') + '" data-d="compact">📐 コンパクト表示　' + (S.compact ? 'ON' : 'OFF') + '</button>' +
           '<button class="dm wide' + (S.sideBySide ? ' on' : '') + '" data-d="sidebyside">🤝 横並び対戦　' + (S.sideBySide ? 'ON' : 'OFF') + '</button>' +
@@ -1780,6 +1803,7 @@
           if (k === 'order') { m.remove(); showOrder(); return; }
           if (k === 'log') { m.remove(); showLog(); return; }
           if (k === 'snd') { S.sound = !S.sound; SFX.setEnabled(S.sound); }
+          if (k === 'bgm') { S.bgm = !S.bgm; syncBgm(); }
           if (k === 'spd') S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1;
           if (k === 'compact') S.compact = !S.compact;
           if (k === 'sidebyside') S.sideBySide = !S.sideBySide;
@@ -3062,7 +3086,7 @@
   function showResult() {
     var st = S.st, r = st.result;
     S.gen = (S.gen || 0) + 1;
-    S.screen = 'result';
+    S.screen = 'result'; syncBgm();
     /* 横並びレイアウトは戦闘画面専用。結果画面では必ず解除する
        （グリッド指定が残ると中身が置き場を失って真っ黒になる） */
     app.classList.remove('land', 'lp-bottom', 'lp-side');
@@ -3156,6 +3180,7 @@
 
   restoreSettings();
   SFX.setEnabled(S.sound);
+  if (S.bgm === undefined) S.bgm = true;
   E.setPool(S.pool); E.setDealMode(S.deal);
   renderTitle();
 })();
