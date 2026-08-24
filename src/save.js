@@ -10,6 +10,7 @@ var CBSAVE = (function () {
   var KEY = 'arcanaclash.save.v1';
   var MAX_GAMES = 200;          // 履歴の上限。古いものから捨てる
   var MAX_DECKS = 20;
+  var MAX_REPS  = 30;           // 再現データ。多すぎると保存領域を圧迫する
 
   var store = null;             // localStorage か、使えなければ null
   var mem = null;               // localStorage が使えないときの置き場
@@ -23,7 +24,7 @@ var CBSAVE = (function () {
   } catch (e) { store = null; }
 
   function blank() {
-    return { v: 1, created: Date.now(), games: [], decks: [], settings: {} };
+    return { v: 1, created: Date.now(), games: [], decks: [], settings: {}, reps: [] };
   }
 
   function normalize(d) {
@@ -31,6 +32,7 @@ var CBSAVE = (function () {
     if (!Array.isArray(d.games)) d.games = [];
     if (!Array.isArray(d.decks)) d.decks = [];
     if (!d.settings || typeof d.settings !== 'object') d.settings = {};
+    if (!Array.isArray(d.reps)) d.reps = [];        // 不具合調べ用の再現データ
     d.v = 1;
     return d;
   }
@@ -48,6 +50,7 @@ var CBSAVE = (function () {
     if (!mem) return false;
     if (mem.games.length > MAX_GAMES) mem.games = mem.games.slice(-MAX_GAMES);
     if (mem.decks.length > MAX_DECKS) mem.decks = mem.decks.slice(-MAX_DECKS);
+    if (mem.reps && mem.reps.length > MAX_REPS) mem.reps = mem.reps.slice(-MAX_REPS);
     if (!store) { warned = true; return false; }
     try { store.setItem(KEY, JSON.stringify(mem)); return true; }
     catch (e) { warned = true; return false; }
@@ -75,6 +78,27 @@ var CBSAVE = (function () {
     return rec;
   }
   function games() { return load().games.slice().reverse(); }   // 新しい順
+
+  /* ---------- 再現データ（不具合の報告用） ----------
+     戦闘の種・両軍の配置・実際に取った行動をそのまま残す。
+     これがあれば、同じ戦闘をこちらでもう一度なぞって中身を確かめられる。 */
+  function addReplay(rep) {
+    var d = load();
+    rep.at = rep.at || Date.now();
+    d.reps.push(rep);
+    save();
+    return rep;
+  }
+  function replays() { return load().reps.slice().reverse(); }
+  function replayCode(rep) {
+    var json = JSON.stringify(rep);
+    var bytes = new TextEncoder().encode(json);
+    var bin = '';
+    for (var i = 0; i < bytes.length; i += 8192) {
+      bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    }
+    return 'AC1' + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
   function gameCount() { return load().games.length; }
 
   /* ---------- 保存した編成 ---------- */
@@ -164,6 +188,7 @@ var CBSAVE = (function () {
     warned: function () { return warned; },
     getSettings: getSettings, setSettings: setSettings,
     addGame: addGame, games: games, gameCount: gameCount,
+    addReplay: addReplay, replays: replays, replayCode: replayCode,
     decks: decks, addDeck: addDeck, removeDeck: removeDeck,
     stats: stats,
     exportCode: exportCode, importCode: importCode,

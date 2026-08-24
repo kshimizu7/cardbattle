@@ -1052,14 +1052,42 @@
         '</div>';
     }
 
+    function repHTML() {
+      var rs = [];
+      try { rs = SAVE.replays(); } catch (e) {}
+      if (!rs.length) {
+        return '<div class="rc-empty">まだ記録がありません。<br>' +
+          '1戦終えると、その対戦をあとから再現できるデータが残ります。</div>';
+      }
+      return '<p style="font-size:11.5px;color:var(--dim);line-height:1.85;margin:0 0 10px">' +
+        'おかしな動きに気づいたら、その対戦の<b style="color:var(--gold)">コードをコピー</b>して' +
+        'クロちゃんに貼ってください。<b style="color:var(--gold)">同じ戦闘をそのまま再現</b>して、' +
+        '1手ずつ何が起きたかを確かめられます。直近' + rs.length + '戦ぶんを保存しています。</p>' +
+        rs.map(function (r, i) {
+          var d = new Date(r.at || Date.now());
+          var res = r.result && r.result.w === 0 ? '勝ち' : r.result && r.result.w === 1 ? '負け' : '引分';
+          return '<div class="rc-row" style="display:flex;align-items:center;gap:8px;padding:7px 2px;' +
+            'border-bottom:1px solid var(--line)">' +
+            '<span style="font-size:11px;color:var(--dim);white-space:nowrap">' +
+              (d.getMonth() + 1) + '/' + d.getDate() + ' ' +
+              ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2) + '</span>' +
+            '<span style="font-size:11.5px;font-weight:900;flex:1;min-width:0">' + res +
+              ' <span style="color:var(--dim);font-weight:400">' + (r.result ? r.result.r : '?') + 'R・' +
+              poolName(r.pool) + '</span></span>' +
+            '<button class="btn ghost small" data-rep="' + i + '" style="flex:0 0 auto">コピー</button>' +
+          '</div>';
+        }).join('');
+    }
+
     function draw() {
       var body = tab === 'sum' ? sumHTML()
         : tab === 'hist' ? histHTML()
-        : tab === 'char' ? charHTML() : dataHTML();
+        : tab === 'char' ? charHTML()
+        : tab === 'rep' ? repHTML() : dataHTML();
       m.innerHTML = '<div class="box">' +
         '<h3 style="color:var(--gold);margin-bottom:6px">戦績・記録</h3>' +
         '<div class="gtabs">' +
-          [['sum', '📈 通算'], ['hist', '📜 履歴'], ['char', '👤 キャラ'], ['data', '⚙ データ']]
+          [['sum', '📈 通算'], ['hist', '📜 履歴'], ['char', '👤 キャラ'], ['rep', '🐞 不具合'], ['data', '⚙ データ']]
             .map(function (o) {
               return '<button class="gtab' + (tab === o[0] ? ' on' : '') + '" data-rt="' + o[0] + '">' + o[1] + '</button>';
             }).join('') +
@@ -1075,6 +1103,15 @@
           ev.stopPropagation();
           openId = (openId === r.dataset.g) ? null : r.dataset.g;
           draw();
+        };
+      });
+      $$('[data-rep]', m).forEach(function (b) {
+        b.onclick = function (ev) {
+          ev.stopPropagation();
+          try {
+            var rs = SAVE.replays();
+            copyText(SAVE.replayCode(rs[+b.dataset.rep]), 'コードをコピーしました');
+          } catch (e) { toast('コピーできませんでした'); }
         };
       });
       $('#rc-close', m).onclick = function () { m.remove(); renderTitle(); };
@@ -3131,6 +3168,59 @@
         me: sideRec(0), foe: sideRec(1)
       });
     } catch (e) {}
+    /* 不具合を後から追えるように、再現データも残す */
+    try {
+      SAVE.addReplay({
+        v: 1, seed: st.seed, coin: st.coin,
+        pool: E.getPool(), deal: E.getDealMode(),
+        mode: S.mode, diff: S.mode === 'cpu' ? S.diff : null,
+        tA: S.teams[0].map(function (c) { return { id: c.id, row: c.row, col: c.col }; }),
+        tB: S.teams[1].map(function (c) { return { id: c.id, row: c.row, col: c.col }; }),
+        acts: (st.rec || []).slice(),
+        result: { w: r.winner, r: r.round, how: r.how }
+      });
+    } catch (e) {}
+  }
+
+  /* 端末をまたいで貼れるように、文字列にして写す */
+  function copyText(txt, okMsg) {
+    var done = function () { toast(okMsg || 'コピーしました'); };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(txt).then(done, function () { fallback(); });
+        return;
+      }
+    } catch (e) {}
+    fallback();
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0';
+      document.body.appendChild(ta); ta.focus(); ta.select();
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+      if (ok) done();
+      else showCodeBox(txt);
+    }
+  }
+  /* コピーできない端末向けに、選んで写せる箱を出す */
+  function showCodeBox(txt) {
+    var m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = '<div class="box" style="max-width:420px">' +
+      '<h3 style="margin:0 0 8px;font-size:15px;color:var(--gold)">不具合報告用のコード</h3>' +
+      '<p style="font-size:11.5px;color:var(--dim);margin:0 0 8px;line-height:1.8">' +
+      'この文字列をすべて選んでコピーし、クロちゃんに貼ってください。' +
+      'その対戦をそのまま再現して中身を確かめられます。</p>' +
+      '<textarea readonly style="width:100%;height:120px;font-size:11px;font-family:ui-monospace,monospace;' +
+      'background:#0a0e18;color:#cfd9ec;border:1px solid #2a3550;border-radius:8px;padding:8px">' +
+      txt + '</textarea>' +
+      '<button class="btn ghost" id="cbclose" style="width:100%;margin-top:10px">閉じる</button></div>';
+    document.body.appendChild(m);
+    var ta = m.querySelector('textarea'); ta.focus(); ta.select();
+    m.querySelector('#cbclose').onclick = function () { m.remove(); };
+    m.onclick = function (ev) { if (ev.target === m) m.remove(); };
   }
 
   function showResult() {
@@ -3189,9 +3279,18 @@
         tbl + mvp(0) + mvp(1) +
         '<button class="btn primary" id="again" style="width:100%;padding:14px;margin-top:10px">🔄 もう一度戦う</button>' +
         '<button class="btn ghost" id="home" style="width:100%;padding:12px;margin-top:8px">タイトルへ</button>' +
+        '<button class="btn ghost" id="repcopy" style="width:100%;padding:10px;margin-top:8px;' +
+          'font-size:12px;opacity:.75">🐞 この対戦のコードをコピー</button>' +
       '</div>';
     $('#again').onclick = startGame;
     $('#home').onclick = renderTitle;
+    $('#repcopy').onclick = function () {
+      try {
+        var rs = SAVE.replays();
+        if (!rs.length) { toast('記録がありません'); return; }
+        copyText(SAVE.replayCode(rs[0]), 'コードをコピーしました');
+      } catch (e) { toast('コピーできませんでした'); }
+    };
     SFX.play(win === 0 ? 'win' : win === null ? 'round' : 'lose');
     banner(headline, 'color:' + color + ';border-color:' + color);
   }

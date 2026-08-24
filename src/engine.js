@@ -318,14 +318,19 @@ var CB = (function () {
     var st = {
       round: 1, phase: 'battle', turnIdx: 0, order: [], events: [], log: [],
       coin: opts.coin != null ? opts.coin : (Math.random() < 0.5 ? 0 : 1),
+      /* 不具合の再現用。種を決めておくと、同じ手順で同じ戦闘をなぞれる */
+      seed: opts.seed != null ? opts.seed : Math.floor(Math.random() * 2147483647),
+      rec: opts.rec === false ? null : [],
       quietRounds: 0, winner: null, result: null,
-      rnd: opts.rnd || Math.random,
+      rnd: null,
       players: [
         { name: opts.nameA || 'プレイヤー1', units: [], cost: 0, stats:{dmg:0, heal:0, kills:0} },
         { name: opts.nameB || 'プレイヤー2', units: [], cost: 0, stats:{dmg:0, heal:0, kills:0} }
       ]
     };
-    [normalizeTeam(teamA), normalizeTeam(teamB)].forEach(function (team, side) {
+    st.rnd = opts.rnd || mulberry32(st.seed);
+    st.teams = [normalizeTeam(teamA), normalizeTeam(teamB)];
+    [st.teams[0], st.teams[1]].forEach(function (team, side) {
       team.forEach(function (slot) {
         var u = makeUnit(slot.id, side, slot.row, slot.col);
         st.players[side].units.push(u);
@@ -758,6 +763,15 @@ var CB = (function () {
      行動実行
      ========================================================= */
   function performAction(st, u, actionKey, target) {
+    if (st.rec) {
+      /* uid は対戦をまたいで増え続けるので、記録には「陣営＋並び順」を使う */
+      var slot = function (v) { return v.side * 10 + st.players[v.side].units.indexOf(v); };
+      var tv = target && target.uid != null ? findUid(st, target.uid) : null;
+      st.rec.push([slot(u), actionKey,
+        tv ? 'u' + slot(tv)
+          : target && target.col != null ? 'c' + target.col
+          : target && target.row != null ? 'r' + target.row : '']);
+    }
     st.events = [];
     var opts = getOptions(st, u);
     var entry = null;
