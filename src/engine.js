@@ -47,7 +47,7 @@ var CB = (function () {
       flavor:'穂先は前の敵を貫き、後ろの敵まで届く。' },
 
     { id:'berserker', name:'狂戦士', en:'Berserker', cost:4, role:'melee', elem:'blood', line:'人',
-      hpT:6, atkT:3, spd:1,
+      hpT:6, atkT:2, spd:1,
       actions:[{key:'sweep', name:'薙ぎ払い', kind:'dmg', range:'front_row', dtype:'phys', fx:'sweep'}],
       passives:['bloodrage','defenseless'],
       flavor:'痛みを忘れた斧は、横一列を薙ぎ払う。' },
@@ -298,6 +298,20 @@ var CB = (function () {
     return u;
   }
 
+  /** 前衛のいない列に後衛は立てない。空いた前衛マスへ繰り上げる。
+      編成画面でも同じ規則を掛けているが、AI・保存デッキ・引き継ぎコードなど
+      別経路から来た配置も、ここで必ず正す。 */
+  function normalizeTeam(team) {
+    var out = team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; });
+    for (var col = 0; col < 3; col++) {
+      if (out.some(function (c) { return c.row === 0 && c.col === col; })) continue;
+      for (var i = 0; i < out.length; i++) {
+        if (out[i].row === 1 && out[i].col === col) { out[i].row = 0; break; }
+      }
+    }
+    return out;
+  }
+
   function createState(teamA, teamB, opts) {
     // team = [{id, row, col}, ...]
     opts = opts || {};
@@ -311,7 +325,7 @@ var CB = (function () {
         { name: opts.nameB || 'プレイヤー2', units: [], cost: 0, stats:{dmg:0, heal:0, kills:0} }
       ]
     };
-    [teamA, teamB].forEach(function (team, side) {
+    [normalizeTeam(teamA), normalizeTeam(teamB)].forEach(function (team, side) {
       team.forEach(function (slot) {
         var u = makeUnit(slot.id, side, slot.row, slot.col);
         st.players[side].units.push(u);
@@ -1330,7 +1344,7 @@ var CB = (function () {
     findUid: findUid, getAtk: getAtk, getSpd: getSpd, hasP: hasP, threat: threat,
     cardPower: cardPower, RATING: RATING, meleeChain: meleeChain, meleeReady: meleeReady,
     squareCells: squareCells, tally: tally, deal: deal, redraw: redraw,
-    setAdvanceMode: setAdvanceMode, getAdvanceMode: getAdvanceMode,
+    setAdvanceMode: setAdvanceMode, getAdvanceMode: getAdvanceMode, normalizeTeam: normalizeTeam,
     playable: playable, mulberry32: mulberry32, shuffle: shuffle, statusVal: statusVal,
     adjacentAllies: adjacentAllies, coverOf: coverOf,
     POOLS: POOLS, setPool: setPool, getPool: getPool, poolIds: poolIds, inPool: inPool, handSize: handSize,

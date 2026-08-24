@@ -1354,6 +1354,36 @@
     for (var i = 0; i < team.length; i++) if (team[i].row === row && team[i].col === col) return team[i];
     return null;
   }
+  /* 前衛のいない列に後衛は立てない。空いた前衛マスへ繰り上げる。 */
+  function compactTeam(team) {
+    var out = team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; });
+    for (var col = 0; col < 3; col++) {
+      if (out.some(function (c) { return c.row === 0 && c.col === col; })) continue;
+      for (var i = 0; i < out.length; i++) {
+        if (out[i].row === 1 && out[i].col === col) { out[i].row = 0; break; }
+      }
+    }
+    return out;
+  }
+  /* その配置が規則を満たしているか（＝繰り上げが起きないか） */
+  function legalTeam(team) {
+    for (var col = 0; col < 3; col++) {
+      var hasBack  = team.some(function (c) { return c.row === 1 && c.col === col; });
+      var hasFront = team.some(function (c) { return c.row === 0 && c.col === col; });
+      if (hasBack && !hasFront) return false;
+    }
+    return true;
+  }
+  /* sel を (row,col) へ動かした結果の配置。入れ替えも考慮する */
+  function afterMove(team, sel, row, col) {
+    var other = unitAtSlot(team, row, col);
+    return team.map(function (c) {
+      if (c === sel)  return { id: c.id, row: row, col: col };
+      if (other && c === other) return { id: c.id, row: sel.row, col: sel.col };
+      return { id: c.id, row: c.row, col: c.col };
+    });
+  }
+
   function firstEmpty(team) {
     for (var i = 0; i < FILL_ORDER.length; i++) {
       var f = FILL_ORDER[i];
@@ -1376,6 +1406,11 @@
     if (bk.length > 3) {                       // 後衛があふれたら、いちばん硬いのを前へ
       bk.sort(byHp);
       while (bk.length > 3) fr.push(bk.shift());
+    }
+    /* 後衛は前衛の数を超えられない（前衛のいない列に後衛は立てないため） */
+    if (bk.length > fr.length) {
+      bk.sort(byHp);
+      while (bk.length > fr.length) fr.push(bk.shift());
     }
     fr.sort(byHp); bk.sort(bySpd);
     var out = [];
@@ -1411,6 +1446,14 @@
       if (!sel) S.selSlot = null;
     }
 
+    /* その移動が規則（前衛のいない列に後衛は立てない）を満たすか */
+    function mvOK(row, col) {
+      if (!sel) return false;
+      if (col < 0 || col > 2) return false;
+      if (row === sel.row && col === sel.col) return false;
+      return legalTeam(afterMove(team, sel, row, col));
+    }
+
     function affordable(id) { return cost + E.BY_ID[id].cost <= cap; }
     var anyLeft = hand.some(function (id) {
       return used.indexOf(id) < 0 && affordable(id);
@@ -1421,7 +1464,7 @@
     function commit(next) {
       S.hist[side].push(team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; }));
       if (S.hist[side].length > 30) S.hist[side].shift();
-      S.teams[side] = next;
+      S.teams[side] = compactTeam(next);
     }
 
     var nextCell = firstEmpty(team);
@@ -1455,9 +1498,10 @@
             '<span>' + (sel.row === 0 ? '前衛' : '後衛') + '・' + ['左', '中央', '右'][sel.col] + '</span>' +
             '<i>空きマスや他のカードを直接タップしてもOK</i></div>' +
           '<div class="ab-row">' +
-            '<button class="ab" data-mv="L"' + (sel.col === 0 ? ' disabled' : '') + '>◀ 左へ</button>' +
-            '<button class="ab" data-mv="V">' + (sel.row === 0 ? '▼ 後衛へ' : '▲ 前衛へ') + '</button>' +
-            '<button class="ab" data-mv="R"' + (sel.col === 2 ? ' disabled' : '') + '>右へ ▶</button>' +
+            '<button class="ab" data-mv="L"' + (mvOK(sel.row, sel.col - 1) ? '' : ' disabled') + '>◀ 左へ</button>' +
+            '<button class="ab" data-mv="V"' + (mvOK(1 - sel.row, sel.col) ? '' : ' disabled') + '>' +
+              (sel.row === 0 ? '▼ 後衛へ' : '▲ 前衛へ') + '</button>' +
+            '<button class="ab" data-mv="R"' + (mvOK(sel.row, sel.col + 1) ? '' : ' disabled') + '>右へ ▶</button>' +
           '</div>' +
           '<div class="ab-row">' +
             '<button class="ab sub" data-mv="I">ℹ 詳細を見る</button>' +
@@ -1527,12 +1571,11 @@
 
     /* ---------- 場：タップで選択／移動／入れ替え ---------- */
     function moveTo(row, col) {
-      var other = unitAtSlot(team, row, col);
-      var next = team.map(function (c) {
-        if (c === sel) return { id: c.id, row: row, col: col };
-        if (other && c === other) return { id: c.id, row: sel.row, col: sel.col };
-        return { id: c.id, row: c.row, col: c.col };
-      });
+      var next = afterMove(team, sel, row, col);
+      if (!legalTeam(next)) {
+        toast('後衛に置けるのは、同じ列に前衛がいるときだけです');
+        return;
+      }
       commit(next);
       S.selSlot = row + '-' + col;
       renderDraft();

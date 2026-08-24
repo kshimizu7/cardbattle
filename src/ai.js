@@ -60,6 +60,8 @@ var CBAI = (function () {
     });
     while (front.length < 3 && back.length > 3) front.push(back.pop());
     while (back.length > 3) front.push(back.pop());
+    /* 後衛は前衛の数を超えられない（前衛のいない列に後衛は立てない規則） */
+    while (back.length > front.length) front.push(back.shift());
     // 前衛は硬い順に中央→左→右
     front.sort(function (a, b) { return b.hpT - a.hpT; });
     var fOrder = [1, 0, 2], bOrder = [1, 0, 2];
