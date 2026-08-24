@@ -1683,15 +1683,21 @@ body.shake{animation:shk2 .56s}
 .detailbox .navrow.big.merged .navpos{flex:0 0 auto;font-size:12px;font-weight:900;color:var(--dim);
   min-width:52px;text-align:center}
 
-/* キャラ絵・名前・能力は固定。動くのは技の欄だけ */
+/* キャラ絵・名前・能力は固定。動くのは技の欄だけ。
+   ただし画面が短いと絵が縦を食い尽くして技の欄が数pxになってしまうので、
+   絵の高さに上限を置き、技の欄には必ず最低限の高さを残す。 */
 .detailbox .dhead{flex:0 0 auto;display:block;position:relative}
-.detailbox .dbody{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none;
+.detailbox .dbody{flex:1 1 auto;min-height:112px;overflow-y:auto;scrollbar-width:none;
   -webkit-overflow-scrolling:touch;padding-bottom:2px}
 .detailbox .dbody::-webkit-scrollbar{display:none}
 
 /* キャラ絵（全幅）と、その下端に重ねる名前・系統・段階 */
-.detailbox .dhead .art{width:100%;aspect-ratio:1/0.86;border-radius:12px 12px 0 0;
-  overflow:hidden;position:relative;cursor:pointer}
+.detailbox .dhead .art{width:100%;aspect-ratio:1/0.86;max-height:40svh;
+  border-radius:12px 12px 0 0;overflow:hidden;position:relative;cursor:pointer}
+@media (max-height:560px){
+  .detailbox .dhead .art{max-height:34svh}
+  .detailbox .dbody{min-height:96px}
+}
 .detailbox .dhead .art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:58%;
   background:linear-gradient(transparent,rgba(6,9,17,.55) 42%,rgba(6,9,17,.94));
   pointer-events:none;z-index:1}

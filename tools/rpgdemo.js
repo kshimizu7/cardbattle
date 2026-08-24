@@ -7,23 +7,15 @@ const fs = require('fs');
 const R = f => fs.readFileSync(__dirname + '/../src/' + f, 'utf8');
 const VARI = require('../src/vari.js');
 const { EVENTS, AMBIENT } = require('./rpgevents.js');
-const { DUNGEONS } = require('./rpgdungeons.js');
 
 /* # = 部屋 / . = 岩盤 / S = 入口 / B = 主の間 */
 const MAP = ['..B..', '#####', '#...#', '#####', '..S..'];
 
-/* 部屋の並び。入口と最奥と休憩は固定、あいだは設定に合う出来事から埋める */
-const SLOTS = ['3,2', '3,0', '3,4', '2,0', '2,4', '1,1', '1,3'];
-function placeFor(dg) {
-  const fit = Object.keys(EVENTS).filter(k => {
-    if (['start', 'boss', 'rest'].indexOf(k) >= 0) return false;
-    const t = EVENTS[k].tags || [];
-    return t.indexOf('*') >= 0 || t.some(x => dg.tags.indexOf(x) >= 0);
-  });
-  const out = { '4,2': 'start', '1,2': 'rest', '0,2': 'boss' };
-  SLOTS.forEach((sl, i) => { out[sl] = fit[i % fit.length]; });
-  return out;
-}
+const PLACED = {
+  '4,2': 'start', '3,2': 'chasm', '3,0': 'water', '3,4': 'chest',
+  '2,0': 'traveler', '2,4': 'merchant',
+  '1,1': 'nest', '1,3': 'altar', '1,2': 'rest', '0,2': 'boss'
+};
 
 const ITEMS = {
   torch:  { name: '松明' },   rope:   { name: '縄' },     potion: { name: '傷薬' },
@@ -41,29 +33,20 @@ const PARTY = [
   { id: 'priest',      hp: 15, max: 15, row: 1 }
 ];
 
-/* ダンジョンごとに、語彙を織り込んだうえで何通りあるかを数える */
-const PLACES = {};
-const STATS = {};
-Object.keys(DUNGEONS).forEach(id => {
-  const dg = DUNGEONS[id];
-  const VN = { who: PARTY.length, hurt: PARTY.length };
-  Object.keys(dg.V).forEach(k => { VN[k] = VARI.count(dg.V[k]); });
-  VN.who2 = VN.who2 || 1;
-  PLACES[id] = placeFor(dg);
-  const st = { rooms: {}, totalIntro: 0, minIntro: Infinity, ambient: VARI.count(AMBIENT, VN) };
-  Object.keys(PLACES[id]).forEach(sl => {
-    const k = PLACES[id][sl], e = EVENTS[k];
-    if (st.rooms[k]) return;
-    const intro = VARI.count(e.text, VN);
-    let outs = [];
-    e.choices.forEach(c => c.out.forEach(o => outs.push(VARI.count(o.t || '', VN))));
-    const outAvg = Math.round(outs.reduce((a, b) => a + b, 0) / outs.length) || 1;
-    st.rooms[k] = { title: e.title, intro: intro, out: outAvg, per: intro * outAvg };
-    st.totalIntro += intro;
-    st.minIntro = Math.min(st.minIntro, intro);
-  });
-  STATS[id] = st;
+/* 何通りあるかを数えておいて、ページに埋め込む */
+const VN = { who: PARTY.length, hurt: PARTY.length };
+const STATS = { rooms: {}, totalIntro: 0, minIntro: Infinity };
+Object.keys(EVENTS).forEach(k => {
+  const e = EVENTS[k];
+  const intro = VARI.count(e.text, VN);
+  let outs = [];
+  e.choices.forEach(c => c.out.forEach(o => outs.push(VARI.count(o.t || '', VN))));
+  const outAvg = Math.round(outs.reduce((a, b) => a + b, 0) / outs.length);
+  STATS.rooms[k] = { title: e.title, intro: intro, out: outAvg, per: intro * outAvg };
+  STATS.totalIntro += intro;
+  STATS.minIntro = Math.min(STATS.minIntro, intro);
 });
+STATS.ambient = VARI.count(AMBIENT, VN);
 
 const page = `<title>ダンジョン画面案</title>
 <style>
@@ -258,26 +241,6 @@ body.land .pm .nm{font-size:8.5px}
   border-radius:9px;padding:8px;cursor:pointer}
 .vpanel .vfoot button.pri{border-color:var(--gold-dim);color:var(--gold);background:rgba(242,198,92,.1)}
 
-/* 開示文の画面 */
-.brief{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none;padding:16px 15px;
-  display:flex;flex-direction:column;gap:9px;
-  background:radial-gradient(120% 70% at 50% 0%,#131b2e,#070a10 70%)}
-.brief::-webkit-scrollbar{display:none}
-.brief .bt{font-size:19px;font-weight:900;color:var(--gold);letter-spacing:.04em}
-.brief .bs{font-size:11px;font-weight:900;color:var(--ink3);letter-spacing:.06em;margin-top:-6px}
-.brief .bx{font-size:12.5px;line-height:2.05;color:#cfd9ec;
-  border-left:2px solid var(--gold-dim);padding-left:11px}
-.brief .bh{font-size:11.5px;line-height:1.95;color:#a89a7e;background:rgba(242,198,92,.06);
-  border:1px dashed #4a3f20;border-radius:9px;padding:9px 11px}
-.brief .bh b{display:block;color:var(--gold);font-size:10.5px;margin-bottom:3px;letter-spacing:.06em}
-.brief .bfoot{margin-top:auto;display:flex;flex-direction:column;gap:7px;padding-top:10px}
-.brief .bfoot button{font-family:inherit;font-size:12.5px;font-weight:900;border-radius:9px;
-  padding:10px;cursor:pointer;border:1px solid var(--line2);background:var(--panel2);color:var(--ink2)}
-.brief .bfoot .gb{border-color:var(--gold-dim);color:var(--gold);background:rgba(242,198,92,.12);font-size:13.5px}
-.pm .stx{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;margin-top:1px}
-.pm .stx span{font-size:7px;font-weight:900;color:var(--ng);border:1px solid #6b2b2b;
-  border-radius:3px;padding:0 2px;line-height:1.5}
-
 .foot{width:100%;max-width:780px;margin-top:18px;font-size:12.5px;color:var(--ink2);line-height:1.95}
 .foot h2{font-size:15px;font-weight:900;color:var(--gold);margin:22px 0 6px}
 .foot ul{margin:0;padding-left:1.15em}
@@ -297,15 +260,6 @@ td.k{font-weight:900;color:var(--ink)}
   <p>実際に歩けます。<b>光っているマスをタップすると移動</b>し、部屋によって語りと選択肢が出ます。
   語りは<b>組み合わせで毎回組み立てられる</b>ので、同じ部屋でも文面が変わります。
   <b>語りの右上にある「◇ N通り」を押すと、その部屋の文章が何通りあるかと、実例が見られます。</b></p>
-  <p><b>上の4つはダンジョンの設定です。</b>切り替えると、出てくる出来事も、語りに使われる言葉も変わります。
-  「人がいない洞」に商人は現れず、「神域」では罠が結界の形をとります。
-  最初の画面で<b>「裏設定を見る（開発用）」</b>を押すと、プレイヤーに見せない設定も確認できます。</p>
-  <div class="switch" style="margin-bottom:9px">
-    <button data-dg="beast" class="on">喰らいの洞</button>
-    <button data-dg="mine">黙した坑道</button>
-    <button data-dg="maze">欲深き迷路</button>
-    <button data-dg="shrine">護りの神域</button>
-  </div>
   <div class="switch">
     <button data-lay="bg" class="on">案C 背景に敷く</button>
     <button data-lay="fold">案A 畳む</button>
@@ -358,47 +312,29 @@ ${R('art.js')}
 var MAP = ${JSON.stringify(MAP)};
 var EVENTS = ${JSON.stringify(EVENTS)};
 var AMBIENT = ${JSON.stringify(AMBIENT)};
-var DUNGEONS = ${JSON.stringify(DUNGEONS)};
-var PLACES = ${JSON.stringify(PLACES)};
+var PLACED = ${JSON.stringify(PLACED)};
 var ITEMS = ${JSON.stringify(ITEMS)};
 var PARTY0 = ${JSON.stringify(PARTY)};
-var ALLSTATS = ${JSON.stringify(STATS)};
+var STATS = ${JSON.stringify(STATS)};
 </script>
 <script>
 (function () {
   'use strict';
   var screen = document.getElementById('screen');
-  var layout = 'bg', S, DG = DUNGEONS.beast, PLACED = PLACES.beast, STATS = ALLSTATS.beast;
-
-  var TT = { all:'全員', front:'前衛', back:'後衛', one:'1人', rand2:'2人', hurt:'いちばん傷ついた者' };
-  var SZ = { small:[2,4], mid:[5,8], big:[9,14] };
-  var BAD = { poison:'毒', bleed:'出血', fear:'恐怖', blind:'暗闇', weak:'弱体', slow:'鈍足' };
+  var layout = 'bg', S;
 
   function fresh() {
     return {
       at: [4, 2], seen: {}, done: {}, bag: [], info: [],
-      party: PARTY0.map(function (p) {
-        return { id: p.id, hp: p.hp, max: p.max, row: p.row, st: {} }; }),
-      mode: 'brief', ev: null, evKey: null, evText: '', res: null, alert: 0, steps: 0,
-      amb: '', vopen: false, vsamples: [], hush: false
+      party: PARTY0.map(function (p) { return { id: p.id, hp: p.hp, max: p.max, row: p.row }; }),
+      mode: 'move', ev: null, evKey: null, evText: '', res: null, alert: 0, steps: 0,
+      amb: '', vopen: false, vsamples: []
     };
   }
 
-  /* 対象を選ぶ */
-  function pickTargets(t) {
-    var a = S.party;
-    if (t === 'all') return a.slice();
-    if (t === 'front') return a.filter(function (p) { return p.row === 0; });
-    if (t === 'back') return a.filter(function (p) { return p.row === 1; });
-    if (t === 'hurt') return [a.slice().sort(function (x, y) { return x.hp / x.max - y.hp / y.max; })[0]];
-    if (t === 'rand2') return a.slice().sort(function () { return Math.random() - 0.5; }).slice(0, 2);
-    return [a[Math.floor(Math.random() * a.length)]];
-  }
-  function amount(s) { var r = SZ[s] || SZ.small; return r[0] + Math.floor(Math.random() * (r[1] - r[0] + 1)); }
-
   /* 差し込む語 */
   function ctx() {
-    var c = {
+    return {
       who: function () {
         var a = S.party.filter(function (p) { return p.hp > 0; });
         return CB.BY_ID[a[Math.floor(Math.random() * a.length)].id].name;
@@ -408,12 +344,6 @@ var ALLSTATS = ${JSON.stringify(STATS)};
         return CB.BY_ID[a[0].id].name;
       }
     };
-    /* ダンジョンの設定から語彙を差し込む。ここが一貫性の要 */
-    Object.keys(DG.V).forEach(function (k) {
-      c[k] = function () { return VARI.expand(DG.V[k]); };
-    });
-    c.who2 = c.who2 || function () { return VARI.expand(DG.V.who || ''); };
-    return c;
   }
   function say(tpl) { return VARI.expand(tpl, ctx()); }
 
@@ -422,63 +352,23 @@ var ALLSTATS = ${JSON.stringify(STATS)};
   function evAt(r, c) { return PLACED[key(r, c)] || null; }
 
   function apply(eff) {
-    var tags = [], i;
-    if (eff.dmg) {
-      var dt = pickTargets(eff.dmg.t), dv = amount(eff.dmg.s);
-      dt.forEach(function (p) { p.hp = Math.max(1, p.hp - dv); });
-      tags.push(['bad', TT[eff.dmg.t] + ' に ' + dv + ' ダメージ' +
-        (eff.dmg.t === 'one' || eff.dmg.t === 'hurt' ? '（' + CB.BY_ID[dt[0].id].name + '）' : '')]);
-    }
-    if (eff.heal) {
-      var ht = pickTargets(eff.heal.t), hv = amount(eff.heal.s);
-      ht.forEach(function (p) { p.hp = Math.min(p.max, p.hp + hv); });
-      tags.push(['good', TT[eff.heal.t] + ' 体力+' + hv]);
-    }
-    if (eff.bad) {
-      var bt = pickTargets(eff.bad.t);
-      bt.forEach(function (p) { p.st[eff.bad.k] = eff.bad.n; });
-      tags.push(['bad', TT[eff.bad.t] + ' が ' + BAD[eff.bad.k] + '（あと' + eff.bad.n + '部屋）']);
-    }
-    if (eff.cure) {
-      var ct = pickTargets(eff.cure.t), n = 0;
-      ct.forEach(function (p) {
-        if (eff.cure.k === '*') { n += Object.keys(p.st).length; p.st = {}; }
-        else if (p.st[eff.cure.k]) { n++; delete p.st[eff.cure.k]; }
-      });
-      tags.push(['good', TT[eff.cure.t] + ' の' +
-        (eff.cure.k === '*' ? '状態異常' : BAD[eff.cure.k]) + 'が治った' + (n ? '' : '（もともと無し）')]);
-    }
+    var tags = [];
+    if (eff.heal) { S.party.forEach(function (p) { p.hp = Math.min(p.max, p.hp + eff.heal); });
+      tags.push(['good', '全員 体力+' + eff.heal]); }
+    if (eff.dmg) { S.party.forEach(function (p) { p.hp = Math.max(1, p.hp - eff.dmg); });
+      tags.push(['bad', '全員 体力-' + eff.dmg]); }
     if (eff.maxHp) { S.party.forEach(function (p) { p.max += eff.maxHp; p.hp += eff.maxHp; });
-      tags.push(['good', '全員 体力上限+' + eff.maxHp]); }
+      tags.push(['good', '体力上限+' + eff.maxHp]); }
     if (eff.atkUp) tags.push(['good', '攻撃+' + eff.atkUp]);
+    if (eff.bless) tags.push(['good', '加護を得た']);
     if (eff.item) { S.bag.push(eff.item); tags.push(['good', ITEMS[eff.item].name + ' を入手']); }
-    if (eff.useItem) { i = S.bag.indexOf(eff.useItem); if (i >= 0) S.bag.splice(i, 1);
-      tags.push(['bad', ITEMS[eff.useItem].name + ' を消費']); }
-    if (eff.info) { S.info.push(say(eff.info)); tags.push(['info', say(eff.info)]); }
+    if (eff.info) { S.info.push(eff.info); tags.push(['info', eff.info]); }
     if (eff.alert) { S.alert += eff.alert; tags.push(['bad', '警戒度+' + eff.alert]); }
-    if (eff.ambush) tags.push(['good', '次の戦闘で先制できる']);
-    if (eff.fight) {
-      var f = eff.fight;
-      var side = f.side === 'ambush' ? 'こちらが先制' : f.side === 'enemy' ? '敵に先制される' : '対等';
-      var sz = f.size === 'boss' ? '主' : f.size === 'small' ? '小勢' : '一群';
-      var hit = f.hit ? '／初撃は' + TT[f.hit === 'front1' ? 'one' : f.hit] : '';
-      tags.push([f.side === 'ambush' ? 'good' : 'bad', '戦闘：' + sz + '・' + side + hit]);
-    }
+    if (eff.ambush) tags.push(['good', '奇襲できる']);
+    if (eff.bonus) tags.push(['good', '大きな隙を突ける']);
+    if (eff.fight) tags.push([eff.fight === 'ambush' ? 'good' : 'bad',
+      eff.fight === 'boss' ? '主との戦闘' : eff.fight === 'ambush' ? '先制して戦闘' : '戦闘']);
     return tags;
-  }
-
-  /* 部屋を進むごとに状態異常を1つ減らす */
-  function tickStatus() {
-    var msg = [];
-    S.party.forEach(function (p) {
-      Object.keys(p.st).forEach(function (k) {
-        if (k === 'poison' || k === 'bleed') {
-          p.hp = Math.max(1, p.hp - (k === 'poison' ? 2 : 3));
-        }
-        p.st[k]--; if (p.st[k] <= 0) { delete p.st[k]; msg.push(CB.BY_ID[p.id].name + ' の' + BAD[k] + 'が治まった'); }
-      });
-    });
-    return msg;
   }
 
   function pick(list) {
@@ -556,11 +446,7 @@ var ALLSTATS = ${JSON.stringify(STATS)};
         '<div class="' + cls + '"><div class="pic">' + CBART.portrait(p.id, d.elem) + '</div>' +
         '<div class="nm">' + d.name + '</div>' +
         '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="hp">' + p.hp + '/' + p.max + '</div>' +
-        (Object.keys(p.st).length
-          ? '<div class="stx">' + Object.keys(p.st).map(function (k) {
-              return '<span>' + BAD[k] + '</span>'; }).join('') + '</div>' : '') +
-        '</div>';
+        '<div class="hp">' + p.hp + '/' + p.max + '</div></div>';
     }).join('');
     return '<div class="party">' + cells + '</div>';
   }
@@ -584,24 +470,8 @@ var ALLSTATS = ${JSON.stringify(STATS)};
       '<div class="vfoot"><button class="pri" data-vroll="1">↻ もう5つ出す</button></div></div>';
   }
 
-  function briefHTML() {
-    return '<div class="brief"><div class="bt">' + DG.name + '</div>' +
-      '<div class="bs">' + DG.sub + '　危険度 ' + '★'.repeat(DG.danger) + '</div>' +
-      '<div class="bx">' + DG.open + '</div>' +
-      (S.hush ? '<div class="bh"><b>裏設定（プレイヤーには見せない）</b>' + DG.hush + '</div>' : '') +
-      '<div class="bfoot">' +
-        '<button class="hb" data-hush="1">' + (S.hush ? '裏設定を隠す' : '裏設定を見る（開発用）') + '</button>' +
-        '<button class="gb" data-enter="1">▶ 踏み込む</button>' +
-      '</div></div>';
-  }
-
   function render() {
-    if (S.mode === 'brief') {
-      screen.innerHTML = '<div class="top"><span class="mis">' + DG.name + '</span></div>' +
-        briefHTML() + partyHTML();
-      bind(); return;
-    }
-    var top = '<div class="top"><span class="mis">討伐：' + DG.name + ' の' + VARI.expand(DG.V.lord) + '</span>' +
+    var top = '<div class="top"><span class="mis">討伐：村人を苦しめる洞窟の主</span>' +
       '<span class="st">' + S.steps + '歩　警戒 ' + S.alert + '</span></div>';
     var land = document.body.classList.contains('land');
     var body;
@@ -631,15 +501,11 @@ var ALLSTATS = ${JSON.stringify(STATS)};
       el.onclick = function () {
         var p = el.dataset.go.split(',').map(Number);
         S.at = p; S.steps++; S.seen[key(p[0], p[1])] = 1;
-        var cured = tickStatus();
         var id = evAt(p[0], p[1]);
         if (id && !S.done[key(p[0], p[1])] && EVENTS[id]) {
           S.ev = EVENTS[id]; S.evKey = id; S.evText = say(EVENTS[id].text);
           S.mode = 'event'; S.res = null;
-        } else {
-          S.mode = 'move'; S.ev = null; S.evKey = null; S.res = null;
-          S.amb = say(AMBIENT) + (cured.length ? '\\n' + cured.join('。') + '。' : '');
-        }
+        } else { S.mode = 'move'; S.ev = null; S.evKey = null; S.res = null; S.amb = say(AMBIENT); }
         render();
       };
     });
@@ -655,13 +521,6 @@ var ALLSTATS = ${JSON.stringify(STATS)};
       S.done[key(S.at[0], S.at[1])] = 1;
       S.mode = 'move'; S.ev = null; S.evKey = null; S.res = null; S.amb = say(AMBIENT);
       render();
-    };
-    var hb = screen.querySelector('[data-hush]');
-    if (hb) hb.onclick = function () { S.hush = !S.hush; render(); };
-    var eb = screen.querySelector('[data-enter]');
-    if (eb) eb.onclick = function () {
-      S.mode = 'event'; S.ev = EVENTS.start; S.evKey = 'start';
-      S.evText = say(EVENTS.start.text); render();
     };
     var vc = screen.querySelector('[data-v]');
     if (vc) vc.onclick = function () { S.vopen = true; roll(); render(); };
@@ -694,7 +553,7 @@ var ALLSTATS = ${JSON.stringify(STATS)};
   document.getElementById('reset').onclick = function () { start(); };
 
   /* 下の表 */
-  function buildTable() {
+  (function () {
     var rows = Object.keys(STATS.rooms).map(function (k) { return STATS.rooms[k]; })
       .sort(function (a, b) { return b.intro - a.intro; });
     document.getElementById('vtable').innerHTML =
@@ -714,23 +573,16 @@ var ALLSTATS = ${JSON.stringify(STATS)};
       'いちばん少ない部屋（' + minR.title + '・' + minR.intro.toLocaleString() + '通り）でも、' +
       '<b>10回探索して同じ導入文に当たる確率は ' + dup(10, minR.intro).toFixed(1) + '%</b>、' +
       '20回で ' + dup(20, minR.intro).toFixed(1) + '% です。';
-  }
-  buildTable();
+  })();
 
-  function start(id) {
-    if (id) { DG = DUNGEONS[id]; PLACED = PLACES[id]; STATS = ALLSTATS[id]; }
+  function start() {
     S = fresh();
     S.seen[key(4, 2)] = 1;
-    S.amb = say(AMBIENT);
+    S.ev = EVENTS.start; S.evKey = 'start'; S.evText = say(EVENTS.start.text);
+    S.mode = 'event'; S.amb = say(AMBIENT);
     render();
   }
-  document.querySelectorAll('[data-dg]').forEach(function (b) {
-    b.onclick = function () {
-      document.querySelectorAll('[data-dg]').forEach(function (o) { o.classList.remove('on'); });
-      b.classList.add('on'); start(b.dataset.dg); buildTable();
-    };
-  });
-  start('beast');
+  start();
 })();
 </script>
 `;
@@ -743,8 +595,5 @@ const SA = require('./standalone.js');
 fs.mkdirSync(__dirname + '/../standalone', { recursive: true });
 fs.writeFileSync(__dirname + '/../standalone/rpgdemo.html', SA.wrap(page, 'rpgdemo'), 'utf8');
 console.log('  standalone/rpgdemo.html も書き出しました');
-Object.keys(STATS).forEach(function (id) {
-  const st = STATS[id];
-  console.log('  ' + DUNGEONS[id].name + '　導入文 計 ' + st.totalIntro.toLocaleString() +
-              ' 通り／最小 ' + st.minIntro.toLocaleString() + ' 通り');
-});
+console.log('  導入文の合計 ' + STATS.totalIntro.toLocaleString() +
+            ' 通り／最小 ' + STATS.minIntro.toLocaleString() + ' 通り');

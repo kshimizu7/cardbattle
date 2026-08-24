@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="41">
+<meta name="app-version" content="42">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -1695,15 +1695,21 @@ body.shake{animation:shk2 .56s}
 .detailbox .navrow.big.merged .navpos{flex:0 0 auto;font-size:12px;font-weight:900;color:var(--dim);
   min-width:52px;text-align:center}
 
-/* キャラ絵・名前・能力は固定。動くのは技の欄だけ */
+/* キャラ絵・名前・能力は固定。動くのは技の欄だけ。
+   ただし画面が短いと絵が縦を食い尽くして技の欄が数pxになってしまうので、
+   絵の高さに上限を置き、技の欄には必ず最低限の高さを残す。 */
 .detailbox .dhead{flex:0 0 auto;display:block;position:relative}
-.detailbox .dbody{flex:1 1 auto;min-height:0;overflow-y:auto;scrollbar-width:none;
+.detailbox .dbody{flex:1 1 auto;min-height:112px;overflow-y:auto;scrollbar-width:none;
   -webkit-overflow-scrolling:touch;padding-bottom:2px}
 .detailbox .dbody::-webkit-scrollbar{display:none}
 
 /* キャラ絵（全幅）と、その下端に重ねる名前・系統・段階 */
-.detailbox .dhead .art{width:100%;aspect-ratio:1/0.86;border-radius:12px 12px 0 0;
-  overflow:hidden;position:relative;cursor:pointer}
+.detailbox .dhead .art{width:100%;aspect-ratio:1/0.86;max-height:40svh;
+  border-radius:12px 12px 0 0;overflow:hidden;position:relative;cursor:pointer}
+@media (max-height:560px){
+  .detailbox .dhead .art{max-height:34svh}
+  .detailbox .dbody{min-height:96px}
+}
 .detailbox .dhead .art::after{content:"";position:absolute;left:0;right:0;bottom:0;height:58%;
   background:linear-gradient(transparent,rgba(6,9,17,.55) 42%,rgba(6,9,17,.94));
   pointer-events:none;z-index:1}
@@ -6551,11 +6557,17 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
         '</div></div>' +
         '<button class="btn primary" id="go" style="width:100%;font-size:16px;padding:15px"' +
           (S.pool ? '' : ' disabled') + '>' + (S.pool ? '⚔ 戦いを始める' : '↑ カードプールを選択') + '</button>' +
+        /* 2段に分ける。1段に4つ並べると幅が足りず、日本語が1文字ずつ折り返される */
         '<div style="display:flex;gap:8px">' +
-          '<button class="btn ghost" id="rules" style="flex:1">📖 ルール</button>' +
-          '<button class="btn ghost" id="gallery" style="flex:1">🗂 カード図鑑</button>' +
-          '<button class="btn ghost" id="snd0" style="flex:0 0 66px">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
-          '<button class="btn ghost" id="bgm0" style="flex:0 0 78px">' + (S.bgm ? '🎵 曲 ON' : '🎵 曲 OFF') + '</button>' +
+          '<button class="btn ghost" id="rules" style="flex:1;white-space:nowrap">📖 ルール</button>' +
+          '<button class="btn ghost" id="gallery" style="flex:1;white-space:nowrap">🗂 カード図鑑</button>' +
+          '<button class="btn ghost" id="fs0" style="flex:0 0 52px" title="全画面">⛶</button>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button class="btn ghost" id="snd0" style="flex:1;white-space:nowrap">' +
+            (S.sound ? '♪ 効果音 ON' : '♪ 効果音 OFF') + '</button>' +
+          '<button class="btn ghost" id="bgm0" style="flex:1;white-space:nowrap">' +
+            (S.bgm ? '🎵 BGM ON' : '🎵 BGM OFF') + '</button>' +
         '</div>' +
         '<div class="opt-group"><div class="opt-label">画面表示</div><div class="opt-col">' +
           '<div class="opt poolopt tgl' + (S.compact ? ' on' : '') + '" data-tgl="compact">' +
@@ -6583,6 +6595,7 @@ if (typeof module !== 'undefined' && module.exports) module.exports = CBART;
     $$('[data-diff]').forEach(function (b) { b.onclick = function () { S.diff = b.dataset.diff; rememberSettings(); renderTitle(); }; });
     $('#go').onclick = startGame;
     $('#rules').onclick = showRules;
+    $('#fs0').onclick = toggleFullscreen;
     $('#gallery').onclick = showGallery;
     $('#snd0').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderTitle(); };
     $('#bgm0').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderTitle(); };

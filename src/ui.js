@@ -805,11 +805,17 @@
         '</div></div>' +
         '<button class="btn primary" id="go" style="width:100%;font-size:16px;padding:15px"' +
           (S.pool ? '' : ' disabled') + '>' + (S.pool ? '⚔ 戦いを始める' : '↑ カードプールを選択') + '</button>' +
+        /* 2段に分ける。1段に4つ並べると幅が足りず、日本語が1文字ずつ折り返される */
         '<div style="display:flex;gap:8px">' +
-          '<button class="btn ghost" id="rules" style="flex:1">📖 ルール</button>' +
-          '<button class="btn ghost" id="gallery" style="flex:1">🗂 カード図鑑</button>' +
-          '<button class="btn ghost" id="snd0" style="flex:0 0 66px">' + (S.sound ? '♪ ON' : '♪ OFF') + '</button>' +
-          '<button class="btn ghost" id="bgm0" style="flex:0 0 78px">' + (S.bgm ? '🎵 曲 ON' : '🎵 曲 OFF') + '</button>' +
+          '<button class="btn ghost" id="rules" style="flex:1;white-space:nowrap">📖 ルール</button>' +
+          '<button class="btn ghost" id="gallery" style="flex:1;white-space:nowrap">🗂 カード図鑑</button>' +
+          '<button class="btn ghost" id="fs0" style="flex:0 0 52px" title="全画面">⛶</button>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button class="btn ghost" id="snd0" style="flex:1;white-space:nowrap">' +
+            (S.sound ? '♪ 効果音 ON' : '♪ 効果音 OFF') + '</button>' +
+          '<button class="btn ghost" id="bgm0" style="flex:1;white-space:nowrap">' +
+            (S.bgm ? '🎵 BGM ON' : '🎵 BGM OFF') + '</button>' +
         '</div>' +
         '<div class="opt-group"><div class="opt-label">画面表示</div><div class="opt-col">' +
           '<div class="opt poolopt tgl' + (S.compact ? ' on' : '') + '" data-tgl="compact">' +
@@ -837,6 +843,7 @@
     $$('[data-diff]').forEach(function (b) { b.onclick = function () { S.diff = b.dataset.diff; rememberSettings(); renderTitle(); }; });
     $('#go').onclick = startGame;
     $('#rules').onclick = showRules;
+    $('#fs0').onclick = toggleFullscreen;
     $('#gallery').onclick = showGallery;
     $('#snd0').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderTitle(); };
     $('#bgm0').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderTitle(); };
