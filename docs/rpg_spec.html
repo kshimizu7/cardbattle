@@ -1,0 +1,442 @@
+<title>RPGモード仕様</title>
+<style>
+:root{
+  --ground:#080b12; --panel:#0d1220; --panel2:#111a2c;
+  --line:#1e2740; --line2:#2b3752;
+  --ink:#dde5f5; --ink2:#94a4c4; --ink3:#6c7b9c;
+  --gold:#f2c65c; --gold-dim:#a98a34;
+  --ok:#7de8a4; --ok-dim:#2f7a52;
+  --mid:#7fd4ff; --mid-dim:#2b6285;
+  --ng:#ff8f8f; --ng-dim:#7a3030;
+  --warn:#ffc06a; --warn-dim:#8a6420;
+  --font:"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:0 0 90px;background:var(--ground);color:var(--ink);
+  font-family:var(--font);font-size:14.5px;line-height:1.95;-webkit-font-smoothing:antialiased}
+.w{max-width:900px;margin:0 auto;padding:30px 18px 0}
+.eyebrow{font-size:10.5px;font-weight:900;letter-spacing:.18em;color:var(--gold-dim);margin:0 0 6px}
+h1{font-size:26px;font-weight:900;margin:0 0 10px;color:var(--gold);line-height:1.4;text-wrap:balance}
+h2{font-size:17.5px;font-weight:900;color:var(--gold);margin:52px 0 6px;padding-top:24px;
+  border-top:1px solid var(--line);text-wrap:balance}
+h3{font-size:14.5px;font-weight:900;color:var(--ink);margin:28px 0 4px}
+p{margin:0 0 14px;max-width:66ch}
+p.lead{color:var(--ink2);font-size:13px;max-width:66ch}
+b{color:#ffeec2;font-weight:900}
+code{font-family:var(--mono);font-size:12px;color:var(--mid);
+  background:rgba(127,212,255,.08);padding:1px 5px;border-radius:4px}
+
+figure{margin:20px 0 6px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:18px 16px 12px;overflow-x:auto}
+figure svg{max-width:100%;height:auto;display:block;margin:0 auto;color:var(--ink2)}
+figcaption{font-size:11.5px;color:var(--ink3);text-align:center;margin-top:11px;line-height:1.8;
+  max-width:64ch;margin-left:auto;margin-right:auto}
+figcaption b{color:var(--ink2)}
+
+.callout{border:1px solid var(--line);background:var(--panel);border-radius:12px;
+  padding:15px 18px;margin:18px 0;border-left:3px solid var(--line2)}
+.callout.key{border-left-color:var(--gold);background:rgba(242,198,92,.05);border-color:var(--gold-dim)}
+.callout.warn{border-left-color:var(--warn);background:rgba(255,192,106,.05);border-color:var(--warn-dim)}
+.callout .ct{font-size:13px;font-weight:900;margin:0 0 7px;color:var(--ink)}
+.callout.key .ct{color:var(--gold)}
+.callout.warn .ct{color:var(--warn)}
+.callout p{font-size:12.5px;color:var(--ink2);margin:0 0 9px}
+.callout p:last-child{margin-bottom:0}
+.callout p b{color:var(--ink)}
+
+.tag{display:inline-block;font-size:10.5px;font-weight:900;line-height:1.7;padding:0 8px;
+  border-radius:999px;border:1px solid var(--line2);color:var(--ink2);white-space:nowrap;vertical-align:1px}
+.tag.ok{color:var(--ok);border-color:var(--ok-dim)}
+.tag.ng{color:var(--ng);border-color:var(--ng-dim)}
+.tag.warn{color:var(--warn);border-color:var(--warn-dim)}
+.tag.mid{color:var(--mid);border-color:var(--mid-dim)}
+
+.tw{overflow-x:auto;margin:16px 0 6px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:620px;font-size:12.5px}
+th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{background:var(--panel2);color:var(--ink2);font-size:11px;font-weight:900;
+  letter-spacing:.06em;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.k{font-weight:900;color:var(--ink);white-space:nowrap}
+td.c{font-family:var(--mono);font-size:11.5px;color:var(--mid)}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.85;margin:8px 0 0;max-width:70ch}
+
+ul.pl{margin:0 0 14px;padding-left:1.15em}
+ul.pl li{margin-bottom:9px;font-size:13px;color:var(--ink2);max-width:64ch}
+ul.pl b{color:#ffeec2}
+
+ol.ph{counter-reset:s;list-style:none;margin:16px 0 0;padding:0}
+ol.ph li{counter-increment:s;position:relative;padding:0 0 20px 42px;
+  border-left:1px solid var(--line);margin-left:12px}
+ol.ph li:last-child{border-left-color:transparent;padding-bottom:0}
+ol.ph li::before{content:"P" counter(s);position:absolute;left:-12px;top:0;
+  width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);
+  color:var(--gold);font-size:10px;font-weight:900;display:grid;place-items:center}
+ol.ph > li > b{display:block;font-size:14px;color:var(--ink);margin-bottom:3px}
+ol.ph .goal{display:block;font-size:11.5px;color:var(--gold-dim);font-weight:800;margin-bottom:5px}
+ol.ph span.d{font-size:12.5px;color:var(--ink2);display:block;max-width:62ch}
+ol.ph span.d b{color:#ffeec2}
+
+pre{background:#070a12;border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+  overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.75;color:#bcd0ea;margin:12px 0}
+pre .c{color:var(--ink3)}
+pre .s{color:var(--gold)}
+</style>
+
+<div class="w">
+
+<p class="eyebrow">ARCANA CLASH ／ RPGモード</p>
+<h1>RPGモード 仕様</h1>
+<p class="lead">これまでの相談をひとつの仕様にまとめました。<b>いちばん重要な決めごとは「ダンジョンは、解く順番から先に作る」</b>という点です。部屋を並べてから鍵を置くのではなく、<b>鍵と扉の連鎖を先に決めて、そこへ部屋をぶら下げます。</b>これをやらないと、開かない扉や取れない鍵が生まれます。</p>
+
+<h2>1. 全体の流れ</h2>
+<p>タイトルで<b>バトルモード</b>と<b>RPGモード</b>を選びます。RPG側の1周はこうです。</p>
+<pre><span class="c">酒場</span> ── パーティ6体を編成、装備を着け替える、傷を癒す
+ ↓
+<span class="c">クエスト選択</span> ── 複数のダンジョンから1つ選ぶ（<span class="s">開示文</span>と危険度が見える）
+ ↓
+<span class="c">ダンジョン</span> ── 部屋を移動 → 語りと選択肢 → 戦闘 → 宝・鍵
+ ↓            （<span class="s">持ち帰れなければ全部失う</span>）
+<span class="c">帰還</span> ── 持ち帰った装備とキーアイテムが手元に残る
+ ↓
+<span class="c">酒場</span>へ戻る ── 強くなった分だけ、上の危険度に挑める</pre>
+<p class="note">戦闘画面は<b>いまのバトルモードをそのまま使います。</b>敵チームを渡すだけで動くので、演出・音・BGM・キャラ絵が全部そのまま乗ります。</p>
+
+<h2>2. マップ ── マス目ではなく、部屋と通路</h2>
+
+<p>移動の単位を<b>マス目から「部屋・通路」に変えます。</b>いただいた地図のとおり、大小の部屋と、それをつなぐ通路でダンジョンを作ります。プレイヤーは<b>隣接する部屋や通路をタップして移動</b>します。1回の移動＝1つの場所ぶん。</p>
+
+<figure>
+<svg viewBox="0 0 760 250" role="img" aria-label="マス目ごとの移動と、部屋・通路ごとの移動の違い。部屋単位のほうが1つの場所に1つの出来事を結び付けられる">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <text x="20" y="24" font-size="12" font-weight="700" fill="currentColor">いまのデモ（マス目ごと）</text>
+  <g stroke="currentColor" stroke-width="1" fill="none" opacity="0.5">
+    <rect x="20" y="40" width="34" height="34" rx="3"/><rect x="58" y="40" width="34" height="34" rx="3"/>
+    <rect x="96" y="40" width="34" height="34" rx="3"/><rect x="134" y="40" width="34" height="34" rx="3"/>
+    <rect x="172" y="40" width="34" height="34" rx="3"/><rect x="210" y="40" width="34" height="34" rx="3"/>
+    <rect x="20" y="78" width="34" height="34" rx="3"/><rect x="58" y="78" width="34" height="34" rx="3"/>
+    <rect x="96" y="78" width="34" height="34" rx="3"/><rect x="134" y="78" width="34" height="34" rx="3"/>
+    <rect x="172" y="78" width="34" height="34" rx="3"/><rect x="210" y="78" width="34" height="34" rx="3"/>
+  </g>
+  <rect x="58" y="78" width="34" height="34" rx="3" fill="none" stroke="#f2c65c" stroke-width="2"/>
+  <line x1="92" y1="95" x2="130" y2="95" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="130" y1="95" x2="168" y2="95" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="168" y1="95" x2="206" y2="95" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="20" y="140" font-size="11" fill="currentColor" opacity="0.75">同じ広間を横切るのに3タップ。</text>
+  <text x="20" y="158" font-size="11" fill="currentColor" opacity="0.75">1マスごとに出来事を置くと過密になる。</text>
+
+  <line x1="380" y1="30" x2="380" y2="215" stroke="currentColor" stroke-width="1" opacity="0.25"/>
+
+  <text x="410" y="24" font-size="12" font-weight="700" fill="#f2c65c">この仕様（部屋・通路ごと）</text>
+  <rect x="410" y="40" width="88" height="60" rx="4" fill="none" stroke="#f2c65c" stroke-width="2"/>
+  <text x="454" y="66" font-size="11" text-anchor="middle" fill="#f2c65c">水鏡の広間</text>
+  <text x="454" y="83" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">いまここ</text>
+  <rect x="530" y="58" width="60" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="560" y="74" font-size="10" text-anchor="middle" fill="currentColor">通路</text>
+  <rect x="622" y="34" width="86" height="72" rx="36" fill="none" stroke="currentColor" stroke-width="1.5"/>
+  <text x="665" y="66" font-size="11" text-anchor="middle" fill="currentColor">円形の間</text>
+  <text x="665" y="83" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.6">（名前なし可）</text>
+  <line x1="498" y1="70" x2="526" y2="70" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+  <line x1="590" y1="70" x2="618" y2="70" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar)"/>
+  <text x="410" y="140" font-size="11" fill="currentColor" opacity="0.75">1タップ＝1つの場所。出来事は場所に1つ。</text>
+  <text x="410" y="158" font-size="11" fill="currentColor" opacity="0.75">名前を付ければ、語りでそのまま呼べる。</text>
+</svg>
+<figcaption>移動の単位を場所にすると、<b>タップ数と出来事の数が一致します。</b>「水鏡の広間を抜けて、細い通路へ」と語れるのは、通路そのものが1つの場所として存在しているからです。</figcaption>
+</figure>
+
+<p>データとしては<b>グラフ</b>です。場所（ノード）と、つながり（エッジ）だけ持ちます。絵として描くための座標と形も一緒に持たせます。</p>
+
+<pre>{ id:'r7', kind:'room',   shape:'circle', x:520, y:80, r:44,
+  name:'水鏡の広間',        <span class="c">// 無名なら name:null</span>
+  links:['c3','c9'] }
+{ id:'c3', kind:'corridor', from:'r7', to:'r2', path:[[520,124],[520,180],[430,180]] }</pre>
+<p class="note">部屋は矩形か円、通路は折れ線。<b>いまのキャラ絵と同じくSVGで描くので、外部画像は要りません。</b>いただいた地図の見た目（石壁のハッチング、方眼の床）も、SVGのパターンで再現できます。</p>
+
+<h2>3. 見えかた ── 灯りと地図</h2>
+
+<p>最初は<b>いる場所と、そこから直接つながっている場所だけ</b>が見えています。見える範囲は光の強さで決まります。</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>手段</th><th>効果</th><th>入手</th></tr></thead>
+<tbody>
+<tr><td class="k">松明なし</td><td>いまいる場所と<b>隣接1つ先</b>まで</td><td>初期状態</td></tr>
+<tr><td class="k">松明（道具）</td><td><b>隣接2つ先</b>まで。使うほど短くなる</td><td>酒場で買う／ダンジョンで拾う</td></tr>
+<tr><td class="k">灯火の呪文<br><span class="tag mid">魔法使い</span></td><td>その場で<b>3つ先</b>まで。数部屋のあいだ持続</td><td>魔法使いを連れている</td></tr>
+<tr><td class="k">区画の地図</td><td>ダンジョンの<b>一部の区画</b>が形だけ見える<br>（出来事の中身は分からない）</td><td>宝箱・NPC・死体</td></tr>
+<tr><td class="k">全体図</td><td><b>全部の形</b>が見える。中身は分からない</td><td>まれ。強いご褒美</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note"><b>地図で分かるのは「形」だけで、「そこに何があるか」は踏むまで分かりません。</b>ここを分けておくと、地図を手に入れても探索の緊張が残ります。逆に「灯り」は目の前の危険を照らすので、地図と役割が被りません。</p>
+
+<h2>4. 通行の制御と、生成の順番</h2>
+
+<div class="callout key">
+<p class="ct">ここがこの仕様の背骨です</p>
+<p>ランダム生成で必ず問題になるのが<b>「開かない扉」と「取れない鍵」</b>です。部屋を並べてから鍵を置くと、鍵が扉の向こう側に入り込みます。</p>
+<p>これを防ぐには、順番を逆にします。<b>先に「どういう順番で解けるか」の連鎖を決めて、あとからその前後に部屋をぶら下げる。</b>こうすると、鍵が扉の向こうに行くことが構造上ありえなくなります。</p>
+</div>
+
+<figure>
+<svg viewBox="0 0 780 300" role="img" aria-label="ダンジョン生成の順番。まず解錠の連鎖を決め、次にその区画へ部屋を配り、最後に鍵をその扉より手前の区画にだけ置く">
+  <defs>
+    <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+    </marker>
+    <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="#f2c65c"/>
+    </marker>
+  </defs>
+
+  <text x="18" y="20" font-size="12" font-weight="700" fill="#f2c65c">① 解錠の連鎖を決める</text>
+  <g font-size="11" text-anchor="middle">
+    <rect x="18" y="34" width="92" height="38" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="64" y="52" fill="currentColor">区画 A</text><text x="64" y="66" fill="currentColor" opacity="0.6" font-size="9.5">入口・自由</text>
+    <rect x="200" y="34" width="92" height="38" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="246" y="52" fill="currentColor">区画 B</text><text x="246" y="66" fill="currentColor" opacity="0.6" font-size="9.5">中層</text>
+    <rect x="382" y="34" width="92" height="38" rx="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    <text x="428" y="52" fill="currentColor">区画 C</text><text x="428" y="66" fill="currentColor" opacity="0.6" font-size="9.5">奥</text>
+    <rect x="564" y="34" width="100" height="38" rx="6" fill="none" stroke="#f2c65c" stroke-width="2"/>
+    <text x="614" y="52" fill="#f2c65c">最奥</text><text x="614" y="66" fill="currentColor" opacity="0.6" font-size="9.5">主と遺物</text>
+  </g>
+  <line x1="110" y1="53" x2="196" y2="53" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <text x="153" y="45" font-size="9.5" text-anchor="middle" fill="currentColor">錆びた鍵</text>
+  <line x1="292" y1="53" x2="378" y2="53" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <text x="335" y="45" font-size="9.5" text-anchor="middle" fill="currentColor">刻印 ×3</text>
+  <line x1="474" y1="53" x2="560" y2="53" stroke="currentColor" stroke-width="1.5" marker-end="url(#ar2)"/>
+  <text x="517" y="45" font-size="9.5" text-anchor="middle" fill="currentColor">竜のうろこ</text>
+
+  <text x="18" y="118" font-size="12" font-weight="700" fill="#f2c65c">② その区画に部屋を配る</text>
+  <g stroke="currentColor" stroke-width="1.2" fill="none" opacity="0.85">
+    <rect x="18" y="132" width="30" height="26" rx="3"/><rect x="56" y="132" width="24" height="26" rx="3"/>
+    <rect x="18" y="166" width="24" height="22" rx="3"/><circle cx="70" cy="177" r="13"/>
+    <rect x="200" y="132" width="34" height="26" rx="3"/><rect x="242" y="132" width="26" height="26" rx="3"/>
+    <rect x="200" y="166" width="26" height="22" rx="3"/><rect x="234" y="166" width="34" height="22" rx="3"/>
+    <rect x="382" y="132" width="30" height="26" rx="3"/><circle cx="440" cy="145" r="14"/>
+    <rect x="382" y="166" width="40" height="22" rx="3"/>
+    <rect x="576" y="136" width="76" height="48" rx="5"/>
+  </g>
+  <text x="614" y="164" font-size="10" text-anchor="middle" fill="currentColor" opacity="0.7">主の間</text>
+
+  <text x="18" y="226" font-size="12" font-weight="700" fill="#f2c65c">③ 鍵は、その扉より手前の区画にだけ置く</text>
+  <g font-size="10" text-anchor="middle">
+    <rect x="18" y="240" width="92" height="30" rx="5" fill="rgba(242,198,92,.12)" stroke="#f2c65c" stroke-width="1.5"/>
+    <text x="64" y="259" fill="#f2c65c">錆びた鍵</text>
+    <rect x="200" y="240" width="92" height="30" rx="5" fill="rgba(242,198,92,.12)" stroke="#f2c65c" stroke-width="1.5"/>
+    <text x="246" y="259" fill="#f2c65c">刻印 ×3</text>
+    <rect x="382" y="240" width="92" height="30" rx="5" fill="rgba(242,198,92,.12)" stroke="#f2c65c" stroke-width="1.5"/>
+    <text x="428" y="259" fill="#f2c65c">竜のうろこ</text>
+  </g>
+  <path d="M64 236 L64 220 L153 220 L153 76" stroke="#f2c65c" stroke-width="1.5" fill="none" marker-end="url(#ar3)" opacity="0.8"/>
+  <path d="M246 236 L246 214 L335 214 L335 76" stroke="#f2c65c" stroke-width="1.5" fill="none" marker-end="url(#ar3)" opacity="0.8"/>
+  <path d="M428 236 L428 208 L517 208 L517 76" stroke="#f2c65c" stroke-width="1.5" fill="none" marker-end="url(#ar3)" opacity="0.8"/>
+  <text x="700" y="259" font-size="10" fill="currentColor" opacity="0.7">← 必ず手前</text>
+</svg>
+<figcaption><b>鍵は必ず、その鍵が開ける扉より手前の区画に置かれます。</b>この順番で作るかぎり、詰みは構造的に発生しません。区画の数と鍵の種類を変えるだけで、ダンジョンの長さと複雑さを調整できます。</figcaption>
+</figure>
+
+<h3>解放条件の種類</h3>
+<div class="tw">
+<table>
+<thead><tr><th>種類</th><th>条件</th><th>語りの例</th></tr></thead>
+<tbody>
+<tr><td class="k">鍵</td><td>チームアイテムを1つ持っている</td><td>錆びた鍵が、ようやく回った</td></tr>
+<tr><td class="k">刻印</td><td>離れた場所の刻印を<b>指定数すべて</b>触れる</td><td>三つ目の刻印に触れた瞬間、遠くで重い音がした</td></tr>
+<tr><td class="k">撃破</td><td>特定の敵を倒す<b>→ 鍵を落とす</b></td><td>崩れ落ちたその手から、鍵がこぼれた</td></tr>
+<tr><td class="k">供物</td><td>アイテムを<b>失う代わり</b>に開く</td><td>竜のうろこを台座に置くと、扉が沈んだ</td></tr>
+<tr><td class="k">一方通行</td><td>通ると<b>戻れなくなる</b></td><td>背後で、床が抜け落ちた</td></tr>
+<tr><td class="k">隠し</td><td>灯り／地図／情報を持っていると<b>見えるようになる</b></td><td>灯りをかざすと、壁の継ぎ目が浮かび上がった</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note"><b>「撃破 → 鍵」は、そのモンスターがそこにいる理由になります。</b>ただの障害物ではなく「鍵を守っている者」になるので、裏設定とつながります。</p>
+
+<h2>5. 出来事の再現性 ── 3つに分ける</h2>
+
+<p>同じ場所に戻ったとき、出来事がどうなるか。ここを3種類に分けます。</p>
+
+<figure>
+<svg viewBox="0 0 760 240" role="img" aria-label="出来事の3分類。一度きりは発生後に消え、繰り返しは何度でも起き、キーは達成するまで何度でも挑める">
+  <defs>
+    <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+    </marker>
+  </defs>
+  <g font-size="11" text-anchor="middle">
+    <text x="18" y="22" font-size="12" font-weight="700" fill="#ff8f8f" text-anchor="start">一度きり</text>
+    <rect x="18" y="34" width="84" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="60" y="53" fill="currentColor">未発生</text>
+    <rect x="166" y="34" width="84" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="208" y="53" fill="currentColor">発生した</text>
+    <rect x="314" y="34" width="104" height="30" rx="5" fill="none" stroke="#ff8f8f" stroke-width="1.6"
+      stroke-dasharray="4 3"/>
+    <text x="366" y="53" fill="#ff8f8f">もう起きない</text>
+
+    <text x="18" y="112" font-size="12" font-weight="700" fill="#7de8a4" text-anchor="start">繰り返し</text>
+    <rect x="18" y="124" width="84" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="60" y="143" fill="currentColor">未発生</text>
+    <rect x="166" y="124" width="84" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="208" y="143" fill="currentColor">発生した</text>
+
+    <text x="18" y="202" font-size="12" font-weight="700" fill="#f2c65c" text-anchor="start">キー</text>
+    <rect x="18" y="214" width="84" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="60" y="233" fill="currentColor">未達成</text>
+    <rect x="166" y="214" width="84" height="30" rx="5" fill="none" stroke="currentColor" stroke-width="1.4"/>
+    <text x="208" y="233" fill="currentColor">挑んだ</text>
+    <rect x="314" y="214" width="104" height="30" rx="5" fill="none" stroke="#f2c65c" stroke-width="1.8"/>
+    <text x="366" y="233" fill="#f2c65c">達成・解放</text>
+  </g>
+  <line x1="102" y1="49" x2="162" y2="49" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar4)"/>
+  <line x1="250" y1="49" x2="310" y2="49" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar4)"/>
+  <line x1="102" y1="139" x2="162" y2="139" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar4)"/>
+  <path d="M208 158 L208 176 L60 176 L60 158" stroke="#7de8a4" stroke-width="1.4" fill="none" marker-end="url(#ar4)"/>
+  <text x="134" y="190" font-size="9.5" text-anchor="middle" fill="#7de8a4">戻るとまた起きる</text>
+  <line x1="102" y1="229" x2="162" y2="229" stroke="currentColor" stroke-width="1.4" marker-end="url(#ar4)"/>
+  <line x1="250" y1="229" x2="310" y2="229" stroke="#f2c65c" stroke-width="1.6" marker-end="url(#ar4)"/>
+  <path d="M208 210 L208 196 L60 196 L60 210" stroke="#f2c65c" stroke-width="1.4" fill="none"
+    stroke-dasharray="4 3" marker-end="url(#ar4)"/>
+  <text x="134" y="192" font-size="9.5" text-anchor="middle" fill="#f2c65c" opacity="0"> </text>
+  <text x="470" y="233" font-size="10" fill="currentColor" opacity="0.75" text-anchor="start">失敗しても、何度でも挑み直せる</text>
+  <text x="440" y="49" font-size="10" fill="currentColor" opacity="0.75" text-anchor="start">落とし穴・宝箱・出会い</text>
+  <text x="270" y="143" font-size="10" fill="currentColor" opacity="0.75" text-anchor="start">コウモリ・すきま風・遠くの物音</text>
+</svg>
+<figcaption><b>キーイベントだけは、失敗しても何度でも挑めます。</b>「刻印に触れる」で失敗して詰む、という事故を防ぐためです。落とし穴や宝箱は一度きり、雰囲気を作るだけの出来事は何度でも。</figcaption>
+</figure>
+
+<div class="tw">
+<table>
+<thead><tr><th>種別</th><th>戻ったとき</th><th>例</th><th>持ち方</th></tr></thead>
+<tbody>
+<tr><td class="k"><span class="tag ng">一度きり</span></td><td>もう起きない</td>
+  <td>落とし穴、宝箱、朽ちた旅人、モンスターの出現</td><td class="c">done[nodeId]=1</td></tr>
+<tr><td class="k"><span class="tag ok">繰り返し</span></td><td>何度でも起きる</td>
+  <td>コウモリ、すきま風、遠くの物音、水滴</td><td class="c">記録しない</td></tr>
+<tr><td class="k"><span class="tag warn">キー</span></td><td><b>達成するまで残る</b></td>
+  <td>刻印、扉、供物の台座、区画の主</td><td class="c">gate[gateId]='open'</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout warn">
+<p class="ct">戦闘から逃げた／負けたときの扱いを決めておく必要があります</p>
+<p>「モンスター出現」を一度きりにすると、<b>負けて戻ってきたら敵が消えている</b>ことになります。そこで<b>戦闘だけは別扱い</b>にします。勝ったら消える、負けたり逃げたら<b>その場に残る</b>。区画の主（鍵を守る敵）は必ずこの扱いです。</p>
+</div>
+
+<h2>6. アイテム ── 2つの層に分ける</h2>
+
+<div class="tw">
+<table>
+<thead><tr><th></th><th>チームアイテム</th><th>装備アイテム</th></tr></thead>
+<tbody>
+<tr><td class="k">持ち主</td><td>パーティ全体（誰かが持つ必要はない）</td><td>キャラ1体ごと</td></tr>
+<tr><td class="k">役割</td><td><b>道を開ける</b></td><td><b>強くなる</b></td></tr>
+<tr><td class="k">例</td><td>鍵、石板、竜のうろこ、日記、地図、松明</td><td>武器、防具、装飾×2</td></tr>
+<tr><td class="k">数</td><td>制限なし（かさばらない）</td><td><b>1体につき4枠</b></td></tr>
+<tr><td class="k">ダンジョン後</td><td><b>そのダンジョン専用のものは消える</b><br>（記念品として残るものもある）</td><td><span class="tag ok">持ち帰れる</span><br>次のダンジョンでも使える</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>装備は4枠</h3>
+<p><b>武器1・防具1・装飾2</b>で設計します。装飾を2つにしたのは、<b>同じ枠を2つ持たせると「どちらを取るか」の判断が生まれる</b>からです。1つだと自動的に最強を挿すだけになります。</p>
+<p>効果は、いまの特性の仕組み（<code>selfMod</code> / <code>aura</code>）にそのまま乗せられます。<b>装備を「もう1つの修正元」として足すだけ</b>で、エンジン側の計算は変えずに済みます。</p>
+
+<pre>{ id:'ironblade', slot:'weapon', name:'鉄の刃',
+  mod:{ atk:+2 },  <span class="c">// 攻撃+2</span>
+  text:'ありふれた、しかし確かな一振り' }
+
+{ id:'wardring', slot:'trinket', name:'守りの環',
+  mod:{ physReduce:1 }, <span class="c">// 受ける物理ダメージ-1</span>
+  onlyLine:'人' }       <span class="c">// 人系だけが着けられる、といった制限も置ける</span></pre>
+
+<div class="callout key">
+<p class="ct">持ち帰れることが、次に潜る理由になります</p>
+<p>ダンジョンを1つ攻略するたびに装備が良くなり、<b>その分だけ上の危険度に手が届く。</b>これがRPGモードの推進力です。逆に言うと、<b>持ち帰れなかったときに何を失うかを決めないと、緊張が生まれません。</b>案としては「全滅したら装備は現地に落とす、キーアイテムだけ失う、途中で引き返せば全部持って帰れる」あたりが素直だと思います。<b>ここは体験の要なので、相談させてください。</b></p>
+</div>
+
+<h2>7. 効果と状態異常</h2>
+
+<p>出来事の結果は、すべて<b>「誰に」×「どのくらい」</b>を持ちます。デモに実装済みです。</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>効果</th><th>誰に</th><th>どのくらい</th></tr></thead>
+<tbody>
+<tr><td class="k">ダメージ／回復</td>
+  <td>全員／前衛／後衛／1人／2人／いちばん傷ついた者</td>
+  <td>小 2〜4　中 5〜8　大 9〜14</td></tr>
+<tr><td class="k">状態異常</td><td>同上</td><td>毒・出血・恐怖・暗闇・弱体・鈍足／<b>残り部屋数</b>で持続</td></tr>
+<tr><td class="k">状態回復</td><td>同上</td><td>特定の1種、またはすべて</td></tr>
+<tr><td class="k">戦闘</td><td>初撃の対象（1人／前衛／全員）</td>
+  <td>先制の向き（<b>こちら／対等／敵</b>）× 規模（小勢・一群・主）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout warn">
+<p class="ct">状態異常は二階建てにする必要があります</p>
+<p>いまのエンジンの状態異常（呪詛・鈍足・弱体・防御・障壁の5種）は、<b>戦闘が終わると消える</b>作りです。RPGでは<b>探索中ずっと続く層</b>が別に要ります。</p>
+<p><b>探索の状態異常は、戦闘開始時に戦闘側へ写します。</b>毒を受けたまま戦闘に入れば、戦闘中も毒のまま。戦闘が終わると戦闘側は消えますが、探索側は残る——という二段構えにします。</p>
+</div>
+
+<h2>8. データの持ち方</h2>
+
+<pre>rpg: {
+  party:   [ {id:'knight', hp:22, max:22, equip:{weapon:'ironblade', armor:null,
+                                                 trinket1:'wardring', trinket2:null}}, … ],
+  stash:   ['ironblade','wardring', …],   <span class="c">// 酒場に置いてある装備</span>
+  cleared: {'beast':2, 'mine':1},         <span class="c">// 踏破回数</span>
+  run: {                                  <span class="c">// 潜っている最中だけ存在する</span>
+    dungeon:'mine', seed:948213,
+    at:'r7', seen:{r1:1,r7:1,c3:1},
+    done:{r4:1}, gate:{g1:'open'},
+    bag:['key_rust'],  status:{knight:{poison:3}},
+    torch:2, alert:1
+  }
+}</pre>
+
+<ul class="pl">
+  <li><b>ダンジョンは種（シード）から作り直します。</b>マップ全体を保存する必要はなく、<code>seed</code> と「どこを見たか・何を開けたか」だけ持てば復元できます。数KBに収まります</li>
+  <li><b>セーブの版番号と移行処理を最初に入れます。</b>いまのセーブは <code>v:1</code> 固定で移行の仕組みがありません。RPGは項目が育っていくので、ここを先に作らないと後で必ず詰まります</li>
+  <li><b>引き継ぎコードを前に出します。</b>localStorage は消えます。v43で入れた対戦の再現データと同じ仕組みで、<b>ダンジョンを1つ攻略するたびにコードの保存を促す</b>のが安全です</li>
+</ul>
+
+<h2>9. 戦闘との接続</h2>
+<ul class="pl">
+  <li><b>敵チームは、いまのカードから組みます。</b>ダンジョンの設定に合う顔ぶれを選ぶだけ（獣の洞なら人狼・イエティ、神域なら竜・聖騎士系）。<b>新しい敵データは要りません</b></li>
+  <li><b>先制はコイン（<code>coin</code>）で表現できます。</b>こちらが奇襲＝<code>coin:0</code>、敵に先制される＝<code>coin:1</code>。エンジンを変えずに済みます</li>
+  <li><b>傷は持ち越します。</b><code>createState</code> に渡すときにHPの初期値を上書きする口が要ります（いまは満タン固定）。ここだけ小さな改修が必要です</li>
+  <li><b>装備と探索の状態異常も、戦闘開始時に反映</b>します</li>
+</ul>
+
+<h2>10. 作る順番（改訂）</h2>
+<ol class="ph">
+  <li><b>部屋と通路のマップで、語りと選択肢を遊べるようにする</b>
+    <span class="goal">確かめたいこと：この遊びは面白いのか</span>
+    <span class="d">固定の1ダンジョン、鍵は1種類だけ、アイテムなし、HP全快。<b>マス目から部屋・通路への作り替えと、灯りによる段階的な開示までを含みます。</b>ここが面白くなければ後が全部無駄になるので、最初に置きます</span></li>
+  <li><b>生成と解放条件</b>
+    <span class="goal">確かめたいこと：毎回ちがうと感じられるか／詰まないか</span>
+    <span class="d">区画と解錠の連鎖から生成。鍵・刻印・撃破・供物の4種の扉。<b>生成後に必ず「入口から最奥まで到達できるか」を検査</b>し、通らなければ作り直します。出来事の3分類もここで入れます</span></li>
+  <li><b>アイテムと装備</b>
+    <span class="goal">確かめたいこと：また潜る理由になるか</span>
+    <span class="d">チームアイテムと4枠の装備。酒場の装備画面。<b>セーブの版番号・移行処理・引き継ぎコードの前出しも必ずここで</b></span></li>
+  <li><b>持ち越しと育成</b>
+    <span class="goal">確かめたいこと：長く遊べるか</span>
+    <span class="d">HPの持ち越し、探索の状態異常、酒場での回復、複数ダンジョンの解放。<b>失うものの設計はここで確定します</b></span></li>
+</ol>
+
+<h2>11. 決めてほしいこと</h2>
+<ul class="pl">
+  <li><b>全滅したとき、何を失うか。</b>装備を落とす／キーアイテムだけ失う／何も失わない。<b>ここでRPGの手ざわりがほぼ決まります。</b>私は「装備は落とす、ただし引き返せば全部持ち帰れる」を推します——引き返す判断そのものが遊びになるからです</li>
+  <li><b>1回のダンジョンの長さ。</b>いまのデモは14部屋で8分ほど。<b>スマホで1回20〜30分</b>を想定するなら、25〜35部屋・区画3つくらいが目安です</li>
+  <li><b>装飾2枠でいいか。</b>武器・防具・装飾×2の4枠。増やすほど組み合わせは増えますが、画面も判断も重くなります</li>
+  <li><b>Phase 1 の範囲でまず作ってよいか。</b>部屋と通路・灯り・鍵1種・語りと選択肢まで。ここまでで「面白いか」の判定はできます</li>
+</ul>
+
+</div>
