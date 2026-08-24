@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080b12">
+<title>RPGモード 探索</title>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <b id="dun">—</b>
+    <span class="spot" id="spot"></span>
+    <span class="sp"></span>
+    <span class="chip" id="pos">—</span>
+    <span class="chip" id="kil">討 0</span>
+    <span class="chip" id="hrt">傷 0</span>
+    <span class="chip" id="tor">松明 OFF</span>
+  </div>
+  <div class="body">
+    <div class="mapwrap" id="mapwrap"></div>
+    <div class="side">
+      <div class="narr" id="narr"></div>
+      <div class="choices" id="choices"></div>
+    </div>
+  </div>
+  <div class="party" id="party"></div>
+</div>
+
+<div class="setup" id="setup"><div class="card">
+  <h1>RPGモード ── 探索（Phase 1）</h1>
+  <p class="lead">部屋と通路の単位で歩きます。灯りの届く範囲だけ形が見え、
+    中に何があるかは入るまで分かりません。関門は、ヒントを読み、条件を満たすと開きます。</p>
+  <h2>ダンジョン</h2>
+  <div class="opts" id="dopts"></div>
+  <div class="dsub" id="dsub"></div>
+  <h2>広さ</h2>
+  <div class="opts" id="ropts"></div>
+  <div class="dsub">物語が進むほど、深く、長くなります。</div>
+  <button class="start" id="go">もぐる</button>
+</div></div>
+
+<style>
+:root{
+  --ground:#080b12; --panel:#0d1220; --panel2:#111a2c;
+  --line:#1e2740; --line2:#2b3752;
+  --ink:#dde5f5; --ink2:#94a4c4; --ink3:#6c7b9c;
+  --gold:#f2c65c; --ok:#7de8a4; --mid:#7fd4ff; --ng:#ff8f8f; --warn:#ffc06a;
+  --font:"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
+  font-size:14px;line-height:1.7;-webkit-text-size-adjust:100%;overflow:hidden}
+.wrap{display:flex;flex-direction:column;height:100svh;max-width:1100px;margin:0 auto}
+.top{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px;
+  flex-wrap:nowrap;overflow:hidden;
+  border-bottom:1px solid var(--line);background:var(--panel)}
+.top b{color:var(--gold);font-size:14px;white-space:nowrap;flex:0 1 auto;
+  min-width:3.2em;overflow:hidden;text-overflow:ellipsis}
+.top .sp{flex:1}
+.top .spot{font-size:12px;color:var(--ink2);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:11em}
+.top .spot:before{content:"／ ";color:var(--ink3)}
+.chip{flex:0 0 auto;font-size:11px;color:var(--ink2);border:1px solid var(--line2);
+  border-radius:999px;padding:2px 9px;white-space:nowrap;background:var(--panel2)}
+@media (max-width:392px){ .top .spot{display:none} .chip{padding:2px 7px;font-size:10.5px} }
+.chip.on{color:var(--gold);border-color:var(--gold)}
+.body{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.mapwrap{flex:0 0 auto;padding:8px 10px 0;display:flex;justify-content:center}
+.mapwrap svg{width:100%;max-width:min(100%,38svh);height:auto;display:block;
+  background:#05070c;border:1px solid var(--line);border-radius:10px}
+.side{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 10px 0}
+.narr{flex:1 1 0;overflow-y:auto;min-height:60px;padding:10px 12px;
+  background:var(--panel);border:1px solid var(--line);border-radius:10px;
+  -webkit-overflow-scrolling:touch}
+.narr p{margin:0 0 10px}
+.narr p:last-child{margin-bottom:0}
+.narr .em{color:var(--gold)}
+.narr .sys{color:var(--mid);font-size:12.5px}
+.narr .bad{color:var(--ng);font-size:12.5px}
+.choices{flex:0 1 auto;min-height:0;display:flex;flex-direction:column;gap:6px;padding:8px 0 0;
+  max-height:min(252px,46svh);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.choices .btn{flex:0 0 auto}
+.btn{appearance:none;width:100%;text-align:left;font:inherit;font-size:13.5px;
+  color:var(--ink);background:var(--panel2);border:1px solid var(--line2);
+  border-radius:9px;padding:9px 12px;cursor:pointer}
+.btn:active{background:#18233a}
+.btn .k{color:var(--ink3);font-size:11.5px;margin-left:6px}
+.btn.go{border-color:#33507a}
+.btn.act{border-color:var(--gold);color:var(--gold)}
+.party{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:8px 10px}
+.pm{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  padding:5px 3px;text-align:center;min-width:0}
+.pm .n{font-size:10.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pm .h{font-size:12px;color:var(--ok);font-variant-numeric:tabular-nums}
+.pm.back{opacity:.72}
+.pm.back .n:before{content:"後 ";color:var(--ink3)}
+body.land .body{flex-direction:row;gap:8px}
+body.land .mapwrap{flex:0 0 44%;padding:8px 0 8px 10px;align-items:flex-start}
+body.land .mapwrap svg{max-width:100%;max-height:calc(100svh - 96px)}
+body.land .side{padding:8px 10px 0 0}
+.setup{position:fixed;inset:0;background:rgba(4,6,11,.94);display:flex;
+  align-items:center;justify-content:center;padding:18px;z-index:9}
+.card{width:100%;max-width:460px;max-height:88svh;overflow-y:auto;background:var(--panel);
+  border:1px solid var(--line2);border-radius:14px;padding:16px}
+.card h1{margin:0 0 4px;font-size:17px;color:var(--gold)}
+.card .lead{margin:0 0 14px;color:var(--ink2);font-size:12.5px}
+.card h2{margin:14px 0 6px;font-size:12px;color:var(--ink3);font-weight:600;letter-spacing:.06em}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opt{font:inherit;font-size:12.5px;color:var(--ink2);background:var(--panel2);
+  border:1px solid var(--line2);border-radius:8px;padding:7px 11px;cursor:pointer}
+.opt.on{color:var(--gold);border-color:var(--gold);background:#181d2c}
+.card .dsub{color:var(--ink3);font-size:11.5px;margin-top:8px;line-height:1.6}
+.start{margin-top:16px;width:100%;font:inherit;font-size:14px;color:#1a1305;
+  background:var(--gold);border:0;border-radius:10px;padding:11px;cursor:pointer;font-weight:700}
+</style>
+<script>/* 文章の組み合わせエンジン。
+   {a|b|c} で言い換え（入れ子OK）、$name で状況に応じた語を差し込む。
+   ・expand() … 1つ選んで文章にする
+   ・count()  … 何通りあるかを数える
+   ブラウザにもそのまま載せるので、依存は持たない。                     */
+(function (root, factory) {
+  var api = factory();
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+  root.VARI = api;
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  /* ---------- 解析 ---------- */
+  function parse(str) {
+    var pos = 0;
+    function seq(stop) {
+      var items = [], buf = '';
+      function flush() { if (buf) { items.push({ t: 'lit', v: buf }); buf = ''; } }
+      while (pos < str.length) {
+        var ch = str[pos];
+        if (stop && (ch === '|' || ch === '}')) break;
+        if (ch === '{') { pos++; flush(); items.push(alt()); continue; }
+        if (ch === '$') {
+          var m = /^\$([a-zA-Z_][a-zA-Z0-9_]*)/.exec(str.slice(pos));
+          if (m) { pos += m[0].length; flush(); items.push({ t: 'var', v: m[1] }); continue; }
+        }
+        buf += ch; pos++;
+      }
+      flush();
+      return { t: 'seq', v: items };
+    }
+    function alt() {
+      var opts = [seq(true)];
+      while (str[pos] === '|') { pos++; opts.push(seq(true)); }
+      if (str[pos] === '}') pos++;
+      return { t: 'alt', v: opts };
+    }
+    return seq(false);
+  }
+
+  /* ---------- 数える ---------- */
+  function count(node, vars) {
+    if (typeof node === 'string') node = parse(node);
+    switch (node.t) {
+      case 'lit': return 1;
+      case 'var': return (vars && vars[node.v]) || 1;
+      case 'seq': return node.v.reduce(function (a, n) { return a * count(n, vars); }, 1);
+      case 'alt': return node.v.reduce(function (a, n) { return a + count(n, vars); }, 0);
+    }
+    return 1;
+  }
+
+  /* ---------- 1つ選ぶ ---------- */
+  function expand(node, ctx, rnd) {
+    rnd = rnd || Math.random;
+    if (typeof node === 'string') node = parse(node);
+    switch (node.t) {
+      case 'lit': return node.v;
+      case 'var':
+        var f = ctx && ctx[node.v];
+        return typeof f === 'function' ? f() : (f == null ? '' : String(f));
+      case 'seq': return node.v.map(function (n) { return expand(n, ctx, rnd); }).join('');
+      case 'alt': return expand(node.v[Math.floor(rnd() * node.v.length)], ctx, rnd);
+    }
+    return '';
+  }
+
+  return { parse: parse, count: count, expand: expand };
+});
+
+/* ダンジョンの設定。
+   open … プレイヤーに開示する。クエスト選択の画面に出る
+   hush … 裏設定。プレイヤーには見せないが、語彙・出来事・敵の傾向を決める
+   V    … 語彙。同じ出来事の文でも、ここが差し替わることで別の場所に読める
+   tags … この場所に出しうる出来事の種類
+   mix  … 出来事の出やすさ（罠・敵・宝・人）                            */
+
+const DUNGEONS = {
+  /* ============ 1. 人がいない、罠と敵だらけ ============ */
+  beast: {
+    id: 'beast',
+    name: '喰らいの洞',
+    sub: '人の手が入っていない自然洞',
+    danger: 1,
+    open:
+      '村の北、崩れた沢の奥に口を開けている。人の手はまったく入っていない。'
+      + '樵が二人、羊を追った子どもが一人、戻っていない。'
+      + '中にあるのは獣と、洞そのものの気まぐれだけだ。',
+    hush:
+      '獣道の崩落でできた自然洞。知性のあるものは棲んでいない。'
+      + '罠はすべて自然のもの——落盤、地割れ、澱んだ毒気、抜ける床。'
+      + 'だから「仕掛け」の語は使わない。人工物も、文字も、明かりも出てこない。'
+      + '奥の主は特別な存在ではなく、単に一番大きく育った個体である。',
+    V: {
+      place: '{洞|洞窟|岩の裂け目}',
+      trace: '{獣の掻き跡|抜け落ちた毛|噛み砕かれた骨}',
+      who2:  '{|}',                       // 人はいない
+      lord:  '{けもの|一番大きな個体|主}',
+      smell: '{獣|濡れた毛|饐えた息}',
+      sound: '{遠い唸り|滴る水|自分たちの足音}',
+      light: '{松明の輪|手にした灯り}'
+    },
+    tags: ['nature', 'beast', 'wild'],
+    mix: { trap: 3, enemy: 4, loot: 1, human: 0 }
+  },
+
+  /* ============ 2. かつて人が住んでいた、罠が多い ============ */
+  mine: {
+    id: 'mine',
+    name: '黙した坑道',
+    sub: '住人の絶えた鉱山',
+    danger: 2,
+    open:
+      'かつて三十人が暮らした鉱山の坑道。ある年の冬、住人はひとり残らず姿を消した。'
+      + '家財も、掘り出した鉱石も、そのまま置き去りにされている。'
+      + '持ち出そうとした者が幾人か向かい、そのうち何人かは戻ってこなかった。',
+    hush:
+      '住人は疫病で全滅した。仕掛けは、彼らが自分たちの財を守るために自ら組んだもの。'
+      + 'つまり罠は「悪意」ではなく「留守番」である。'
+      + '生活の跡が生々しく残っているのがこの場所の肌ざわりで、'
+      + '出てくる死体はほとんどが後から来た盗掘者のほう。'
+      + '奥の主は、最後まで坑道に残った鉱夫長の成れの果て。',
+    V: {
+      place: '{坑道|旧坑|地下の住まい}',
+      trace: '{生活の跡|使いかけの道具|冷えたかまど}',
+      who2:  '{先に入った者|盗掘者|欲を出した誰か}',
+      lord:  '{坑道|仕掛け|残された意志}',
+      smell: '{黴|石炭|人が暮らした名残}',
+      sound: '{梁の軋み|どこかで落ちる石|風が坑を抜ける音}',
+      light: '{松明の輪|壁に残った灯り台}'
+    },
+    tags: ['made', 'trap', 'relic', 'human'],
+    mix: { trap: 4, enemy: 2, loot: 3, human: 1 }
+  },
+
+  /* ============ 3. 宝が巧妙に隠され、冒険者も多い ============ */
+  maze: {
+    id: 'maze',
+    name: '欲深き迷路',
+    sub: '財宝が眠ると伝わる人工迷宮',
+    danger: 3,
+    open:
+      '誰が、何のために造ったのかは分かっていない。'
+      + 'ただ「財宝が眠る」という話だけが独り歩きし、腕自慢が絶えず集まってくる。'
+      + '入口には常に幾人かの姿があり、奥へ行くほど人は減る。',
+    hush:
+      '迷宮そのものが宝を守るために造られた仕掛けの塊で、'
+      + '通路の形も、宝の隠し方も、挑む者を試すように出来ている。'
+      + 'ここでの危険は罠と敵だけではない——同じ宝を狙う人間が、いちばん厄介である。'
+      + '奥の主は、最初にこの迷宮を攻略しかけて取り込まれた冒険者。',
+    V: {
+      place: '{迷宮|回廊|石組みの通路}',
+      trace: '{先客の血痕|削られた壁の目印|途中で捨てられた装備}',
+      who2:  '{冒険者|同じ宝を狙う連中|腕自慢}',
+      lord:  '{迷宮|仕掛けを組んだ者|最奥の主}',
+      smell: '{油|鉄と血|人いきれ}',
+      sound: '{遠くで人の声|金属が擦れる音|誰かの短い悲鳴}',
+      light: '{松明の輪|壁の燭台の名残}'
+    },
+    tags: ['made', 'trap', 'loot', 'human', 'rival'],
+    mix: { trap: 4, enemy: 3, loot: 4, human: 3 }
+  },
+
+  /* ============ 4. 竜と取り巻きが遺物を護る神域 ============ */
+  shrine: {
+    id: 'shrine',
+    name: '護りの神域',
+    sub: '竜が遺物を護る聖域',
+    danger: 4,
+    open:
+      '山ひとつを刳り抜いて造られた地下神殿。奥に「触れてはならぬもの」が眠り、'
+      + '竜がそれを護っていると伝わる。近づく者は絶えて久しい。'
+      + '——だが今年、山の水が枯れた。原因は、おそらく奥にある。',
+    hush:
+      '竜はもともと人間の守り手で、遺物を封じるために自ら竜となった。'
+      + '取り巻きは、同じ誓いを立てた信徒の成れの果てである。'
+      + 'つまりここの敵は「襲ってくる怪物」ではなく「務めを果たしている者たち」で、'
+      + 'その分だけ言葉に敬意と哀れが混じる。'
+      + '罠は物理ではなく結界・幻・試練の形をとる。文字と灯りが多い。',
+    V: {
+      place: '{神域|地下神殿|石の回廊}',
+      trace: '{古い刻印|供物の跡|磨り減った祈りの床}',
+      who2:  '{巡礼者|誓いを立てた者|かつての信徒}',
+      lord:  '{竜|護り手|眠るもの}',
+      smell: '{焚いた香|乾いた石|雷を待つ空気}',
+      sound: '{詠唱のような残響|低く長い呼吸|石が石に触れる音}',
+      light: '{松明の輪|絶えず燃えている灯明}'
+    },
+    tags: ['holy', 'relic', 'ward', 'dragon'],
+    mix: { trap: 2, enemy: 3, loot: 2, human: 1 }
+  }
+};
+
+
+/* 移動中に流す一言。
+   語彙（$place $sound $smell $light $trace $lord）がダンジョンごとに差し替わるので、
+   同じ枝を引いても別の場所の文に読める。
+   （出来事そのもの＝EVENTS は tools/rpgevents.js 側）                   */
+
+const WALK = {
+  /* 通路を抜けるとき */
+  corridor:
+    '{'
+    +   '{$lightの外は|光の届く先は}、{何も見えない|同じ闇が続くだけだ|形を持たない|数歩ぶんしかない}'
+    + '|' + '闇は、{どこまでも同じ顔をしている|奥へ行くほど厚い|光を吸っては返さない}'
+    + '|' + '通路は{緩く曲がって|わずかに下って|じわじわと上って|一度細くなってから広がって}いる'
+    + '|' + '{足元は|床は}{湿っている|乾いて滑る|平らではない|踏むたびに小さく鳴る}'
+    + '|' + '{壁は|天井は}{手を伸ばせば届く|思ったより近い|$lightでは端まで届かない}'
+    + '}。'
+    + '{|{'
+    +   '$soundが、{どこかで|背後で|前方で|頭上で}{続いている|一度だけした|止んだ}'
+    + '|' + '$smellが{一段濃くなった|さっきより薄い|不意に入れ替わった|鼻の奥に残る}'
+    + '|' + '$traceが、{足元に|壁の低いところに|天井の近くに}{続いている|途切れがちに残っている}'
+    + '|' + '$who が、{後ろを振り返った|足を止めて耳を澄ませた|何も言わずに先を歩く|数を数え直した}'
+    + '|' + '$hurt の{足取りが、少し重い|息が、まだ整っていない|傷が、$lightの下で黒く見える}'
+    + '|' + '{誰も口をきかない|自分たちの足音だけが返ってくる|列は、崩れていない}'
+    + '}。}',
+
+  /* 名前のない部屋に入ったとき */
+  room:
+    '{'
+    +   '{天井の低い|思ったより広い|四角く区切られた|歪な形の|奥行きだけがある}{部屋|空間|窪み}だ'
+    + '|' + '{何もない|使われた跡のない|がらんとした|荒らされた後らしい}{部屋|広間}に出た'
+    + '|' + '{$lightが、壁の四隅まで届いた|$lightを回すと、壁は四方にある|$lightの輪に、部屋がすっぽり収まる}'
+    + '|' + '{ここは行き止まりではない|出口は、入ってきた側だけではない|道は、まだ続いている}'
+    + '}。'
+    + '{'
+    +   '$traceが、{薄く残っている|床の一隅にだけ残っている|壁を伝って続いている}'
+    + '|' + '$smellが{ここだけ溜まっている|ここだけ薄い|$placeの他とは違う}'
+    + '|' + '{見るべきものは、何もない|めぼしいものはない|$who が、一通り壁を検めた|'
+    +       '$hurt が、隅を覗いて首を振った}'
+    + '|' + '$soundが、{ここではよく反響する|ここでは返ってこない|一拍遅れて返る}'
+    + '|' + '{$lordの通り道ではなさそうだ|ここまでは、何も来ていないらしい}'
+    + '}。'
+};
+
+
+/* キーイベント（解錠イベント）のパターン集。
+   ダンジョン生成のときは、まずここから何本か選んで「解錠の連鎖」を組む。
+   1つのパターンは5面のテキストを持つ：
+
+     hint    … どこかの石板・日記・古老が教えてくれる「開けかた」
+     seed    … 条件を満たせる出来事そのもの（別の部屋に置かれる）
+     blocked … まだ開かない状態で、そこに立ったときの語り
+     open    … 条件が満たされて開いた瞬間の語り
+     again   … 開いたあと、もう一度通るときの短い一言
+
+   語彙は $place $trace $who2 $lord $smell $sound $light（ダンジョン側）と
+   $who $hurt（パーティ側）が差し替わる。同じパターンでも別の場所に読める。
+
+   cond … 機械が判定する条件。
+     carry  {item}          チームアイテムを持っている
+     mark   {key,n}         刻印に n 箇所ふれた
+     slay   {who}           特定の相手を倒した
+     spare  {scope}         このもぐりで一体も倒していない（run/zone）
+     favor  {key}           助ける選択をした
+     offer  {item}          捧げた
+     lever  {key}           機構を動かした
+     word   {key}           合言葉を知っている
+     light  {state}         灯りを消している／全部点けた
+     hurtless               誰も傷を負わずにここまで来た
+     party  {shape}         人数・並びの条件
+     deal   {key}           先客と話をつけた
+
+   look … 何が道を塞いでいるかの見た目。語りの土台になる。
+     door / gap / rubble / ward / water / dark / beastly                  */
+
+const KEYS = {
+
+  /* ============ 恩返し ============ */
+
+  favor_bridge: {
+    id: 'favor_bridge', name: '恩返しの橋', kind: 'favor',
+    tags: ['nature', 'beast', 'wild'], look: 'gap',
+    cond: { t: 'favor', key: 'beast' },
+    hint:
+      '{壁を引っ掻いた跡|土に描かれた線|石を並べただけの図}が{ある|残っている|目に入る}。'
+      + '{図というより、覚え書きに近い|意味を読み取るのに、しばらくかかった}。'
+      + '——{裂け目|向こう岸|途切れた道}と、{そのそばに立つ獣のような形|四つ足の何か|大きな影}。'
+      + '{$who が、それを指でなぞった|「渡してもらった者がいる、ということか」|'
+      + '$hurt が、しばらく黙ってそれを見ていた}。',
+    seed:
+      '{足を挟まれた|岩の下敷きになった|罠にかかったまま動けない}獣が{一頭|一匹}、'
+      + '{こちらを見ている|荒い息をしている|唸る力も残っていないらしい}。'
+      + '{$trace|牙|毛}は{この$placeのものだ|見慣れたものだ}。'
+      + '{助ければ時間を食う。放っておけば、それだけのことだ|'
+      + '$who が、答えを待つようにこちらを見た|'
+      + '手を出す理由は、どこにもない}。',
+    blocked:
+      '{道は|足元は}{そこで途切れている|裂け目に噛みちぎられている|向こう岸まで、跳べる幅ではない}。'
+      + '{底からは$soundだけが返ってくる|投げた石は、音を返さなかった|下から冷たい風が吹き上げてくる}。'
+      + '{渡る手立ては、いまのところ無い|力ずくで越えられる幅ではない|'
+      + '{縄も|足場も}見当たらない}。',
+    open:
+      '{背後で|物音に振り返ると|$soundに混じって}、{重いものを引きずる音|木がしなる音|土を蹴る音}がした。'
+      + '{助けた獣|あの獣|さっきの一頭}が、{倒木|折れた梁|太い枝}を'
+      + '{咥えて|引きずって|押して}きて、{裂け目に渡した|向こう岸との間に落とした|架けた}。'
+      + '{そして、何も言わずに闇へ戻っていった|一度だけこちらを見て、去った|'
+      + '$who が、その背に短く頭を下げた}。',
+    again: '{架け渡された$traceの上を、一列で渡る|渡した木は、まだそこにある|'
+      + '足場は、思ったより頼りになる}。'
+  },
+
+  favor_guide: {
+    id: 'favor_guide', name: '道を教える者', kind: 'favor',
+    tags: ['human', 'rival', 'made'], look: 'rubble',
+    cond: { t: 'favor', key: 'human' },
+    hint:
+      '{崩れた壁に|柱の陰に|床に}、{誰かが刻んだ短い文|新しい掻き跡|矢印のような印}がある。'
+      + '「{抜け道は、教えられた者しか通れない|ここは、頼んで開けてもらった|'
+      + '恩は、道になって返ってくる}」'
+      + '{署名はない|続きは、削られている|日付だけが、ごく最近のものだった}。',
+    seed:
+      '{$who2が一人|人影がひとつ}、{壁にもたれて|うずくまって|足を投げ出して}動けずにいる。'
+      + '{血は止まっているが、歩けそうにない|水を切らしてから、だいぶ経つらしい|'
+      + '装備は上等だが、片方の靴がない}。'
+      + '「{……悪いが|なあ|頼む}、{水を|手を|少しでいい}」'
+      + '{$hurt が、自分の分の袋に手をかけた|一行の足が、そこで止まった|'
+      + '先を急ぐなら、通り過ぎればいい}。',
+    blocked:
+      '{通路は|その先は}{崩れた石で|落ちた梁と土砂で|積み上がった瓦礫で}{完全に塞がっている|埋まっている}。'
+      + '{$who が肩で押してみたが、びくともしない|掘るには、道具も時間も足りない|'
+      + '隙間から風は通る。向こうに空間はあるらしい}。',
+    open:
+      '{背後から声がかかった|「おい」と呼ぶ声がした|足音が追いついてきた}。'
+      + '{さっきの$who2|助けた者|あの男}が、{足を引きずりながら|息を切らして}立っている。'
+      + '「{そっちは埋まってる。こっちだ|水の礼だ。抜け道を教える|'
+      + '俺が通ってきた道がある}」'
+      + '{$traceの陰に、人ひとり分の隙間があった|示されたのは、壁の裏の細い道だった|'
+      + '言われて初めて、そこが道に見えた}。',
+    again: '{教えられた抜け道を、身をよじって通る|細い道は、二度目は速い|'
+      + '肩が擦れる幅だが、通れることはもう知っている}。'
+  },
+
+  favor_free: {
+    id: 'favor_free', name: '放たれたもの', kind: 'favor',
+    tags: ['made', 'trap', 'relic', 'holy'], look: 'door',
+    cond: { t: 'favor', key: 'caged' },
+    hint:
+      '{扉の脇に|框に|石の縁に}、{擦り切れた文字|辛うじて読める一行}が残っている。'
+      + '「{閉じ込めたものを、先に解け|鍵は檻の側にある|'
+      + 'ここを開けるのは、我々ではない}」'
+      + '{意味は、そのときには分からなかった|$who が、小さく首を振った|'
+      + '書いた者は、それで済むと思っていたらしい}。',
+    seed:
+      '{鉄格子の向こうに|檻の中に|閉ざされた小部屋に}、{何かがいる|動くものがある|息の音がする}。'
+      + '{$lightに浮かんだのは、{痩せこけた輪郭|うずくまった影|こちらを見上げる目}だった|'
+      + '$smellが、そこだけ濃い|近づくと、格子を掴む音がした}。'
+      + '{閂は外から掛かっている。開けるのは、こちらの一存だ|'
+      + '長いこと、誰も来なかったのだろう|$hurt が、閂に手をかけたまま動かない}。',
+    blocked:
+      '{扉は|その扉は}{びくともしない|押しても引いても動かない|嵌め殺しのように動かない}。'
+      + '{鍵穴はない|錠らしきものは、どこにも見当たらない|'
+      + '$traceが、扉の縁を隙間なく縁取っている}。'
+      + '{力で開くものではない、と$who が言った|叩いた音は、$soundになって返ってきただけだった}。',
+    open:
+      '{閂を外したもの|放たれたもの|檻から出た影}は、{一度も振り返らずに|音もなく|'
+      + '$who の脇をすり抜けて}奥へ{歩いていった|消えた}。'
+      + '{そして、扉の前で立ち止まると|やがて、閉ざされた扉に手を当て|'
+      + '$placeの奥で、何かが動く音がした}——'
+      + '{扉は、内側から開いた|閂は、向こう側から外された|重い音を立てて、道が開く}。',
+    again: '{開いたままの扉を、そのままくぐる|扉は、もう閉じない|'
+      + '内側の閂は、外れたままになっている}。'
+  },
+
+  /* ============ 不殺・無傷 ============ */
+
+  spare_door: {
+    id: 'spare_door', name: '血を見なかった者', kind: 'spare',
+    tags: ['holy', 'ward', 'relic', 'dragon', 'made'], look: 'door',
+    cond: { t: 'spare', scope: 'run' },
+    hint:
+      '{日記の一頁|石板の一面|書きつけの終わりの方}に、{こうある|そう書かれている}。'
+      + '「{三度目でようやく分かった|仲間を全部失ってから気づいた|'
+      + '我々の入りかたが、そもそも間違っていた}。'
+      + '{あれらは番人だ。斬れば、扉は開かない|'
+      + '刃を抜かずに来た者にだけ、あの扉は開く|'
+      + '一つも殺さずに辿り着け。それだけのことだった}」'
+      + '{最後の行は、途中で途切れている|筆跡は、そこで乱れている|'
+      + '$who が、その頁をゆっくり閉じた}。',
+    seed: null,
+    blocked:
+      '{扉には|その戸口には}{錠も|鍵穴も|取っ手も}ない。'
+      + '{$traceが、縁に沿ってびっしりと刻まれている|'
+      + '押しても引いても、石の壁と変わらない|'
+      + '手を当てると、$soundが内側から返ってくる}。'
+      + '{——こちらの手が、まだ乾いていない|'
+      + '扉は、開くつもりがないらしい|'
+      + '$hurt が、自分の刃を見下ろした}。',
+    open:
+      '{扉に手を当てると|近づいただけで|一行が前に立つと}、'
+      + '{$soundが一度だけ響いた|$lightが、ふっと揺れた|石の内側で、何かが外れる音がした}。'
+      + '{扉は、押してもいないのに開いていく|重い戸が、内側へ引かれた|'
+      + '継ぎ目のなかったはずの石が、割れて道になる}。'
+      + '「{通れ、ということらしい|一体も斬らずに来た。それが答えだった|'
+      + '$lordは、こちらの手を見ていたのだ}」',
+    again: '{開いた扉は、そのままになっている|一度通れば、扉は咎めない|'
+      + '戸口は、もう何も試してこない}。',
+    note: 'ダンジョンを出て入り直すと敵は復活する。＝不殺条件も最初からやり直しになる。'
+  },
+
+  spare_ward: {
+    id: 'spare_ward', name: '濡れていない手', kind: 'spare',
+    tags: ['holy', 'ward', 'dragon'], look: 'ward',
+    cond: { t: 'spare', scope: 'zone' },
+    hint:
+      '{供物の跡の隣に|磨り減った床に|柱の根元に}、{短い言葉|一行だけ|一句}が刻まれている。'
+      + '「{この先、鉄を握った手は通さぬ|'
+      + '内で流された血は、内に残る|'
+      + 'ここから奥では、何も殺めるな}」'
+      + '{$placeに入る前の忠告だったのだろう|'
+      + '手前ではなく、ここから先の話らしい|'
+      + '$who が、それを二度読んだ}。',
+    seed: null,
+    blocked:
+      '{通路の途中で|何もない場所で|一歩踏み出したところで}、'
+      + '{見えない壁に阻まれた|前に進めなくなった|空気が板のように硬い}。'
+      + '{$lightは向こう側まで届いているのに、体だけが行けない|'
+      + '$soundは通る。こちらだけが通れない|'
+      + '押し返す力は、腹立たしいほど静かだ}。',
+    open:
+      '{境目に立つと|一歩踏み出すと|前に進むと}、{何の抵抗もなかった|'
+      + '空気は、ただの空気だった|阻むものは、消えている}。'
+      + '{$traceが、通り過ぎる間だけ$lightを返した|'
+      + '$soundが、ひとつだけ遅れて追いかけてきた|背後で、結界の閉じる音がした}。'
+      + '{$hurt が、自分の手のひらを見た|'
+      + '「殺していない、というだけのことだ」と$who が言った}。',
+    again: '{境目は、もう何もしない|通り抜けるとき、わずかに空気が動く|'
+      + '結界は、こちらを覚えているらしい}。'
+  },
+
+  hurtless: {
+    id: 'hurtless', name: '傷なき者の道', kind: 'hurtless',
+    tags: ['holy', 'ward', 'made', 'trap'], look: 'ward',
+    cond: { t: 'hurtless' },
+    hint:
+      '{壁一面に|天井まで届く高さで|床から順に}、{同じ形の$traceが並んでいる|'
+      + '手形が、いくつも重ねて捺されている|名前らしきものが刻まれている}。'
+      + '{どれも、ある高さから下は掻き消されている|'
+      + 'ほとんどが、途中で乱れて終わっている|'
+      + '最後まで揃っているのは、ひとつだけだ}。'
+      + '「{血を落とした者は、ここまで|傷を負った者は戻れ|'
+      + '欠けた身では、次の間に入れぬ}」',
+    seed: null,
+    blocked:
+      '{$placeは、そこで一度閉じている|通路は、平らな石の面で終わっている}。'
+      + '{$hurt の傷が、$lightの下で黒く見える|'
+      + '誰かが血を流している。それだけで、ここは開かないらしい|'
+      + '石の面は、$soundすら返さない}。',
+    open:
+      '{誰ひとり、まだ血を流していない|一行に傷はない|'
+      + 'ここまで、掠り傷ひとつ負っていない}。'
+      + '{石の面は|閉じていた壁は}{音もなく引いた|静かに割れて道になった|'
+      + '$lightを吸い込むように、奥へ後退した}。'
+      + '{$who が、拍子抜けしたように息を吐いた|'
+      + '「そういう試しだったのか」|運が良かった、で片づけるには惜しい}。',
+    again: '{一度開いた道は、傷を問わない|開いた石の間を抜ける|'
+      + '割れた壁は、閉じる気配がない}。'
+  },
+
+  /* ============ 刻印・灯明 ============ */
+
+  mark_seal: {
+    id: 'mark_seal', name: '刻印の扉', kind: 'mark',
+    tags: ['made', 'holy', 'relic', 'ward'], look: 'door',
+    cond: { t: 'mark', key: 'seal', n: 3 },
+    hint:
+      '{扉の表に|石の面に|框の上に}、{窪みが三つ|浅い彫り込みが三つ|三つの空白}{並んでいる|穿たれている}。'
+      + '{同じ形の$traceを、$placeのどこかで見た気がする|'
+      + 'どれも、手のひらほどの大きさだ|'
+      + '一つ目には、うっすらと$lightが残っている}。'
+      + '{$who が、指を三本立てた|「三つ、どこかにある」}',
+    seed:
+      '{壁の一点だけ|柱の腹に|床の一枚だけ}、{$traceが|同じ印が}{はっきりと残っている|'
+      + '磨り減らずに残っている|$lightを弾いた}。'
+      + '{触れると、指先が温かい|手を当てると、$soundが遠くで一度鳴った|'
+      + '押した感触は、扉のそれに似ている}。',
+    blocked:
+      '{扉の窪みは|三つの印は}、{まだ埋まっていない|いくつか暗いままだ|'
+      + '揃っていない}。'
+      + '{押しても、$soundが返るだけだった|'
+      + '$lightをかざしても、何も起きない|'
+      + '足りない分だけ、扉は重い}。',
+    open:
+      '{最後の一つに触れた瞬間|三つ目が灯った途端|印が揃うと}、'
+      + '{扉の窪みが順に$lightを帯びた|三つの光が、扉の上でひとつになった|'
+      + '$soundが、$place全体を一度だけ揺らした}。'
+      + '{閂の外れる音がして、扉が開く|重い石が、内側へ滑った|'
+      + '道は、あっけないほど静かに通じた}。',
+    again: '{灯った印は、消えていない|開いた扉をくぐる|'
+      + '三つの窪みは、今も$lightを帯びたままだ}。'
+  },
+
+  mark_lamp: {
+    id: 'mark_lamp', name: '灯明を継ぐ', kind: 'mark',
+    tags: ['holy', 'relic', 'ward', 'human'], look: 'dark',
+    cond: { t: 'mark', key: 'lamp', n: 4 },
+    hint:
+      '{床の$traceは|磨り減った跡は}、{同じ道筋を何度も往復している|'
+      + '部屋から部屋へ、繋がっている|一本の順路になっている}。'
+      + '「{灯明を絶やすな|順に継げ|火が途切れれば、道も途切れる}」'
+      + '{ここに住んでいた者の、毎日の仕事だったのだろう|'
+      + '$who2の日課が、そのまま仕掛けになっている|'
+      + '守られていたころは、当たり前だったに違いない}。',
+    seed:
+      '{$lightの届く先に|壁の高いところに|柱に取りつけられた}{灯明台|皿|受け}がひとつ、'
+      + '{冷えたまま|空のまま|油だけ残して}{置かれている|残っている}。'
+      + '{火を移せば、継げる|松明の先を近づけると、あっさりと燃え上がった|'
+      + '$smellが、そこだけ変わった}。',
+    blocked:
+      '{奥は|その先は}{$lightの届かない闇だ|一歩先も見えない|'
+      + '松明を差し出しても、光がそこで止まる}。'
+      + '{灯明が、まだいくつか冷えている|'
+      + '継いだ火の数だけ、闇が退いている——まだ足りない|'
+      + '$who が、来た道の灯りを振り返った}。',
+    open:
+      '{最後の灯明に火が移った|四つ目が灯った|順路が、火で繋がった}。'
+      + '{$place全体が、ゆっくりと明るくなっていく|'
+      + '一つ灯るごとに、闇が一歩ずつ下がった|'
+      + '見えていなかった$traceが、床の上に浮かび上がる}。'
+      + '{奥へ続く道が、初めから在ったように現れた|'
+      + '闇だと思っていたものは、ただの暗がりだった}。',
+    again: '{灯明は、まだ燃えている|明るくなった道を進む|'
+      + '継いだ火は、絶えていない}。'
+  },
+
+  /* ============ 撃破 ============ */
+
+  slay_key: {
+    id: 'slay_key', name: '呑まれた鍵', kind: 'slay',
+    tags: ['*'], look: 'door',
+    cond: { t: 'slay', who: 'holder' },
+    hint:
+      '{$who2の|先に来た者の|誰かの}{書きつけ|走り書き|最後の一行}が残っている。'
+      + '「{鍵は、あれの腹の中だ|持っていかれた|'
+      + '飲み込まれた。取り返すには、殺すしかない}」'
+      + '{そのあとの頁は、白いままだ|'
+      + '筆跡は震えている|$hurt が、それを黙って畳んだ}。',
+    seed: null,
+    blocked:
+      '{鍵穴は|錠は}{ある|確かにある|真新しいくらいだ}。{だが、鍵がない|肝心のものが手元にない}。'
+      + '{$who が刃を差し込んでみたが、折れそうになっただけだった|'
+      + '蝶番は内側だ。壊すのは無理がある|'
+      + '$soundだけが、扉の向こうから返ってくる}。',
+    open:
+      '{倒れたそれの|崩れた体の|骸の}{下から|奥から|中から}、{硬いものが転がり出た|'
+      + '$lightを返すものがある|金気の音がした}。'
+      + '{錆びてはいるが、確かに鍵だ|'
+      + '長いこと$smellに漬かっていたらしい|'
+      + '$who が布で拭ってから、$hurt に渡した}。'
+      + '{扉の錠は、思いのほか素直に回った|回すと、乾いた音を立てて開いた}。',
+    again: '{鍵はもう手にある。扉は開いたままだ|開けた扉をくぐる|'
+      + '錠は、下りていない}。'
+  },
+
+  slay_pillar: {
+    id: 'slay_pillar', name: '崩れて生まれる道', kind: 'slay',
+    tags: ['nature', 'beast', 'wild', 'trap', 'made'], look: 'rubble',
+    cond: { t: 'slay', who: 'guard' },
+    hint:
+      '{$traceは|掻き跡は|磨り減りかたは}、{一点に集まっている|同じ場所を指している|'
+      + 'この$placeで、そこだけ違う}。'
+      + '{何かが、いつも同じ場所で暴れているらしい|'
+      + '$lordの通り道なのだろう|'
+      + '$who が「上を見ろ」と言った——梁が、もう保たない}。',
+    seed: null,
+    blocked:
+      '{道は|向こうへ抜ける道は}{塞がっている|土砂と石で埋まっている|'
+      + '崩れた岩が、天井まで積み上がっている}。'
+      + '{どかせる重さではない|$who が一つ動かしただけで、上から砂が落ちてきた|'
+      + '$soundが、積み石の奥で反響した}。',
+    open:
+      '{倒れる拍子に|最後の一撃で|それが崩れ落ちたとき}、'
+      + '{$placeが揺れた|天井から石が降った|積み上がっていたものが、内側から崩れた}。'
+      + '{土煙が晴れると、そこに道があった|'
+      + '塞いでいた岩は、押し潰されて低くなっている|'
+      + '越えられる高さだ、と$who が言った}。'
+      + '{危うく巻き込まれるところだった|$hurt が、頭から砂をかぶって咳き込んだ}。',
+    again: '{崩れた岩を乗り越えて進む|低くなった瓦礫を越える|'
+      + '足場は悪いが、通れる}。'
+  },
+
+  /* ============ 持ち物 ============ */
+
+  carry_key: {
+    id: 'carry_key', name: '鍵の扉', kind: 'carry',
+    tags: ['*'], look: 'door',
+    cond: { t: 'carry', item: 'key' },
+    hint:
+      '{錠は|鍵穴は}{見ればわかる|一目でそれと分かる|扉の腹の高さにある}。'
+      + '{$placeのどこかに、対の鍵があるはずだ|'
+      + '合う鍵は、そう遠くにはない|'
+      + '$who が「持ち主が居たはずだ」と言った}。',
+    seed:
+      '{$traceに埋もれて|窪みの底に|$who2の残した荷の中に}、{鍵がひとつ|鍵らしきものが}'
+      + '{落ちている|残されている|$lightを返した}。'
+      + '{錆びてはいるが、歯は生きている|'
+      + '思ったより重い|どの扉のものかは、分からない}。',
+    blocked:
+      '{扉は施錠されている|錠が下りている|鍵がなければ、それまでだ}。'
+      + '{$who が肩を当てたが、無駄だった|'
+      + '蹴破れる厚みではない|'
+      + '鍵穴を覗くと、向こう側にも$lightがあった}。',
+    open:
+      '{鍵は|手にした鍵は}{渋りながら|一度引っかかってから|驚くほど滑らかに}回った。'
+      + '{錠が落ちる音|閂の外れる音|金気の音}が、$place に{短く響く|やけに大きく響いた}。'
+      + '{扉は、ゆっくりと内側へ開いた|押すと、素直に開いた}。',
+    again: '{錠はもう下りていない|開けた扉をくぐる|'
+      + '鍵は、まだ荷の中にある}。'
+  },
+
+  carry_scale: {
+    id: 'carry_scale', name: 'うろこをかざす', kind: 'carry',
+    tags: ['dragon', 'holy', 'ward', 'relic'], look: 'ward',
+    cond: { t: 'carry', item: 'scale' },
+    hint:
+      '{$traceに混じって|刻印の中に一つだけ|供物の跡の上に}、'
+      + '{鱗のような形|魚の鱗にも似た輪郭|楯状の紋}が{彫られている|捺されている}。'
+      + '「{同じ血のものだけが通る|うろこを持たぬ者は入るな|'
+      + '$lordの証を掲げよ}」'
+      + '{$who が、それを写し取った|印は、扉の高さより上にある}。',
+    seed:
+      '{床の$traceに混じって|壁の窪みに|$lightの端に}、{楯ほどの大きさの|手のひらより大きい|'
+      + '厚みのある}{鱗が一枚|うろこ}{落ちている|転がっている|突き刺さったままだ}。'
+      + '{$lightを当てると、内側から色が動いた|'
+      + '生き物から剥がれたものにしては、あまりに硬い|'
+      + '$who が、両手で持ち上げてみせた}。'
+      + '{$lordが脱いだものか、剥がされたものか——それは分からない|'
+      + '$hurt が、触れるのをためらった|'
+      + '持っていくべきかどうか、しばらく誰も言い出さなかった}。',
+    blocked:
+      '{境目には|前には}{何も見えない|空気しかない|$lightが素通りしている}。'
+      + '{だが、進めない|一歩が、そこから先へ出ない|'
+      + '押し返す力は、$soundもなく静かだ}。'
+      + '{$hurt が手を伸ばして、指先で止められた|見えないものに阻まれるのは、気分が悪い}。',
+    open:
+      '{うろこを掲げると|かざした途端|$lightにうろこを透かした瞬間}、'
+      + '{それが内側から光った|手のひらが熱くなった|$traceが、同じ形に応えた}。'
+      + '{阻んでいたものが、ほどけるように失せた|空気が、ふっと軽くなった|'
+      + '結界は、扉のように左右へ退いた}。'
+      + '{「$lordの側と見なされた、ということか」|'
+      + '$who が、うろこを大事に懐へ戻した}。',
+    again: '{うろこを持つ限り、ここは通れる|境目は、もう阻まない|'
+      + '掲げるまでもなく、道は空いている}。'
+  },
+
+  carry_tablet: {
+    id: 'carry_tablet', name: '石板を嵌める', kind: 'carry',
+    tags: ['made', 'relic', 'holy', 'trap'], look: 'door',
+    cond: { t: 'carry', item: 'tablet' },
+    hint:
+      '{壁の一面に|扉の中央に|石の面に}、{四角い窪み|一枚分の欠け|明らかに何かが抜けた跡}がある。'
+      + '{縁だけが磨り減っていない|'
+      + '嵌まっていたものは、持ち出されたらしい|'
+      + '$who が、窪みに手のひらを当てて大きさを測った}。',
+    seed:
+      '{$traceの下から|崩れた棚の陰に|$who2の荷に紛れて}、{平たい石板|文字の刻まれた板}が'
+      + '{一枚|出てきた|見つかった}。'
+      + '{持ち出す価値があると思ったのだろう|'
+      + '重い。だが、置いていく気にはならない|'
+      + '縁の形に、見覚えがある気がした}。',
+    blocked:
+      '{窪みは|欠けた部分は}{空のままだ|埋まっていない}。'
+      + '{扉は、その一枚が戻るまで動かないらしい|'
+      + '押しても、$soundすら返ってこない|'
+      + '$lightをかざすと、窪みの底に$traceが見えた}。',
+    open:
+      '{石板を窪みに|欠けた部分に|そこへ}{嵌める|戻す|滑り込ませる}と、'
+      + '{音もなく吸い込まれた|かちりと収まった|$traceが、隙間なく繋がった}。'
+      + '{$place のどこか奥で、重いものが動く音がした|'
+      + '扉は、押す前に開いていた|'
+      + '石の面が、上へ引き上げられていく}。',
+    again: '{嵌めた石板は、そのままになっている|開いた道を進む|'
+      + '窪みは、もう欠けていない}。'
+  },
+
+  /* ============ 知識・合言葉 ============ */
+
+  word_pass: {
+    id: 'word_pass', name: '唱える言葉', kind: 'word',
+    tags: ['human', 'made', 'holy', 'relic'], look: 'door',
+    cond: { t: 'word', key: 'pass' },
+    hint:
+      '{日記の|書きつけの|帳面の}{最後の頁|真ん中あたり|余白}に、'
+      + '{一語だけ|短い言葉が|意味の取れない一続きが}{書かれている|残されている}。'
+      + '「{これを言えば開く|忘れるな。二度は教えてもらえない|'
+      + '声に出すこと。心で唱えても駄目だ}」'
+      + '{$who が、声に出さずに二度読んだ|'
+      + '$hurt が、忘れないうちにと繰り返した}。',
+    seed: null,
+    blocked:
+      '{扉には|そこには}{錠も鍵穴も窪みもない|取っ手すらない|継ぎ目だけがある}。'
+      + '{手を当てると、$soundが内側から返ってくる|'
+      + '$lightを近づけても、何も浮かばない|'
+      + '$who が、試しに叩いてみた。ただの石の音だった}。'
+      + '{開けかたを、まだ知らない|何か言えばいいのだろうが、その何かが分からない}。',
+    open:
+      '{$who が|声を揃えて|一行のうちの誰かが}、{その言葉を口にした|覚えた一語を唱えた}。'
+      + '{$place が、一度だけ$soundを返した|'
+      + '$traceが、順に$lightを帯びていく|'
+      + '空気が、わずかに動いた}。'
+      + '{継ぎ目のなかった石が、真ん中から割れて開く|'
+      + '扉は、言われた通りに開いた|'
+      + '——それだけのことだった。それだけのことで、道が通じた}。',
+    again: '{一度唱えた扉は、もう閉じない|開いたままの戸口をくぐる|'
+      + '言葉は、二度目は要らないらしい}。'
+  },
+
+  /* ============ 機構 ============ */
+
+  lever_water: {
+    id: 'lever_water', name: '水を抜く', kind: 'lever',
+    tags: ['made', 'trap', 'relic', 'human'], look: 'water',
+    cond: { t: 'lever', key: 'sluice' },
+    hint:
+      '{壁に|柱に|床の一段高いところに}、{水位を刻んだ線|等間隔の刻み|目盛りらしきもの}がある。'
+      + '{いちばん上の線は、頭より高い|'
+      + '線の並びは、水が引いたり満ちたりを繰り返した記録だ|'
+      + '「{下げれば通れる|水門は北|落とし口を開けよ}」と添え書きがある}。',
+    seed:
+      '{$traceに半ば埋もれて|壁に据えつけられた|水路の脇に}、'
+      + '{錆びた把手|木の梃子|歯車と鎖}が{ある|残っている|辛うじて形を保っている}。'
+      + '{動かせそうだ|$who が両手で掛かると、軋みながら少し動いた|'
+      + 'どこに繋がっているのかは、ここからでは分からない}。',
+    blocked:
+      '{通路は|その先は}{水に沈んでいる|胸まで水が来ている|黒い水で満たされている}。'
+      + '{$lightは水面で跳ね返り、底は見えない|'
+      + '$smellが、水の上に重く溜まっている|'
+      + '泳いで渡るには、装備が重すぎる}。',
+    open:
+      '{どこか遠くで|背後の$placeで|足元の下で}、{重いものが落ちる音|水の走る音|'
+      + '$soundとは違う、低く長い音}がした。'
+      + '{水面が、目に見えて下がっていく|'
+      + '見る間に水が引き、床の$traceが現れた|'
+      + '沈んでいた$who2の荷が、あちこちに残されている}。'
+      + '{濡れた床は滑る。それでも、通れる|$hurt が、真っ先に足を踏み出した}。',
+    again: '{水はもう戻っていない|濡れた床を渡る|'
+      + '底に残った$traceを踏んで進む}。'
+  },
+
+  lever_pulley: {
+    id: 'lever_pulley', name: '離れた場所が動く', kind: 'lever',
+    tags: ['made', 'trap', 'relic'], look: 'door',
+    cond: { t: 'lever', key: 'pulley' },
+    hint:
+      '{天井を|壁の上のほうを|扉の枠を}{見ると|辿ると}、{鎖|太い縄|滑車の列}が'
+      + '{奥へ伸びている|別の方向へ続いている|$lightの届かない先へ消えている}。'
+      + '{この扉は、ここでは開かない|'
+      + '動かす場所は、別にあるらしい|'
+      + '$who が「引く側がどこかにある」と言った}。',
+    seed:
+      '{何もない部屋の真ん中に|壁から突き出して|台座の上に}、'
+      + '{把手|轆轤|鎖の巻き取り}が{一つだけ|据えられている|残っている}。'
+      + '{ここには、他に何もない|'
+      + 'この部屋自体が、そのためだけに掘られたように見える|'
+      + '回すと、$placeのどこか遠くで$soundがした}。',
+    blocked:
+      '{扉は|落とし格子は}{下りたままだ|閉じている|人の力で持ち上がる重さではない}。'
+      + '{格子の向こうに、道が見えている|'
+      + '$lightは通る。体だけが通らない|'
+      + '$who が下から押し上げようとして、諦めた}。',
+    open:
+      '{鎖が|縄が|滑車が}{張り|軋み|一度大きく鳴り}、'
+      + '{扉が上がっていく|落とし格子が、ゆっくりと巻き上げられた|'
+      + '重い石が、横へ引かれていく}。'
+      + '{さっき回した把手が、これに繋がっていたのだ|'
+      + '離れた場所で動かしたものが、ここで形になった|'
+      + '$hurt が、感心したように天井を見上げた}。',
+    again: '{上がった格子は、下りていない|開いた口をくぐる|'
+      + '鎖は、張ったままだ}。'
+  },
+
+  /* ============ 供物 ============ */
+
+  offer_food: {
+    id: 'offer_food', name: '捧げもの', kind: 'offer',
+    tags: ['beast', 'wild', 'holy', 'nature', 'dragon'], look: 'beastly',
+    cond: { t: 'offer', item: 'food' },
+    hint:
+      '{床の$traceは|磨り減った跡は|窪みの並びは}、'
+      + '{何かを置いては下げた跡だ|同じ場所に、同じ大きさのものが繰り返し置かれていた|'
+      + '皿を据えるための窪みに見える}。'
+      + '{$smellが、そこだけ残っている|'
+      + '「{手ぶらで通るな|与えよ、さらば通れ|空の手は許さぬ}」|'
+      + '$who が、自分たちの荷を数え直した}。',
+    seed:
+      '{$who2の残した荷から|崩れた棚の下から|布に包まれて}、'
+      + '{干し肉のひと塊|保存の効く食料|手をつけていない糧食}が{出てきた|見つかった}。'
+      + '{自分たちの腹に入れてもいい|'
+      + '$hurt が、腹の鳴る音を隠さなかった|'
+      + '——ただ、こういうものは、たいてい使い道がある}。',
+    blocked:
+      '{道を|通路の真ん中を}{塞いで|埋めて|遮って}、'
+      + '{大きなものが|それが|$lordに似た何かが}{伏せている|動かない|こちらを見ている}。'
+      + '{襲ってくる気配はない。ただ、退く気配もない|'
+      + '$soundが、腹の底から響いてくる|'
+      + '$lightを向けても、瞬きひとつしない}。'
+      + '{通せ、と言って通るものではなさそうだ|力ずくは、賢い選択に思えない}。',
+    open:
+      '{足元に置くと|差し出すと|投げてよこすと}、{それは|そいつは}'
+      + '{ゆっくりと|音もなく|首だけ動かして}{嗅ぎ|確かめ|一瞥し}——'
+      + '{咥えて、脇へ退いた|そのまま道を空けた|一歩、横へずれた}。'
+      + '{通れ、ということらしい|'
+      + '$who が、目を合わせないまま脇を通り抜けた|'
+      + '$hurt は、通り過ぎるまで息を止めていた}。',
+    again: '{それは、もうこちらを見ない|脇を通り抜ける|'
+      + 'こちらを覚えているのか、身じろぎもしない}。'
+  },
+
+  /* ============ 灯り ============ */
+
+  dark_path: {
+    id: 'dark_path', name: '消したときに見えるもの', kind: 'light',
+    tags: ['holy', 'ward', 'relic', 'made'], look: 'dark',
+    cond: { t: 'light', state: 'off' },
+    hint:
+      '{壁の$traceは|刻まれた文は|一行だけの書きつけは}、'
+      + '{$lightの下では読めない|光を当てると、かえって消える|'
+      + '斜めから見たときだけ、辛うじて形になる}。'
+      + '「{火を落とせ|明かりは、目を潰す|'
+      + '暗がりでしか見えぬものがある}」'
+      + '{$who が、松明を持つ手を握り直した|'
+      + '$hurt は、あまり良い顔をしなかった}。',
+    seed: null,
+    blocked:
+      '{行き止まりだ|通路は、そこで終わっている|壁が、正面を塞いでいる}。'
+      + '{$lightを端から端まで当ててみたが、継ぎ目ひとつない|'
+      + '$who が壁を叩いた。$soundは、詰まった音だった|'
+      + '地図の上では、この先にまだ空白がある}。',
+    open:
+      '{松明を伏せると|火を落とすと|$lightを消した途端}、'
+      + '{闇の中に、青白い筋が浮かび上がった|'
+      + '床と壁に、$traceが線になって現れた|'
+      + '見えなかった道筋が、ぼんやりと光っている}。'
+      + '{光の下では、確かに何も見えなかった|'
+      + '「明るくしていたから、見えなかったのか」|'
+      + '$hurt が、暗いまま最初の一歩を踏み出した}。',
+    again: '{光る筋は、暗がりでは今も見える|火を落として、その道をたどる|'
+      + '一度たどった道は、暗くても迷わない}。'
+  },
+
+  /* ============ 人数・並び ============ */
+
+  party_alone: {
+    id: 'party_alone', name: '一人ずつ', kind: 'party',
+    tags: ['made', 'trap', 'loot', 'rival', 'nature', 'wild'], look: 'gap',
+    cond: { t: 'party', shape: 'single' },
+    hint:
+      '{床の$traceは|磨り減りかたは}、{一人分の幅しかない|一列に細く続いている|'
+      + '横に並んだ跡がない}。'
+      + '「{束になって来るな|一人ずつ、順に|重さを分けよ}」'
+      + '{$who が、足場の細さを目で測った|'
+      + 'ここは、束になって渡る場所ではない}。',
+    seed: null,
+    blocked:
+      '{一行が揃って踏み出した途端|全員が乗った瞬間|六人分の重みがかかると}、'
+      + '{足元が沈んだ|$soundとともに、床が軋んだ|渡りかけた足場が、大きく傾いだ}。'
+      + '{慌てて戻る|$hurt が引き戻された|このまま行けば、全員落ちる}。',
+    open:
+      '{一人ずつ|順番に|間を空けて}{渡る|進む|足を運ぶ}。'
+      + '{渡り終えた者が、次の一人に$lightを向ける|'
+      + '待つ側は、$soundだけを頼りに向こうを見ている|'
+      + '$who が最後に残って、$hurt を先に行かせた}。'
+      + '{時間はかかったが、誰も落ちなかった|'
+      + '——束でなければ、こんなに簡単なことだった}。',
+    again: '{一人ずつ渡る手順は、もう身についている|順に渡る|'
+      + '間を空けて、次の一人が続く}。'
+  },
+
+  /* ============ 先客との取引 ============ */
+
+  deal_rival: {
+    id: 'deal_rival', name: '先客との取引', kind: 'deal',
+    tags: ['rival', 'human', 'loot', 'made'], look: 'door',
+    cond: { t: 'deal', key: 'rival' },
+    hint:
+      '{扉の前の床に|框のそばに|壁際に}、{焚き火の跡|寝床にした形跡|食い散らかした跡}がある。'
+      + '{ごく最近のものだ|灰は、まだ温かい|'
+      + '$smellが、そこだけ人のものだ}。'
+      + '{誰かが、この扉の前で長く粘っている|'
+      + '——そして、まだ開けられていないらしい|'
+      + '$who が、その灰を指でつついた}。',
+    seed:
+      '{$who2が数人|先客の一団が|腕自慢が三人ほど}、{道を塞ぐように|'
+      + '$lightの向こうに|こちらを見て}{立っている|腰を上げた}。'
+      + '「{そこから先は、俺たちが先だ|寄るな|'
+      + '——待て。お前ら、何を持ってる}」'
+      + '{刃を抜くか、口をきくか|$hurt が、無言で$who を見た|'
+      + '数の上では、こちらが多い}。',
+    blocked:
+      '{扉は|その戸は}{向こう側から押さえられている|閂が下りている|'
+      + '人の手で塞がれている}。'
+      + '{$soundに混じって、人の声がする|'
+      + '押し合いになれば、こちらも無傷では済まない|'
+      + '$who が、一度手を止めた}。',
+    open:
+      '{話は|取引は|交渉は}{思ったより早くついた|案外あっさりと成立した|'
+      + '互いに、損のない形で落ち着いた}。'
+      + '「{半分でいい|奥のものには手を出すな|先に行け。俺たちは、ここで待つ}」'
+      + '{閂が、向こう側から外された|'
+      + '$who2 が、道を空けて顎をしゃくった|'
+      + '$hurt が、通り際に一度だけ振り返った}。',
+    again: '{先客は、もうこちらを止めない|開いた扉をくぐる|'
+      + '$who2 は、こちらを見もしない}。'
+  }
+};
+
+/* 開通後にもう一度そこを通るときの、頭につく一言。
+   again はそれ自体を短く保ちたいので、変化はこちら側で稼ぐ。 */
+const PASS = '{|$who を先頭に、|列を崩さずに、|$lightをかざしながら、|急ぐでもなく、}';
+
+
+/* ダンジョン生成（Phase 1）。
+   仕様どおり「解錠の連鎖を先に決めて、そのあとで区画に部屋を配る」順で作る。
+
+     ① 何本の関門を置くかを決め、キーイベントを選ぶ
+     ② 区画 Z0 → Z1 → … → ZL を一本の背骨として並べる
+     ③ 区画ごとに部屋を撒き、隣接する部屋どうしを通路でつなぐ
+     ④ 区画のあいだは、必ず関門の通路ひとつだけで繋ぐ
+     ⑤ ヒントと種（条件を満たせる出来事）を、その関門より手前の区画にだけ置く
+
+   ⑤を守る限り、詰みは構造として起きない。最後に必ず検算する。         */
+
+
+
+/* ---------- 種つき乱数（同じ種なら同じダンジョン） ---------- */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const pick = (rnd, a) => a[Math.floor(rnd() * a.length)];
+function shuffle(rnd, a) {
+  a = a.slice();
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+
+/* ---------- 部屋の名前 ---------- */
+const NAME_BY_TAG = {
+  nature: '{滴りの|骨の|苔むした|風の抜ける|狭まった|奥まった}{窪み|広間|岩室|裂け目|洞}',
+  made:   '{朽ちた|崩れた|打ち捨てられた|低い|広い}{広間|作業場|詰所|坑口|貯蔵}',
+  human:  '{住まいの|かまどの|寝床の|子どもの}{跡|間|名残}',
+  holy:   '{祈りの|供物の|沈黙の|灯明の|封じの}{間|回廊|祭室|前室}',
+  trap:   '{仕掛けの|軋む|傾いだ|抜けた床の}{間|廊|部屋}',
+  loot:   '{隠しの|欲の|数えの|重ねの}{間|蔵|窪み}',
+  dragon: '{鱗の|長き眠りの|翼の|誓いの}{間|回廊|祭室}'
+};
+
+/* ---------- 生成本体 ---------- */
+function generate(opts) {
+  opts = opts || {};
+  const dun = DUNGEONS[opts.dungeon || 'beast'];
+  const seed = opts.seed != null ? opts.seed : Math.floor(Math.random() * 2147483647);
+  const rnd = mulberry32(seed);
+  const nRooms = Math.max(6, Math.min(40, opts.rooms || 12));
+
+  /* ── ① 関門の本数とキーイベント ── */
+  const nGates = opts.gates != null ? opts.gates
+    : nRooms <= 12 ? 1 : nRooms <= 20 ? 2 : nRooms <= 28 ? 3 : 4;
+
+  const fits = k => k.tags.indexOf('*') >= 0 || k.tags.some(t => dun.tags.indexOf(t) >= 0);
+  const pool = shuffle(rnd, Object.keys(KEYS).filter(id => fits(KEYS[id])));
+  const chosen = [];
+  const usedKind = {};
+  for (const id of pool) {
+    if (chosen.length >= nGates) break;
+    if (usedKind[KEYS[id].kind]) continue;      /* 同じ型を重ねない */
+    usedKind[KEYS[id].kind] = 1; chosen.push(KEYS[id]);
+  }
+  while (chosen.length < nGates) chosen.push(KEYS[pick(rnd, pool)]);
+  /* 「一体も倒さずに」「無傷で」は、奥に置くと詰みに近くなる。必ず手前に寄せる */
+  const early = { spare: 1, hurtless: 1 };
+  chosen.sort((a, b) => (early[a.kind] ? 0 : 1) - (early[b.kind] ? 0 : 1));
+
+  /* ── ② 区画に部屋数を割る ── */
+  const nZones = nGates + 1;
+  const share = new Array(nZones).fill(0);
+  for (let i = 0; i < nRooms; i++) share[i % nZones]++;
+  /* ヒントと種を置く余地を必ず残す。区画は最低3室 */
+  for (let z = 0; z < nZones; z++) if (share[z] < 3) share[z] = 3;
+
+  /* ── ③④ 格子の上に部屋を撒く ── */
+  const G = 13;
+  const cellOf = (x, y) => y * G + x;
+  const occupied = {};
+  const nodes = [], edges = [];
+  let nid = 0;
+  const newRoom = (x, y, zone) => {
+    const r = { id: 'r' + (nid++), kind: 'room', zone, gx: x, gy: y, links: [], name: null, ev: null };
+    occupied[cellOf(x, y)] = r; nodes.push(r); return r;
+  };
+  const neighbors = (x, y) => [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
+    .filter(([a, b]) => a >= 0 && b >= 0 && a < G && b < G);
+
+  const cx = Math.floor(G / 2), cy = G - 2;
+  const zoneRooms = [];
+  let entry = newRoom(cx, cy, 0);
+  entry.entrance = true;
+
+  for (let z = 0; z < nZones; z++) {
+    const list = [entry];
+    let frontier = [entry];
+    while (list.length < share[z] && frontier.length) {
+      const from = pick(rnd, frontier);
+      const free = neighbors(from.gx, from.gy).filter(([a, b]) => !occupied[cellOf(a, b)]);
+      if (!free.length) { frontier = frontier.filter(f => f !== from); continue; }
+      const [a, b] = pick(rnd, free);
+      const r = newRoom(a, b, z);
+      list.push(r); frontier.push(r);
+    }
+    zoneRooms.push(list);
+
+    /* 区画の中で、隣り合う部屋を通路でつなぐ（行き止まりを減らす） */
+    for (const r of list)
+      for (const [a, b] of neighbors(r.gx, r.gy)) {
+        const o = occupied[cellOf(a, b)];
+        if (o && o.zone === z && o.id > r.id) edges.push({ a: r.id, b: o.id, gate: null });
+      }
+
+    /* 次の区画の入口を、この区画の部屋の隣の空きに置く */
+    if (z < nZones - 1) {
+      const cands = shuffle(rnd, list).map(r => {
+        const free = neighbors(r.gx, r.gy).filter(([a, b]) => !occupied[cellOf(a, b)]);
+        return free.length ? { from: r, at: pick(rnd, free) } : null;
+      }).filter(Boolean);
+      if (!cands.length) { share.length = z + 1; list[list.length - 1].goal = true; break; }
+      const c = cands[0];
+      const next = newRoom(c.at[0], c.at[1], z + 1);
+      edges.push({ a: c.from.id, b: next.id, gate: 'g' + z });
+      entry = next;
+    } else {
+      list[list.length - 1].goal = true;
+    }
+  }
+
+  /* ── 通路を、部屋と部屋のあいだの節として立てる ── */
+  const corridors = [];
+  edges.forEach((e, i) => {
+    const A = nodes.find(n => n.id === e.a), B = nodes.find(n => n.id === e.b);
+    const c = {
+      id: 'c' + i, kind: 'corridor', zone: Math.min(A.zone, B.zone),
+      from: A.id, to: B.id, gate: e.gate, open: !e.gate,
+      gx: (A.gx + B.gx) / 2, gy: (A.gy + B.gy) / 2, links: [A.id, B.id], name: null, ev: null
+    };
+    corridors.push(c); A.links.push(c.id); B.links.push(c.id);
+  });
+  const all = nodes.concat(corridors);
+  const byId = {}; all.forEach(n => { byId[n.id] = n; });
+
+  /* ── 関門の中身 ── */
+  const gates = {};
+  chosen.slice(0, Math.max(0, share.length - 1)).forEach((key, z) => {
+    gates['g' + z] = { id: 'g' + z, key: key.id, cond: key.cond, look: key.look, state: 'shut', zone: z };
+  });
+
+  /* ── ⑤ ヒントと種を、関門より手前の区画にだけ置く ── */
+  Object.keys(gates).forEach(gid => {
+    const g = gates[gid], key = KEYS[g.key];
+    const before = [];
+    for (let z = 0; z <= g.zone; z++) (zoneRooms[z] || []).forEach(r => { if (!r.entrance && !r.ev) before.push(r); });
+    const bag = shuffle(rnd, before);
+    if (key.hint && bag.length) { const r = bag.pop(); r.ev = { t: 'hint', gate: gid, key: key.id }; }
+    if (key.seed && bag.length) { const r = bag.pop(); r.ev = { t: 'seed', gate: gid, key: key.id }; }
+    /* 「倒すと開く」型は、倒すべき相手そのものを手前の区画に置く */
+    if (key.cond.t === 'slay' && bag.length) { const r = bag.pop(); r.ev = { t: 'foe', gate: gid, key: key.id }; }
+  });
+
+  /* ── 名前をつける（4割ほど。残りは無名のまま） ── */
+  const tmpl = dun.tags.map(t => NAME_BY_TAG[t]).filter(Boolean);
+  const usedName = {};
+  nodes.forEach(r => {
+    if (r.entrance) { r.name = '入口'; return; }
+    if (r.goal) { r.name = '最奥の間'; return; }
+    if (!tmpl.length || rnd() >= 0.42) return;
+    for (let t = 0; t < 12; t++) {           /* 同じ名前は一つの場所に二つと無い */
+      const nm = VARI.expand(pick(rnd, tmpl), {}, rnd);
+      if (!usedName[nm]) { usedName[nm] = 1; r.name = nm; return; }
+    }
+  });
+
+  return {
+    seed, dungeon: dun.id, rooms: nodes.length, zones: share.length,
+    nodes: all, byId, gates, start: nodes[0].id,
+    goal: (nodes.find(n => n.goal) || nodes[nodes.length - 1]).id,
+    keys: chosen.slice(0, Math.max(0, share.length - 1)).map(k => k.id)
+  };
+}
+
+/* ---------- 検算：詰みが無いか ---------- */
+/* 振る舞いだけで満たせる型（何も置かなくてよい） */
+const FREE = { spare: 1, hurtless: 1, light: 1, party: 1, word: 1 };
+
+function verify(map) {
+  const seen = {}, satisfied = {};
+  let changed = true, steps = 0;
+  const walk = () => {
+    const q = [map.start]; const vis = { [map.start]: 1 };
+    while (q.length) {
+      const n = map.byId[q.shift()];
+      seen[n.id] = 1;
+      for (const lid of n.links) {
+        const l = map.byId[lid];
+        if (!l) continue;
+        if (l.kind === 'corridor' && l.gate && !satisfied[l.gate]) continue;
+        if (!vis[l.id]) { vis[l.id] = 1; q.push(l.id); }
+      }
+    }
+  };
+  while (changed && steps++ < 20) {
+    changed = false;
+    walk();
+    /* 見えた部屋に置かれた種／相手にたどり着ければ、その関門は開けられる */
+    for (const id in seen) {
+      const n = map.byId[id];
+      if (n && n.ev && (n.ev.t === 'seed' || n.ev.t === 'foe') && !satisfied[n.ev.gate]) {
+        satisfied[n.ev.gate] = 1; changed = true;
+      }
+    }
+    for (const gid in map.gates) {
+      if (satisfied[gid]) continue;
+      if (FREE[map.gates[gid].cond.t]) { satisfied[gid] = 1; changed = true; }
+    }
+  }
+  const reachable = !!seen[map.goal];
+  const orphan = map.nodes.filter(n => !seen[n.id]).map(n => n.id);
+
+  /* 置き忘れの検算 */
+  const placed = {};
+  map.nodes.forEach(n => { if (n.ev) placed[n.ev.gate + ':' + n.ev.t] = 1; });
+  const missing = [];
+  for (const gid in map.gates) {
+    const k = KEYS[map.gates[gid].key];
+    if (k.hint && !placed[gid + ':hint']) missing.push(gid + ' のヒント');
+    if (k.seed && !placed[gid + ':seed']) missing.push(gid + ' の種');
+    if (k.cond.t === 'slay' && !placed[gid + ':foe']) missing.push(gid + ' の相手');
+    if (!FREE[k.cond.t] && !k.seed && k.cond.t !== 'slay') missing.push(gid + ' の手立て');
+  }
+  return { ok: reachable && !missing.length, reachable, orphan, satisfied, missing };
+}
+
+
+
+
+/* ================= 状態 ================= */
+var PARTY = [
+  { n:'聖騎士', hp:14, mx:14, row:0 }, { n:'狂戦士', hp:12, mx:12, row:0 },
+  { n:'槍兵',   hp:11, mx:11, row:0 }, { n:'高僧',   hp:9,  mx:9,  row:1 },
+  { n:'魔術師', hp:8,  mx:8,  row:1 }, { n:'狩人',   hp:10, mx:10, row:1 }
+];
+var S = null;
+
+function rnd(){ return Math.random(); }
+function ctxOf(dun){
+  var d = DUNGEONS[dun], c = {};
+  for (var k in d.V) (function(k){ c[k] = function(){ return VARI.expand(d.V[k], c, rnd); }; })(k);
+  c.who  = function(){ var a=PARTY.filter(function(p){return p.hp>0;}); return (a[Math.floor(rnd()*a.length)]||PARTY[0]).n; };
+  c.hurt = function(){
+    var a = PARTY.filter(function(p){ return p.hp>0 && p.hp < p.mx; });
+    if (!a.length) a = PARTY.filter(function(p){ return p.hp>0; });
+    return (a[Math.floor(rnd()*a.length)]||PARTY[0]).n;
+  };
+  return c;
+}
+/* 差し込んだ語の前後に半角の隙間が残ると「狩人 が、」になる。ここで潰す。 */
+function tidy(s){
+  return s.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1')
+          .replace(/。+/g, '。').replace(/、。/g, '。');
+}
+function say(t, cls){
+  var box = document.getElementById('narr');
+  var p = document.createElement('p');
+  if (cls) p.className = cls;
+  p.textContent = tidy(VARI.expand(t, S.ctx, rnd));
+  box.appendChild(p);
+  while (box.children.length > 40) box.removeChild(box.firstChild);
+  box.scrollTop = box.scrollHeight;
+}
+
+/* ================= 灯り ================= */
+function lightHops(){ return S.spell ? 6 : S.torch ? 4 : 2; }   /* 部屋1つ＝2ホップ */
+function reveal(){
+  var lim = lightHops(), q = [[S.at,0]], vis = {}; vis[S.at]=1;
+  while (q.length){
+    var it = q.shift(), n = S.map.byId[it[0]], d = it[1];
+    S.seen[n.id] = 1;
+    if (d >= lim) continue;
+    if (n.kind === 'corridor' && n.gate && !S.open[n.gate]) continue;  /* 閉じた扉の先は照らせない */
+    for (var i=0;i<n.links.length;i++){
+      var l = n.links[i];
+      if (!vis[l]) { vis[l]=1; q.push([l, d+1]); }
+    }
+  }
+}
+
+/* ================= 地図の絵 ================= */
+function drawMap(){
+  var U=100, ns=S.map.nodes, xs=[], ys=[];
+  ns.forEach(function(n){ if (S.seen[n.id]) { xs.push(n.gx); ys.push(n.gy); } });
+  if (!xs.length) { xs=[S.map.byId[S.at].gx]; ys=[S.map.byId[S.at].gy]; }
+  /* 見えた範囲に合わせる。ただし一度広がった枠は縮めない（地図が跳ねると読みにくい） */
+  var f = S.frame || (S.frame = { x0:Infinity, y0:Infinity, x1:-Infinity, y1:-Infinity });
+  f.x0=Math.min(f.x0, Math.min.apply(null,xs)); f.x1=Math.max(f.x1, Math.max.apply(null,xs));
+  f.y0=Math.min(f.y0, Math.min.apply(null,ys)); f.y1=Math.max(f.y1, Math.max.apply(null,ys));
+  var side = Math.max(f.x1-f.x0, f.y1-f.y0) + 1.8;
+  var x0 = (f.x0+f.x1)/2 - side/2, y0 = (f.y0+f.y1)/2 - side/2;
+  var w = side*U, h = side*U;
+  var s='<svg viewBox="0 0 '+Math.round(w)+' '+Math.round(h)+'" role="img" aria-label="ダンジョンの地図">';
+  var cxOf=function(n){ return (n.gx-x0)*U; }, cyOf=function(n){ return (n.gy-y0)*U; };
+
+  ns.forEach(function(n){
+    if (n.kind!=='corridor' || !S.seen[n.id]) return;
+    var A=S.map.byId[n.from], B=S.map.byId[n.to];
+    var horiz = A.gy===B.gy, ax=cxOf(A), ay=cyOf(A), bx=cxOf(B), by=cyOf(B);
+    var t=26, x=Math.min(ax,bx)-(horiz?0:t/2), y=Math.min(ay,by)-(horiz?t/2:0);
+    var ww=horiz?Math.abs(bx-ax):t, hh=horiz?t:Math.abs(by-ay);
+    var shut = n.gate && !S.open[n.gate];
+    s+='<rect x="'+x+'" y="'+y+'" width="'+ww+'" height="'+hh+'" rx="4" fill="'+
+       (S.been[n.id]?'#1b2438':'#131a29')+'" stroke="'+(shut?'#8a4a4a':'#2b3752')+'" stroke-width="3"/>';
+    if (shut){
+      var mx=(ax+bx)/2, my=(ay+by)/2;
+      s+= horiz
+        ? '<rect x="'+(mx-5)+'" y="'+(my-22)+'" width="10" height="44" rx="3" fill="#c96a6a"/>'
+        : '<rect x="'+(mx-22)+'" y="'+(my-5)+'" width="44" height="10" rx="3" fill="#c96a6a"/>';
+    }
+  });
+
+  ns.forEach(function(n){
+    if (n.kind!=='room' || !S.seen[n.id]) return;
+    var cx=cxOf(n), cy=cyOf(n), sz=n.entrance||n.goal?78:70;
+    var here = n.id===S.at, been=S.been[n.id];
+    s+='<rect x="'+(cx-sz/2)+'" y="'+(cy-sz/2)+'" width="'+sz+'" height="'+sz+'" rx="8" fill="'+
+       (here?'#3a3115':been?'#1c2740':'#0f1522')+'" stroke="'+
+       (here?'#f2c65c':been?'#3d4c6e':'#243049')+'" stroke-width="'+(here?5:3)+'"/>';
+    if (n.entrance) s+='<text x="'+cx+'" y="'+(cy+6)+'" text-anchor="middle" font-size="26" fill="#94a4c4">入</text>';
+    else if (n.goal && been) s+='<text x="'+cx+'" y="'+(cy+7)+'" text-anchor="middle" font-size="26" fill="#f2c65c">奥</text>';
+    else if (been && n.ev) s+='<text x="'+cx+'" y="'+(cy+7)+'" text-anchor="middle" font-size="24" fill="'+
+       (n.ev.t==='hint'?'#7fd4ff':n.ev.t==='foe'?'#ff8f8f':'#7de8a4')+'">'+
+       (n.ev.t==='hint'?'書':n.ev.t==='foe'?'敵':'品')+'</text>';
+    else if (here) s+='<circle cx="'+cx+'" cy="'+cy+'" r="9" fill="#f2c65c"/>';
+    /* 名前は地図に書かない（狭い画面では潰れる）。上の帯に出す。
+       名前のある部屋だけ、小さな印を付けておく */
+    else if (been && n.name) s+='<circle cx="'+(cx+sz/2-11)+'" cy="'+(cy-sz/2+11)+'" r="4" fill="#6c7b9c"/>';
+  });
+  s+='</svg>';
+  document.getElementById('mapwrap').innerHTML = s;
+}
+
+/* ================= 判定 ================= */
+function meets(gid){
+  var c = S.map.gates[gid].cond;
+  switch (c.t){
+    case 'carry':    return !!S.bag[c.item];
+    case 'mark':     return (S.marks[c.key]||0) >= c.n;
+    case 'slay':     return !!S.did['slay:'+gid];
+    case 'favor':    return !!S.did['favor:'+gid];
+    case 'offer':    return !!S.bag[c.item];
+    case 'lever':    return !!S.did['lever:'+gid];
+    case 'word':     return !!S.did['word:'+gid];
+    case 'deal':     return !!S.did['deal:'+gid];
+    case 'spare':    return S.kills === 0;
+    case 'hurtless': return S.hurt === 0;
+    case 'light':    return c.state === 'off' ? !S.torch : S.torch;
+    case 'party':    return !!S.did['single:'+gid];
+    default:         return false;
+  }
+}
+var NEED = {
+  carry:'持ち物が要る', mark:'印が揃っていない', slay:'倒すべき相手がいる',
+  favor:'まだ、誰にも借りを作っていない', offer:'捧げるものがない', lever:'どこかで何かを動かす',
+  word:'言うべき言葉を知らない', deal:'話がついていない', spare:'すでに血を見ている',
+  hurtless:'傷を負っている', light:'灯りの扱いが違う', party:'進みかたが違う'
+};
+
+/* ================= 出来事 ================= */
+function enter(id){
+  var n = S.map.byId[id], first = !S.been[id];
+  S.at = id; S.been[id] = 1; S.steps++;
+  S.noise = (!S.enc && rnd() < 0.26) ? 1 : 0;    /* その場に着いた時点で決める */
+  reveal();
+
+  if (n.kind === 'corridor' && n.gate){
+    var gid = n.gate, key = KEYS[S.map.gates[gid].key];
+    if (S.open[gid]) say(PASS + key.again);
+    else if (meets(gid)){
+      S.open[gid] = 1; say(key.open, 'em');
+      say('── ' + key.name + '：道が通じた', 'sys');
+      reveal();
+    } else {
+      say(key.blocked);
+      say('── ' + NEED[S.map.gates[gid].cond.t], 'bad');
+    }
+  } else if (n.kind === 'room' && n.ev && first){
+    var k2 = KEYS[n.ev.key];
+    if (n.ev.t === 'hint'){
+      say(k2.hint); say('── 覚え書きを写した（' + k2.name + '）', 'sys'); S.notes[n.ev.key]=1;
+      if (k2.cond.t === 'word') S.did['word:'+n.ev.gate] = 1;   /* 読むことが、そのまま知ること */
+    }
+    else if (n.ev.t === 'foe'){
+      say('{$placeの奥から|部屋の中央に|$lightの輪の縁に}、{ひときわ大きいものが|'
+        + '他とは明らかに違う影が|$lordではないが、それに近いものが}{立ち上がった|こちらを向いた|'
+        + '身を起こした}。{ここを通るなら、これを越えるしかない|'
+        + '避けて通れる位置ではない|$who が、無言で武器を握り直した}。');
+      S.enc = { gate: n.ev.gate };
+    }
+    else say(k2.seed);
+  } else if (n.kind === 'room'){
+    if (first && n.name && !n.entrance)
+      say('{ここが|この場所が|$who が言うには、ここが|框の彫りが読める——ここが}' +
+          n.name + '{だ|らしい|、と伝わる場所だろう}。', 'sys');
+    say(WALK.room);
+  } else {
+    say(WALK.corridor);
+  }
+  if (n.goal && first) say('{探していたものは、この奥にある|ここが最奥だ|——ここまで来た}。', 'em');
+  render();
+}
+
+/* 種のある部屋で出せる行動 */
+function seedActs(n){
+  if (!n.ev || n.ev.t !== 'seed') return [];
+  var gid = n.ev.gate, c = S.map.gates[gid].cond, out = [];
+  if (meets(gid)) return [];
+  if (c.t === 'favor') out.push({ l:'手を貸す', k:'借りを作る', f:function(){
+    S.did['favor:'+gid]=1; say('{$who が、黙って手を貸した|時間は食った。それだけのことだ|'+
+      '$hurt が、自分の水を分けた}。{相手は、何も言わなかった|礼らしい礼は、無かった}。','em'); } });
+  if (c.t === 'carry' || c.t === 'offer') out.push({ l:'持っていく', k:'荷が一つ増える', f:function(){
+    S.bag[c.item]=1; say('{$who が、それを荷に収めた|重いが、置いていく気にはならない|'+
+      '使い道は、そのうち分かる}。','em'); } });
+  if (c.t === 'mark') out.push({ l:'触れる', k:'印 '+((S.marks[c.key]||0)+1)+'/'+c.n, f:function(){
+    S.marks[c.key]=(S.marks[c.key]||0)+1;
+    say('{指先が温かい|$soundが、遠くで一度鳴った|$traceが、$lightを弾いた}。','em');
+    say('── 印 '+S.marks[c.key]+'/'+c.n,'sys'); } });
+  if (c.t === 'lever') out.push({ l:'動かす', k:'どこかが変わる', f:function(){
+    S.did['lever:'+gid]=1; say('{軋みながら、それは動いた|$placeの奥で、重いものが動く音がした|'+
+      '$soundとは違う音が、長く尾を引いた}。','em'); } });
+  if (c.t === 'deal') out.push({ l:'話をつける', k:'刃を抜かない', f:function(){
+    S.did['deal:'+gid]=1; say('{話は、思ったより早くついた|互いに、損のない形に落ち着いた}。','em'); } });
+  return out;
+}
+
+/* 仮の遭遇（Phase 2 で本物の戦闘につなぐ） */
+function encounter(){
+  say('{$soundに混じって|$lightの輪の外で|前方の闇で}、{何かが動いた|気配が立ち上がった|'+
+      '$lordではない、小さいものがこちらを向いた}。');
+  S.enc = {}; render();
+}
+
+/* ================= 描画 ================= */
+function render(){
+  drawMap();
+  var n = S.map.byId[S.at], box = document.getElementById('choices');
+  box.innerHTML = '';
+
+  /* 帯と手札は、どの分岐でも先に更新しておく */
+  document.getElementById('spot').textContent =
+    n.kind === 'corridor' ? (n.gate ? '関門の前' : '通路') : (n.name || '名の無い部屋');
+  document.getElementById('pos').textContent =
+    '踏破 ' + Object.keys(S.been).filter(function(k){return S.map.byId[k].kind==='room';}).length +
+    '/' + S.map.nodes.filter(function(x){return x.kind==='room';}).length + ' 室';
+  document.getElementById('kil').textContent = '討 ' + S.kills;
+  document.getElementById('hrt').textContent = '傷 ' + S.hurt;
+  var tc = document.getElementById('tor');
+  tc.textContent = S.torch ? '松明 ON' : '松明 OFF';
+  tc.className = 'chip' + (S.torch ? ' on' : '');
+  document.getElementById('party').innerHTML = PARTY.map(function(p){
+    return '<div class="pm'+(p.row?' back':'')+'"><div class="n">'+p.n+'</div><div class="h">'+p.hp+'</div></div>';
+  }).join('');
+
+  var add = function(label, key, cls, fn){
+    var b = document.createElement('button');
+    b.className = 'btn ' + (cls||'');
+    b.innerHTML = label + (key ? '<span class="k">' + key + '</span>' : '');
+    b.onclick = fn; box.appendChild(b);
+  };
+
+  if (S.enc){
+    var gid0 = S.enc.gate;
+    add('斬りかかる', gid0 ? '倒せば、道が変わる' : '倒せば、不殺の条件は消える', 'act', function(){
+      S.kills++; if (gid0) S.did['slay:'+gid0] = 1; S.enc = 0;
+      say('{短い戦いだった|数を頼みに押し切った|$who が、先に動いた}。','em');
+      say('── 倒した数 '+S.kills, 'sys'); render(); });
+    add('やり過ごす', '刃を抜かない', 'act', function(){
+      S.enc = 0;
+      if (rnd()<0.4){ S.hurt++; say('{擦れ違いざま、$hurt が浅く裂かれた|通り抜けたが、無傷とはいかない}。','bad'); }
+      else say('{息を殺して、やり過ごした|向こうは、こちらに関心を示さなかった}。','em');
+      render(); });
+    return;
+  }
+
+  /* 関門の前でだけ出せる行動 */
+  if (n.kind === 'corridor' && n.gate && !S.open[n.gate]){
+    var gc = S.map.gates[n.gate].cond, gid = n.gate;
+    if (gc.t === 'party' && !S.did['single:'+gid])
+      add('一人ずつ渡る', '列を解く', 'act', function(){
+        S.did['single:'+gid] = 1;
+        say('{隊列を解き、間を空けて並んだ|$who が「一人ずつだ」と短く言った}。','em');
+        enter(n.id); });
+    if (gc.t === 'light' && ((gc.state === 'off') === S.torch))
+      add(S.torch ? '火を伏せる' : '松明を掲げる', 'ここでは、灯りの扱いが鍵になる', 'act', function(){
+        S.torch = !S.torch; reveal(); enter(n.id); });
+  }
+
+  seedActs(n).forEach(function(a){ add(a.l, a.k, 'act', function(){ a.f(); render(); }); });
+
+  /* 移動先 */
+  var here = n, opts = [];
+  here.links.forEach(function(lid){
+    var l = S.map.byId[lid];
+    if (here.kind === 'corridor' && here.gate && !S.open[here.gate] && l.zone > here.zone) return;
+    opts.push(l);
+  });
+  opts.forEach(function(l){
+    var label, note = '';
+    if (l.kind === 'corridor'){
+      var far = S.map.byId[l.from === here.id ? l.to : l.from];
+      label = far.name ? far.name + 'の方へ' : (S.been[far.id] ? '来た道を戻る' : '通路の先へ');
+      if (l.gate && !S.open[l.gate]) note = '関門';
+      else if (!S.seen[far.id]) note = '灯りが届いていない';
+      else if (!S.been[far.id]) note = '未踏';
+    } else {
+      label = l.name ? l.name + 'へ' : (S.been[l.id] ? '戻る' : 'その先の部屋へ');
+      if (!S.been[l.id]) note = '未踏';
+    }
+    add(label, note, 'go', function(){ enter(l.id); });
+  });
+
+  /* 出直す。倒した敵は生き返り、不殺・無傷の条件はやり直せる。
+     いっぽう構造として開いた道（橋・瓦礫・扉）は開いたまま。 */
+  if (S.kills || S.hurt) add('入口まで引き返して、出直す', '敵は生き返る／条件はやり直せる', '', function(){
+    S.kills = 0; S.hurt = 0; S.enc = 0; S.noise = 0;
+    PARTY.forEach(function(p){ p.hp = p.mx; });
+    say('{一行は、いったん外へ出た|来た道を戻り、$placeの外の空気を吸った|'
+      + '$who が「出直す」と言った。誰も反対しなかった}。'
+      + '{戻ってみれば、$traceは新しくなっている|'
+      + '倒したはずのものが、また$soundを立てている|'
+      + '$placeは、こちらを覚えていないらしい}。', 'sys');
+    say('── 討った数と傷は、帳消しになった。開いた道は、開いたまま。', 'sys');
+    enter(S.map.start); });
+
+  add((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '灯り 2部屋 → 1部屋' : '灯り 1部屋 → 2部屋'), '', function(){
+    S.torch = !S.torch;
+    say(S.torch ? '{松明に火を移した|$lightが、闇を一歩ぶん押し戻す}。' : '{火を伏せた|$lightは、足元だけになった}。','sys');
+    reveal(); render(); });
+  if (!S.spellUsed) add('魔術師のトーチ', '一度だけ 3部屋ぶん', '', function(){
+    S.spell = 1; S.spellUsed = 1;
+    say('{魔術師が短く唱えた|詠唱は、思ったより短かった}。{$placeが、奥まで見えた|'+
+        '$lightが、届くはずのない先まで伸びる}。','em');
+    reveal(); S.spell = 0; render(); });
+  if (S.noise) add('物音のする方をうかがう', '遭遇するかもしれない', '', function(){ S.noise = 0; encounter(); });
+}
+
+/* ================= 開始 ================= */
+var SETUP = { dun:'beast', rooms:10 };
+function begin(){
+  var map = generate({ dungeon: SETUP.dun, rooms: SETUP.rooms });
+  var v = verify(map);
+  S = { map:map, at:map.start, been:{}, seen:{}, open:{}, bag:{}, marks:{}, did:{}, notes:{},
+        kills:0, hurt:0, steps:0, torch:false, spell:0, spellUsed:0, enc:0, noise:0, ctx:ctxOf(SETUP.dun) };
+  PARTY.forEach(function(p){ p.hp = p.mx; });
+  document.getElementById('setup').style.display='none';
+  document.getElementById('dun').textContent = DUNGEONS[SETUP.dun].name;
+  document.getElementById('narr').innerHTML='';
+  say(DUNGEONS[SETUP.dun].open);
+  say('── 部屋 ' + map.nodes.filter(function(x){return x.kind==='room';}).length +
+      '／関門 ' + Object.keys(map.gates).length + '（' +
+      map.keys.map(function(k){return KEYS[k].name;}).join('・') + '）' +
+      '／種 ' + map.seed + (v.ok ? '' : ' ※要確認'), 'sys');
+  enter(map.start);
+}
+function relayout(){ document.body.classList.toggle('land', innerWidth > innerHeight * 1.15); }
+addEventListener('resize', relayout);
+
+document.addEventListener('DOMContentLoaded', function(){
+  relayout();
+  var ds = document.getElementById('dopts'), rs = document.getElementById('ropts');
+  Object.keys(DUNGEONS).forEach(function(k){
+    var b=document.createElement('button'); b.className='opt'+(k===SETUP.dun?' on':'');
+    b.textContent=DUNGEONS[k].name;
+    b.onclick=function(){ SETUP.dun=k; [].forEach.call(ds.children,function(c){c.classList.remove('on');});
+      b.classList.add('on'); document.getElementById('dsub').textContent=DUNGEONS[k].sub+'／'+DUNGEONS[k].open; };
+    ds.appendChild(b);
+  });
+  document.getElementById('dsub').textContent=DUNGEONS[SETUP.dun].sub+'／'+DUNGEONS[SETUP.dun].open;
+  [['序盤',10],['中盤',18],['後半',26],['最奥',32]].forEach(function(p){
+    var b=document.createElement('button'); b.className='opt'+(p[1]===SETUP.rooms?' on':'');
+    b.textContent=p[0]+' '+p[1]+'室';
+    b.onclick=function(){ SETUP.rooms=p[1]; [].forEach.call(rs.children,function(c){c.classList.remove('on');});
+      b.classList.add('on'); };
+    rs.appendChild(b);
+  });
+  document.getElementById('go').onclick=begin;
+});
+
+</script>
+
+</body>
+</html>
