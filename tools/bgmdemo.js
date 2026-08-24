@@ -221,3 +221,10 @@ ${BGMJS}
 
 fs.writeFileSync(__dirname + '/../bgm.html', page);
 console.log('bgm.html  ' + (page.length / 1024).toFixed(1) + ' KB');
+
+/* 配布用に、文字コード宣言を含む完全なHTMLも書き出す */
+const SA = require('./standalone.js');
+fs.mkdirSync(__dirname + '/../standalone', { recursive: true });
+fs.writeFileSync(__dirname + '/../standalone/bgm.html',
+  SA.wrap(page, 'bgm'), 'utf8');
+console.log('  standalone/bgm.html も書き出しました');

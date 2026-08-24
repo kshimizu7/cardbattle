@@ -683,3 +683,10 @@ var PARTY0 = ${JSON.stringify(PARTY)};
 
 fs.writeFileSync(__dirname + '/../rpgdemo.html', page);
 console.log('rpgdemo.html  ' + (page.length / 1024).toFixed(1) + ' KB');
+
+/* 配布用に、文字コード宣言を含む完全なHTMLも書き出す */
+const SA = require('./standalone.js');
+fs.mkdirSync(__dirname + '/../standalone', { recursive: true });
+fs.writeFileSync(__dirname + '/../standalone/rpgdemo.html',
+  SA.wrap(page, 'rpgdemo'), 'utf8');
+console.log('  standalone/rpgdemo.html も書き出しました');

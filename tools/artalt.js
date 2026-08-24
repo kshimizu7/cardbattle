@@ -544,3 +544,10 @@ var CHARS = ${JSON.stringify(CHARS)};
 
 fs.writeFileSync(__dirname + '/../artalt.html', page);
 console.log('artalt.html  ' + (page.length / 1024).toFixed(0) + ' KB');
+
+/* 配布用に、文字コード宣言を含む完全なHTMLも書き出す */
+const SA = require('./standalone.js');
+fs.mkdirSync(__dirname + '/../standalone', { recursive: true });
+fs.writeFileSync(__dirname + '/../standalone/artalt.html',
+  SA.wrap(page, 'artalt'), 'utf8');
+console.log('  standalone/artalt.html も書き出しました');
