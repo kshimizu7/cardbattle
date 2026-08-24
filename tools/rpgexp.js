@@ -313,7 +313,10 @@ function describeRoom(n, first){
       say(k2.hint);
       say('── 覚え書きを写した（' + k2.name + '）', 'sys');
       S.notes[n.ev.key]=1; S.evDone[n.id]=1;
-      if (k2.cond.t === 'word') S.did['word:'+n.ev.gate] = 1;
+      if (k2.cond.t === 'word'){
+        S.did['word:'+n.ev.gate] = 1;
+        say('── 書かれていた言葉を覚えた。どこかの扉の前で、唱えられる', 'sys');
+      }
       revealName(n);
     } else if (n.ev.t === 'seed' && first){
       say(k2.seed);
