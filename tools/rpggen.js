@@ -12,6 +12,7 @@
 const VARI = require('../src/vari.js');
 const { DUNGEONS } = require('./rpgdungeons.js');
 const { KEYS } = require('./rpgkeys.js');
+const { SHAPES, FEATURES } = require('./rpgrooms.js');
 
 /* ---------- 種つき乱数（同じ種なら同じダンジョン） ---------- */
 function mulberry32(a) {
@@ -159,16 +160,45 @@ function generate(opts) {
     if (key.cond.t === 'slay' && bag.length) { const r = bag.pop(); r.ev = { t: 'foe', gate: gid, key: key.id }; }
   });
 
-  /* ── 名前をつける（4割ほど。残りは無名のまま） ── */
+  /* ── 部屋の中身を決める。描写・選択肢・地図は全部ここから引く ── */
+
+  /* 形と通り名（alias）。入った瞬間のキャプションになる */
+  const usedAlias = {};
+  nodes.forEach(r => {
+    r.shape = rnd() < 0.14 ? 'round' : rnd() < 0.3 ? 'big' : rnd() < 0.5 ? 'long' : 'small';
+    if (r.entrance) { r.shape = 'big'; r.alias = '入口の間'; return; }
+    if (r.goal) { r.shape = 'round'; r.alias = '最奥の間'; return; }
+    for (let t = 0; t < 10; t++) {
+      const a = VARI.expand(SHAPES[r.shape].alias, {}, rnd);
+      if (!usedAlias[a] || t === 9) { usedAlias[a] = 1; r.alias = a; return; }
+    }
+  });
+
+  /* 真名。ヒント・種の置かれた部屋に優先して付け、出来事を解くと明かされる */
   const tmpl = dun.tags.map(t => NAME_BY_TAG[t]).filter(Boolean);
   const usedName = {};
-  nodes.forEach(r => {
-    if (r.entrance) { r.name = '入口'; return; }
-    if (r.goal) { r.name = '最奥の間'; return; }
-    if (!tmpl.length || rnd() >= 0.42) return;
-    for (let t = 0; t < 12; t++) {           /* 同じ名前は一つの場所に二つと無い */
+  const giveName = r => {
+    if (!tmpl.length || r.name) return;
+    for (let t = 0; t < 12; t++) {
       const nm = VARI.expand(pick(rnd, tmpl), {}, rnd);
       if (!usedName[nm]) { usedName[nm] = 1; r.name = nm; return; }
+    }
+  };
+  nodes.forEach(r => { if (r.ev) giveName(r); });
+  nodes.forEach(r => { if (!r.ev && !r.entrance && !r.goal && rnd() < 0.25) giveName(r); });
+
+  /* 特徴。ダンジョンの性格に合うものだけ。1つの特徴は1つの場所に2回まで */
+  const fpool = Object.keys(FEATURES).filter(id =>
+    FEATURES[id].tags.some(t => dun.tags.indexOf(t) >= 0));
+  const fused = {};
+  nodes.forEach(r => {
+    r.features = [];
+    if (r.entrance || !fpool.length) return;
+    const n = rnd() < 0.5 ? 1 : rnd() < 0.24 ? 2 : 0;
+    const cand = shuffle(rnd, fpool.filter(id => (fused[id] || 0) < 2));
+    for (let i = 0; i < n && i < cand.length; i++) {
+      if (r.features.indexOf(cand[i]) >= 0) continue;
+      r.features.push(cand[i]); fused[cand[i]] = (fused[cand[i]] || 0) + 1;
     }
   });
 
