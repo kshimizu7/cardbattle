@@ -1,0 +1,283 @@
+<title>RPGモード 実現性メモ</title>
+<style>
+:root{
+  --ground:#080b12; --panel:#0d1220; --panel2:#111a2c;
+  --line:#1e2740; --line2:#2b3752;
+  --ink:#dde5f5; --ink2:#94a4c4; --ink3:#6c7b9c;
+  --gold:#f2c65c; --gold-dim:#a98a34;
+  --ok:#7de8a4; --ok-dim:#2f7a52;
+  --mid:#7fd4ff; --mid-dim:#2b6285;
+  --ng:#ff8f8f; --ng-dim:#7a3030;
+  --warn:#ffc06a; --warn-dim:#8a6420;
+  --font:"Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;padding:0 0 90px;background:var(--ground);color:var(--ink);
+  font-family:var(--font);font-size:14.5px;line-height:1.95;-webkit-font-smoothing:antialiased}
+.w{max-width:880px;margin:0 auto;padding:30px 18px 0}
+.eyebrow{font-size:10.5px;font-weight:900;letter-spacing:.18em;color:var(--gold-dim);margin:0 0 6px}
+h1{font-size:26px;font-weight:900;margin:0 0 10px;color:var(--gold);line-height:1.4;text-wrap:balance}
+h2{font-size:17px;font-weight:900;color:var(--gold);margin:50px 0 6px;padding-top:24px;
+  border-top:1px solid var(--line);text-wrap:balance}
+h3{font-size:14.5px;font-weight:900;color:var(--ink);margin:26px 0 4px}
+p{margin:0 0 14px;max-width:66ch}
+p.lead{color:var(--ink2);font-size:13px;max-width:66ch}
+b{color:#ffeec2;font-weight:900}
+code{font-family:var(--mono);font-size:12px;color:var(--mid);
+  background:rgba(127,212,255,.08);padding:1px 5px;border-radius:4px}
+
+.callout{border:1px solid var(--line);background:var(--panel);border-radius:12px;
+  padding:16px 19px;margin:18px 0;border-left:3px solid var(--line2)}
+.callout.big{border-left-color:var(--warn);background:rgba(255,192,106,.05);border-color:var(--warn-dim)}
+.callout.good{border-left-color:var(--ok);background:rgba(125,232,164,.045);border-color:var(--ok-dim)}
+.callout .ct{font-size:13px;font-weight:900;margin:0 0 7px;color:var(--ink)}
+.callout.big .ct{color:var(--warn)}
+.callout.good .ct{color:var(--ok)}
+.callout p{font-size:12.5px;color:var(--ink2);margin:0 0 9px}
+.callout p:last-child{margin-bottom:0}
+.callout p b{color:var(--ink)}
+
+.tag{display:inline-block;font-size:10.5px;font-weight:900;line-height:1.7;padding:0 8px;
+  border-radius:999px;border:1px solid var(--line2);color:var(--ink2);white-space:nowrap;vertical-align:1px}
+.tag.ok{color:var(--ok);border-color:var(--ok-dim)}
+.tag.ng{color:var(--ng);border-color:var(--ng-dim)}
+.tag.warn{color:var(--warn);border-color:var(--warn-dim)}
+.tag.mid{color:var(--mid);border-color:var(--mid-dim)}
+
+.tw{overflow-x:auto;margin:16px 0 6px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+table{border-collapse:collapse;width:100%;min-width:600px;font-size:12.5px}
+th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+thead th{background:var(--panel2);color:var(--ink2);font-size:11px;font-weight:900;
+  letter-spacing:.06em;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.k{font-weight:900;color:var(--ink)}
+td.n{font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{font-size:11.5px;color:var(--ink3);line-height:1.85;margin:8px 0 0;max-width:70ch}
+
+/* フェーズ */
+ol.ph{counter-reset:s;list-style:none;margin:16px 0 0;padding:0}
+ol.ph li{counter-increment:s;position:relative;padding:0 0 20px 42px;
+  border-left:1px solid var(--line);margin-left:12px}
+ol.ph li:last-child{border-left-color:transparent;padding-bottom:0}
+ol.ph li::before{content:"P" counter(s);position:absolute;left:-12px;top:0;
+  width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid var(--line2);
+  color:var(--gold);font-size:10px;font-weight:900;display:grid;place-items:center}
+ol.ph > li > b{display:block;font-size:14px;color:var(--ink);margin-bottom:3px}
+ol.ph .goal{display:block;font-size:11.5px;color:var(--gold-dim);font-weight:800;margin-bottom:5px}
+ol.ph span.d{font-size:12.5px;color:var(--ink2);display:block;max-width:62ch}
+ol.ph span.d b{color:#ffeec2}
+
+ul.pl{margin:0 0 14px;padding-left:1.15em}
+ul.pl li{margin-bottom:9px;font-size:13px;color:var(--ink2);max-width:64ch}
+ul.pl b{color:#ffeec2}
+
+/* 画面レイアウト図 */
+.mock{display:flex;gap:18px;flex-wrap:wrap;margin:16px 0 4px}
+.mock figure{margin:0}
+.mock .ph-box{border:1px solid var(--line2);border-radius:10px;background:#05070d;overflow:hidden;
+  display:flex;flex-direction:column}
+.mock .p1{width:150px;height:280px}
+.mock .p2{width:280px;height:170px}
+.mock .seg{display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:900;
+  color:var(--ink3);border-bottom:1px solid var(--line);text-align:center;padding:2px}
+.mock .seg:last-child{border-bottom:0}
+.mock .map{background:rgba(127,212,255,.09);color:var(--mid)}
+.mock .txt{background:rgba(242,198,92,.07);color:var(--gold-dim)}
+.mock .ch{background:rgba(125,232,164,.07);color:var(--ok-dim)}
+.mock figcaption{font-size:11px;color:var(--ink3);text-align:center;margin-top:7px;font-weight:800}
+.mock .row2{display:flex;height:100%}
+.mock .row2 > div{flex:1;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+.mock .row2 > div:last-child{border-right:0}
+</style>
+
+<div class="w">
+
+<p class="eyebrow">ARCANA CLASH ／ 新モードの検討</p>
+<h1>RPGモードは作れるか</h1>
+<p class="lead">ウィザードリィ風の酒場・ダンジョン探索・ダンジョンマスターの語りと選択肢・アイテム。構想を、いまのコードの実物に当てて見積もりました。<b>結論から言うと作れます。ただし1か所だけ、構想そのものを組み替える必要があります。</b></p>
+
+<h2>まず、いちばん大事なこと</h2>
+
+<div class="callout big">
+<p class="ct">遊んでいる最中、そこに私はいません</p>
+<p>「クロちゃんがダンジョンマスターとして、その場でイケてる選択肢を自動生成する」——ここが物理的に成立しません。<b>ゲームはHTML 1ファイルで完結していて、サーバーもAPIキーも持っていないからです。</b>私がいるのは<b>いま、この開発の場だけ</b>で、プレイヤーの端末で動いているのはJavaScriptだけです。</p>
+<p>これは技術的な細かい話ではなく、<b>構想の中心をどう作るかという設計の分かれ道</b>なので、最初に潰しておきます。</p>
+</div>
+
+<div class="tw">
+<table>
+<thead><tr><th>やり方</th><th>中身</th><th>手ざわり</th><th>コスト・制約</th></tr></thead>
+<tbody>
+<tr>
+  <td class="k">A案<br><span class="tag ng">非推奨</span></td>
+  <td>実行時にAI APIを呼ぶ</td>
+  <td>毎回ちがう文章。構想そのもの</td>
+  <td><b>サーバーが必須。</b>APIキーはHTMLに書けないので中継サーバーが要ります。<b>1プレイごとに課金</b>、オフラインで遊べない、応答待ちが入る</td>
+</tr>
+<tr>
+  <td class="k">B案<br><span class="tag warn">部分的に有効</span></td>
+  <td>私が事前に全文を書き、そのまま出す</td>
+  <td>文章の質は最も高い</td>
+  <td>書いた分しか出ない。<b>20回も遊べば全部見終わる</b></td>
+</tr>
+<tr>
+  <td class="k">C案<br><span class="tag ok">これを推します</span></td>
+  <td>私が<b>部品</b>を書き、実行時にコードが組み合わせる</td>
+  <td>毎回ちがう状況が出る。文章は使い回しつつ、<b>状況・パーティ・持ち物で中身が変わる</b></td>
+  <td>0円・オフライン可・待ち時間なし。<b>部品を書く量が仕事の本体</b></td>
+</tr>
+</tbody>
+</table>
+</div>
+
+<p>C案は妥協案に見えますが、そうでもありません。<b>「新しい体験だ」と感じさせているのは、文章そのものより状況のほうです。</b>マップ・ミッション・敵の配置・持ち物・パーティの傷つき具合が毎回ちがえば、同じ文面でも別の判断になります。ローグライクが何百回遊ばれるのはこの仕組みです。</p>
+<p>そのうえで、文章に差し込む変数を増やせば体感の重複はかなり減らせます。<b>「あなたたちは」ではなく「先頭の<u>ゴーレム</u>が」、「奥から」ではなく「<u>血の匂いのする</u>奥から」</b>のように、キャラ名・属性・傷の具合・持ち物を文に混ぜる。同じイベントでも別の文に見えます。</p>
+
+<div class="callout good">
+<p class="ct">A案を完全に捨てる必要はありません</p>
+<p>ハイブリッドが現実的です。<b>ふだんはC案で動かし、「この1回だけ特別な語りが欲しい」場面——最終ボスの前口上、クリア後のエピローグ——だけをA案にする</b>という切り分けができます。呼ぶ回数が桁で減るのでコストが読め、サーバーが落ちてもC案の文面に落ちるだけで遊べます。ただしこれはPhase 4以降の話で、最初は考えなくていいと思います。</p>
+</div>
+
+<h2>いまのコードから、どれだけ流用できるか</h2>
+
+<div class="tw">
+<table>
+<thead><tr><th>作るもの</th><th>難度</th><th>いまあるもの</th></tr></thead>
+<tbody>
+<tr><td class="k">戦闘</td><td><span class="tag ok">ほぼ流用</span></td>
+  <td><b>ここが最大の資産です。</b><code>createState()</code> に敵チームを渡せば、そのまま戦えます。演出・AI・効果音・BGMも全部乗ります</td></tr>
+<tr><td class="k">ダンジョン生成</td><td><span class="tag ok">容易</span></td>
+  <td>部屋・通路・敵配置・宝の置き場は純粋な計算です。乱数（<code>mulberry32</code>）もシード管理も既にあります</td></tr>
+<tr><td class="k">マップ描画</td><td><span class="tag ok">容易</span></td>
+  <td>格子を塗るだけ。未踏を暗く、既踏を明るく。SVGでもCSSでも書けます</td></tr>
+<tr><td class="k">ミッション型</td><td><span class="tag ok">容易</span></td>
+  <td>「主を討つ」「宝石を持ち帰る」「殲滅する」は、<b>勝利条件の判定式が違うだけ</b>です</td></tr>
+<tr><td class="k">アイテム・装備</td><td><span class="tag mid">中</span></td>
+  <td><b>思ったより素直に入ります。</b>いまの特性は <code>selfMod</code>（自分の能力を変える）と <code>aura</code>（周りを変える）という仕組みで、<code>getAtk()</code> がそれを足し込んでいます。<b>装備を「もう1つの修正元」として同じ場所に足すだけ</b>です</td></tr>
+<tr><td class="k">DMイベント</td><td><span class="tag mid">仕組みは中／文章は大</span></td>
+  <td>ゼロから。ただし仕組み自体は素直で、<b>重いのは文章を量産する作業</b>のほうです</td></tr>
+<tr><td class="k">HPの持ち越し</td><td><span class="tag warn">やや大</span></td>
+  <td>いまのエンジンは<b>「1戦で完結、HPは満タンから」</b>という前提です。傷を持ち越すには外側に別の器が要ります</td></tr>
+<tr><td class="k">画面（6つ）</td><td><span class="tag warn">大</span></td>
+  <td>酒場・クエスト選択・探索・報酬・持ち物・装備。<code>ui.js</code> は既に164KBあるので、<b>RPG用は別ファイル</b>に分けるべきです</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2>画面まわり</h2>
+
+<p>縦持ちで「上にマップ、下に語りと選択肢」を成立させられるかが焦点です。スマホの縦画面で3段に割ると、それぞれがかなり狭くなります。</p>
+
+<div class="mock">
+  <figure>
+    <div class="ph-box p1">
+      <div class="seg map" style="flex:0 0 36%">マップ<br>36%</div>
+      <div class="seg txt" style="flex:1 1 auto">ダンジョンマスターの語り<br>（4〜6行）</div>
+      <div class="seg ch" style="flex:0 0 30%">選択肢<br>2〜3個</div>
+    </div>
+    <figcaption>縦持ち</figcaption>
+  </figure>
+  <figure>
+    <div class="ph-box p2">
+      <div class="row2">
+        <div class="seg map" style="flex:1">マップ</div>
+        <div><div class="seg txt" style="flex:1">語り</div><div class="seg ch" style="flex:0 0 40%">選択肢</div></div>
+      </div>
+    </div>
+    <figcaption>横持ち</figcaption>
+  </figure>
+</div>
+
+<p class="note">横持ちは左右2列にすれば自然に収まります。問題は縦持ちで、<b>マップ・語り・選択肢が場所を取り合います。</b>解き方は2つあって、①語りが出ている間はマップを小さく畳む（探索中は大きく、語りの間は帯状に）、②語りを全画面のシートで出してマップに重ねる。<b>①のほうが「いまどこにいるか」を見失わないので良いと思いますが、これは実際に組んで見ないと判断できません。</b>案を作って見てもらう工程が要ります。</p>
+
+<h3>既存モードとの関係</h3>
+<p>タイトルで<b>「バトルモード」「RPGモード」を選ぶ</b>形にして、<b>コードも画面も完全に分けるべき</b>です。いまのバトルモードは十分に安定しているので、RPG側の変更が波及しないように隔離します。共有するのは戦闘エンジン・キャラデータ・演出・音だけにします。</p>
+
+<h2>セーブへの影響 ── ここが一番危ない</h2>
+
+<p>いま保存しているのは<b>設定・戦績・保存編成</b>だけで、どれも消えても遊べます。RPGモードが増やすのは性質が違います。</p>
+
+<div class="tw">
+<table>
+<thead><tr><th>増えるもの</th><th>中身</th><th>消えたら</th></tr></thead>
+<tbody>
+<tr><td class="k">パーティ</td><td>連れているキャラ、傷の具合</td><td class="k" style="color:var(--ng)">痛い</td></tr>
+<tr><td class="k">持ち物・装備</td><td>拾ったアイテム、誰が何を着けているか</td><td class="k" style="color:var(--ng)">かなり痛い</td></tr>
+<tr><td class="k">進行中のダンジョン</td><td>マップ、現在地、探索済み、消費済みイベント</td><td class="k" style="color:var(--ng)">その回が消える</td></tr>
+<tr><td class="k">クリア履歴・解放</td><td>踏破したダンジョン、解放された要素</td><td class="k" style="color:var(--ng)">最も痛い</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="callout big">
+<p class="ct">localStorage は消えます</p>
+<p>保存先はブラウザの localStorage です。<b>ブラウザのデータ削除、シークレットモード、機種変更——どれでも全部消えます。</b>バトルモードは1戦ごとに完結するので消えても痛くありませんでした。<b>RPGモードは何時間もかけて育てたものが消えるので、体験そのものが壊れます。</b></p>
+<p>幸い、<b>引き継ぎコードの書き出し・読み込みは既に実装済み</b>です（<code>exportCode</code> / <code>importCode</code>）。RPGモードではこれを奥に隠さず、<b>ダンジョンを1つクリアするたびにコードの保存を促す</b>くらい前に出すべきだと思います。ここを最初から設計に入れておかないと、後から足しても手遅れになります。</p>
+</div>
+
+<h3>作り替えが要るところ</h3>
+<ul class="pl">
+  <li><b>版番号と移行処理。</b>いまのセーブは <code>v:1</code> 固定で、移行の仕組みがありません。RPGモードの項目が増える／構造が変わるたびに、<b>既存プレイヤーのデータを壊さず読み替える処理</b>が必要になります。ここは最初に入れておくべきです</li>
+  <li><b>容量は問題ありません。</b>localStorage は概ね5MBで、ダンジョン1つ分の状態は数KBです。桁が3つ違うので気にしなくて大丈夫です</li>
+</ul>
+
+<h2>ファイルサイズ</h2>
+
+<p>1ファイル完結を維持できるかを、推測ではなく実測しました。<b>DMイベント1件を実際のデータ構造で書いて測ったところ、1,258バイト</b>でした（語り＋選択肢3つ＋結果7通り）。</p>
+
+<div class="tw">
+<table>
+<thead><tr><th></th><th class="n">そのまま</th><th class="n">配信時（gzip）</th></tr></thead>
+<tbody>
+<tr><td class="k">いまの index.html（v41）</td><td class="n">486 KB</td><td class="n">133 KB</td></tr>
+<tr><td class="k">＋ DMイベント 200件</td><td class="n">約 736 KB</td><td class="n">約 230 KB</td></tr>
+<tr><td class="k">＋ DMイベント 400件</td><td class="n">約 990 KB</td><td class="n">約 330 KB</td></tr>
+</tbody>
+</table>
+</div>
+<p class="note">日本語テキストはgzipで約39%まで縮みます（実測）。GitHub Pagesは自動で圧縮して配信するので、<b>400件書いても通信量は330KB程度</b>。写真1枚より軽い計算です。<b>容量は制約になりません。</b>先に心配していた点でしたが、外して大丈夫です。</p>
+
+<h2>作る順番</h2>
+<p class="lead">全部そろってから出す作り方はおすすめしません。<b>いちばん不確かなところを最初に確かめる</b>順にしています。</p>
+
+<ol class="ph">
+  <li>
+    <b>語りと選択肢だけを、遊べる形で確かめる</b>
+    <span class="goal">確かめたいこと：この遊びは面白いのか</span>
+    <span class="d">ダンジョンは<b>固定の10部屋、1ミッション型だけ</b>。アイテムなし、装備なし、HPは戦闘ごとに全快。DMイベントは<b>20件だけ</b>書きます。マップ・移動・語り・選択肢・既存の戦闘、これだけ。<b>ここが面白くなければ、後の全部が無駄になります。</b>だから最初に置きます</span>
+  </li>
+  <li>
+    <b>ダンジョンの自動生成とミッション3種</b>
+    <span class="goal">確かめたいこと：毎回ちがうと感じられるか</span>
+    <span class="d">部屋・通路・敵・宝をシードから生成。討伐／宝／殲滅の3型。イベントを<b>60〜80件</b>に増やし、キャラ名や状況を文に差し込む仕掛けを入れます。<b>ここで「繰り返しに見えるか」が分かります</b></span>
+  </li>
+  <li>
+    <b>アイテムと装備</b>
+    <span class="goal">確かめたいこと：ダンジョンに潜る動機になるか</span>
+    <span class="d">武器・防具・装飾。既存の <code>selfMod</code> の仕組みに乗せます。入手経路（敵が落とす／宝箱／NPCが売る／朽ちた旅人）と、持ち物・装備の画面。<b>セーブの拡張と引き継ぎコードの前出しも、ここで必ずやります</b></span>
+  </li>
+  <li>
+    <b>持ち越しと育成</b>
+    <span class="goal">確かめたいこと：長く遊べるか</span>
+    <span class="d">HPの持ち越し、酒場での回復、経験値。<b>ここでゲーム性が大きく変わります</b>——傷を抱えたまま奥へ進むか引き返すかという判断が生まれる代わりに、回復手段の設計を間違えると詰みます。だから最後に置いています</span>
+  </li>
+</ol>
+
+<h2>私が気にしていること</h2>
+
+<ul class="pl">
+  <li><b>いちばんの懸念は、繰り返しに見えることです。</b>10回遊んで同じ文が3回出たら、そこで冷めます。C案の成否はここ一点にかかっています。<b>Phase 2 で「本当に毎回ちがうと感じるか」を確かめるまで、先に進まないほうがいい</b>と思います</li>
+  <li><b>次は、選択肢に意味があるかです。</b>「鬨の声を上げる」が単に文章のバリエーションで終わると、<b>2回目からは誰も読まずに1番を押します。</b>選択には<b>持ち物を使う・危険と引き換えに得をする・情報を得る</b>のように、はっきりした損得が要ります。挙げてもらった「HPが上限を超えて1増える」「モンスターが現れる」はまさにそれで、方向は正しいと思います</li>
+  <li><b>セーブ消失は、後から直せません。</b>Phase 3 で必ず手を打ちます</li>
+  <li><b>作業量は正直に言うと、いまのゲームをもう1つ作るのに近いです。</b>Phase 1 だけなら小さいですが、Phase 4 まで行くとコード量はいまと同じくらいになります。ただ<b>戦闘・演出・音・キャラが全部そのまま使える</b>ので、ゼロから作るのとは全然違います</li>
+</ul>
+
+<h2>決めてほしいこと</h2>
+<ul class="pl">
+  <li><b>C案（事前に部品を書いて実行時に組む）で進めていいか。</b>A案（実行時にAIを呼ぶ）を選ぶなら、サーバーと課金の話が前提として先に必要になります</li>
+  <li><b>Phase 1 の範囲でまず作ってみるか。</b>固定10部屋・1ミッション・イベント20件。ここで「語りと選択肢」の面白さだけを判定します</li>
+  <li><b>縦持ちのマップの出し方。</b>①探索中は大きく／語りの間は帯状に畳む、②語りを全画面シートで重ねる。私は①推しですが、案を作って見てもらったほうが早いと思います</li>
+</ul>
+
+</div>
