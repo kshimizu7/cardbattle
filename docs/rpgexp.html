@@ -2038,6 +2038,12 @@ function drawMap(){
     + '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'
     + '<mask id="lm"><rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#000"/>'
     + '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#lg)"/></mask>'
+    + '<radialGradient id="dkg">'
+    + '<stop offset="0" stop-color="#000"/>'
+    + '<stop offset="0.7" stop-color="#000"/>'
+    + '<stop offset="1" stop-color="#fff"/></radialGradient>'
+    + '<mask id="dk"><rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#fff"/>'
+    + '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#dkg)"/></mask>'
     + '<radialGradient id="warm">'
     + '<stop offset="0" stop-color="#ffd98a" stop-opacity="0.28"/>'
     + '<stop offset="0.75" stop-color="#ffd98a" stop-opacity="0.1"/>'
@@ -2142,6 +2148,9 @@ function drawMap(){
     s += '<text x="' + cx + '" y="' + (cy + (icon ? 17 : 5)) + '" text-anchor="middle" font-size="' + fpx.toFixed(1) + '" font-weight="600" fill="'
       + (n.revealed ? '#7a5a12' : '#5a5340') + '">' + nm + '</text>';
   });
+
+  /* 闇のとばり：円の外は、記録済みの場所も影に沈む（見えているのは円の中だけ） */
+  s += '<rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#241c10" opacity="0.52" mask="url(#dk)"/>';
 
   /* いまの光のあたたかい輪と、パーティの赤点 */
   s += '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#warm)"/>';
