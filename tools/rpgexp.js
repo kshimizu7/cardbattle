@@ -101,6 +101,13 @@ body.land .side{padding:8px 10px 0 0}
 .card .dsub{color:var(--ink3);font-size:11.5px;margin-top:8px;line-height:1.6}
 .start{margin-top:16px;width:100%;font:inherit;font-size:14px;color:#1a1305;
   background:var(--gold);border:0;border-radius:10px;padding:11px;cursor:pointer;font-weight:700}
+.vrow{display:flex;align-items:flex-start;gap:8px;margin:7px 0}
+.vrow .vlab{flex:0 0 5.4em;font-size:11.5px;color:var(--ink3);padding-top:8px}
+.vrow .opts{flex:1}
+.vrow .opt{padding:5px 9px;font-size:11.5px}
+body.mapzoom .mapwrap{position:fixed;inset:0;z-index:8;background:rgba(4,6,11,.92);
+  display:flex;align-items:center;justify-content:center;padding:14px}
+body.mapzoom .mapwrap svg{max-width:min(96vw,92svh);max-height:92svh;width:auto}
 `;
 
 const APP = String.raw`
@@ -200,33 +207,46 @@ function reveal(){
 }
 
 /* ================= 地図の絵 =================
-   Roll20 のランダムダンジョン風：羊皮紙の下地、方眼の床、太い黒壁、
-   外周はガリガリと削ったような陰影（feTurbulence で輪郭を荒らす）。   */
-var RSZ = { small:56, long:72, big:86, round:86 };
+   Roll20 風。マス目に沿った部屋（複数マス・円形・不規則形）、
+   長さと幅のある廊下、外へ開いた入口、粗さは流儀に従う。          */
+var CELL = 40;
+var CORW = { narrow: 16, wide: 26 };
 var INK = '#241f14';
 function drawMap(){
-  var U=100, ns=S.map.nodes, xs=[], ys=[];
-  ns.forEach(function(n){ if (S.seen[n.id]) { xs.push(n.gx); ys.push(n.gy); } });
-  if (!xs.length) { xs=[S.map.byId[S.at].gx]; ys=[S.map.byId[S.at].gy]; }
+  var ns = S.map.nodes;
+  var corw = CORW[S.map.profile.corWidth] || 16;
+  /* 見えた範囲（マス座標）。一度広がった枠は縮めない */
   var f = S.frame || (S.frame = { x0:Infinity, y0:Infinity, x1:-Infinity, y1:-Infinity });
-  f.x0=Math.min(f.x0, Math.min.apply(null,xs)); f.x1=Math.max(f.x1, Math.max.apply(null,xs));
-  f.y0=Math.min(f.y0, Math.min.apply(null,ys)); f.y1=Math.max(f.y1, Math.max.apply(null,ys));
-  var side = Math.max(f.x1-f.x0, f.y1-f.y0) + 1.9;
-  var x0 = (f.x0+f.x1)/2 - side/2, y0 = (f.y0+f.y1)/2 - side/2;
-  var W = Math.round(side*U);
-  var s='<svg viewBox="0 0 '+W+' '+W+'" role="img" aria-label="ダンジョンの地図">';
+  ns.forEach(function(n){
+    if (!S.seen[n.id]) return;
+    if (n.kind === 'room') n.rects.forEach(function(q){
+      f.x0=Math.min(f.x0,q.x); f.y0=Math.min(f.y0,q.y);
+      f.x1=Math.max(f.x1,q.x+q.w); f.y1=Math.max(f.y1,q.y+q.h); });
+    else n.cells.forEach(function(c){
+      f.x0=Math.min(f.x0,c[0]); f.y0=Math.min(f.y0,c[1]);
+      f.x1=Math.max(f.x1,c[0]+1); f.y1=Math.max(f.y1,c[1]+1); });
+  });
+  if (!isFinite(f.x0)){ var e0=S.map.byId[S.at]; f.x0=e0.x; f.y0=e0.y; f.x1=e0.x+e0.w; f.y1=e0.y+e0.h; }
+  var bx0 = Math.floor(f.x0) - 1, by0 = Math.floor(f.y0) - 1;
+  var bw = Math.ceil(f.x1) - bx0 + 1, bh = Math.ceil(f.y1) - by0 + 1;
+  var side = Math.max(bw, bh);
+  var x0 = bx0 - Math.floor((side - bw) / 2);   /* 内容を枠の中央へ（整数マスでずらし、方眼を保つ） */
+  var y0 = by0 - Math.floor((side - bh) / 2);
+  var W = Math.round(side * CELL);
+  var px = function(x){ return (x - x0) * CELL; }, py = function(y){ return (y - y0) * CELL; };
 
+  var s='<svg viewBox="0 0 '+W+' '+W+'" role="img" aria-label="ダンジョンの地図">';
   s+='<defs>'
     +'<filter id="rgh" x="-20%" y="-20%" width="140%" height="140%">'
-    +'<feTurbulence type="fractalNoise" baseFrequency="0.11" numOctaves="2" seed="'
+    +'<feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="'
     +(S.map.seed%97)+'" result="n"/>'
-    +'<feDisplacementMap in="SourceGraphic" in2="n" scale="16"/></filter>'
-    +'<pattern id="gp" width="25" height="25" patternUnits="userSpaceOnUse">'
-    +'<rect width="25" height="25" fill="#f0ead9"/>'
-    +'<path d="M25 0H0V25" fill="none" stroke="#ccc1a1" stroke-width="1.6"/></pattern>'
-    +'<pattern id="dots" width="25" height="25" patternUnits="userSpaceOnUse">'
-    +'<rect width="25" height="25" fill="#e6dfca"/>'
-    +'<circle cx="12.5" cy="12.5" r="1.1" fill="#c7bd9f"/></pattern>'
+    +'<feDisplacementMap in="SourceGraphic" in2="n" scale="'+(S.map.roughPx||0)+'"/></filter>'
+    +'<pattern id="gp" width="'+CELL+'" height="'+CELL+'" patternUnits="userSpaceOnUse">'
+    +'<rect width="'+CELL+'" height="'+CELL+'" fill="#f0ead9"/>'
+    +'<path d="M'+CELL+' 0H0V'+CELL+'" fill="none" stroke="#ccc1a1" stroke-width="1.6"/></pattern>'
+    +'<pattern id="dots" width="'+CELL+'" height="'+CELL+'" patternUnits="userSpaceOnUse">'
+    +'<rect width="'+CELL+'" height="'+CELL+'" fill="#e6dfca"/>'
+    +'<circle cx="'+(CELL/2)+'" cy="'+(CELL/2)+'" r="1.2" fill="#c7bd9f"/></pattern>'
     +'<radialGradient id="pg">'
     +'<stop offset="0" stop-color="#c33a2e" stop-opacity="0.5"/>'
     +'<stop offset="0.7" stop-color="#c33a2e" stop-opacity="0.18"/>'
@@ -234,58 +254,78 @@ function drawMap(){
     +'</defs>';
   s+='<rect x="0" y="0" width="'+W+'" height="'+W+'" fill="url(#dots)"/>';
 
-  var cxOf=function(n){ return (n.gx-x0)*U; }, cyOf=function(n){ return (n.gy-y0)*U; };
+  /* 図形（px単位）を集める */
+  var prims=[];
+  ns.forEach(function(n){
+    if (!S.seen[n.id]) return;
+    if (n.kind === 'room'){
+      if (n.shape === 'round'){
+        prims.push({ n:n, k:'c', cx:px(n.gx), cy:py(n.gy), r:n.w*CELL/2 });
+      } else {
+        n.rects.forEach(function(q){
+          prims.push({ n:n, k:'r', x:px(q.x), y:py(q.y), w:q.w*CELL, h:q.h*CELL });
+        });
+      }
+    } else {
+      var xs=n.cells.map(function(c){return c[0];}), ys=n.cells.map(function(c){return c[1];});
+      var mnx=Math.min.apply(null,xs), mxx=Math.max.apply(null,xs);
+      var mny=Math.min.apply(null,ys), mxy=Math.max.apply(null,ys);
+      var ext=10;                                   /* 部屋の壁の下まで差し込む */
+      if (n.horiz)
+        prims.push({ n:n, k:'r', x:px(mnx)-ext, y:py(mny)+(CELL-corw)/2,
+          w:(mxx-mnx+1)*CELL+ext*2, h:corw, cor:1 });
+      else
+        prims.push({ n:n, k:'r', x:px(mnx)+(CELL-corw)/2, y:py(mny)-ext,
+          w:corw, h:(mxy-mny+1)*CELL+ext*2, cor:1 });
+    }
+  });
+  var geom=function(p2, grow){
+    grow = grow || 0;
+    return p2.k==='c'
+      ? '<circle cx="'+p2.cx+'" cy="'+p2.cy+'" r="'+(p2.r+grow)+'"'
+      : '<rect x="'+(p2.x-grow)+'" y="'+(p2.y-grow)+'" width="'+(p2.w+grow*2)+'" height="'+(p2.h+grow*2)+'" rx="'+(4+grow)+'"';
+  };
 
-  /* 図形をまとめて作っておき、陰影→壁→床の順に重ねる */
-  var shapes=[];
+  /* ① 荒れた外周 → ② 黒壁 → ③ 床 */
+  if (S.map.roughPx){
+    s+='<g filter="url(#rgh)">';
+    prims.forEach(function(p2){ s+=geom(p2,12)+' fill="#57503b" opacity="0.85"/>'; });
+    s+='</g>';
+  } else {
+    prims.forEach(function(p2){ s+=geom(p2,10)+' fill="#57503b" opacity="0.35"/>'; });
+  }
+  prims.forEach(function(p2){ s+=geom(p2,4)+' fill="'+INK+'"/>'; });
+  prims.forEach(function(p2){
+    var fill = S.been[p2.n.id] ? 'url(#gp)' : '#d8d0b6';
+    s+=geom(p2,0)+' fill="'+fill+'"/>';
+  });
+
+  /* 入口：南の壁を外へ開ける */
+  var ent = null;
+  ns.forEach(function(n){ if (n.entrance) ent = n; });
+  if (ent && S.seen[ent.id]){
+    var m = ent.rects[0];
+    var ox = px(m.x + m.w/2) - CELL*0.4, oy = py(m.y + m.h) - 6;
+    s+='<rect x="'+ox+'" y="'+oy+'" width="'+(CELL*0.8)+'" height="'+(CELL*0.72)+'" fill="'
+      +(S.been[ent.id]?'url(#gp)':'#d8d0b6')+'"/>'
+      +'<rect x="'+(ox-5)+'" y="'+oy+'" width="5" height="'+(CELL*0.72)+'" fill="'+INK+'"/>'
+      +'<rect x="'+(ox+CELL*0.8)+'" y="'+oy+'" width="5" height="'+(CELL*0.72)+'" fill="'+INK+'"/>';
+  }
+
+  /* ④ 関門・印・名前 */
   ns.forEach(function(n){
     if (!S.seen[n.id]) return;
     if (n.kind === 'corridor'){
-      var A=S.map.byId[n.from], B=S.map.byId[n.to];
-      var horiz=A.gy===B.gy, ax=cxOf(A), ay=cyOf(A), bx=cxOf(B), by=cyOf(B);
-      var t=26, x=Math.min(ax,bx)-(horiz?0:t/2), y=Math.min(ay,by)-(horiz?t/2:0);
-      shapes.push({ n:n, kind:'rect', x:x, y:y,
-        w:horiz?Math.abs(bx-ax):t, h:horiz?t:Math.abs(by-ay),
-        mx:(ax+bx)/2, my:(ay+by)/2, horiz:horiz });
-    } else {
-      var sz=RSZ[n.shape]||70;
-      shapes.push({ n:n, kind:n.shape==='round'?'circle':'rect',
-        x:cxOf(n)-sz/2, y:cyOf(n)-sz/2, w:sz, h:sz,
-        cx:cxOf(n), cy:cyOf(n), r:sz/2 });
-    }
-  });
-  var geom=function(sh, grow){
-    grow = grow || 0;
-    return sh.kind==='circle'
-      ? '<circle cx="'+sh.cx+'" cy="'+sh.cy+'" r="'+(sh.r+grow)+'"'
-      : '<rect x="'+(sh.x-grow)+'" y="'+(sh.y-grow)+'" width="'+(sh.w+grow*2)+'" height="'+(sh.h+grow*2)+'" rx="'+(6+grow)+'"';
-  };
-
-  /* ① 外周の陰影。輪郭を荒らした太い縁 */
-  s+='<g filter="url(#rgh)">';
-  shapes.forEach(function(sh){ s+=geom(sh,13)+' fill="#57503b" opacity="0.85"/>'; });
-  s+='</g>';
-  /* ② 壁。くっきりした黒い縁 */
-  shapes.forEach(function(sh){ s+=geom(sh,4)+' fill="'+INK+'"/>'; });
-  /* ③ 床。踏破した所は方眼、見えているだけの所は無地 */
-  shapes.forEach(function(sh){
-    var n=sh.n;
-    var fill = S.been[n.id] ? 'url(#gp)' : '#d8d0b6';
-    s+=geom(sh,0)+' fill="'+fill+'"/>';
-  });
-  /* ④ 印・関門・名前 */
-  shapes.forEach(function(sh){
-    var n=sh.n;
-    if (n.kind==='corridor'){
       if (n.gate && !S.open[n.gate]){
-        s+= sh.horiz
-          ? '<rect x="'+(sh.mx-5)+'" y="'+(sh.my-19)+'" width="10" height="38" rx="3" fill="#a03434"/>'
-          : '<rect x="'+(sh.mx-19)+'" y="'+(sh.my-5)+'" width="38" height="10" rx="3" fill="#a03434"/>';
+        var gx2 = px(n.gx), gy2 = py(n.gy);
+        s+= n.horiz
+          ? '<rect x="'+(gx2-5)+'" y="'+(gy2-corw/2-8)+'" width="10" height="'+(corw+16)+'" rx="3" fill="#a03434"/>'
+          : '<rect x="'+(gx2-corw/2-8)+'" y="'+(gy2-5)+'" width="'+(corw+16)+'" height="10" rx="3" fill="#a03434"/>';
       }
       return;
     }
-    var cx=sh.cx, cy=sh.cy, sz=sh.w;
-    var been=S.been[n.id], here=n.id===S.at;
+    var cx = px(n.gx), cy = py(n.gy);
+    var been = S.been[n.id];
     var icon='', ic='';
     if (n.entrance){ icon='入'; ic='#5a5340'; }
     else if (n.goal && been){ icon='奥'; ic='#8a6a1a'; }
@@ -293,25 +333,25 @@ function drawMap(){
       icon = n.ev.t==='hint'?'書':n.ev.t==='foe'?'敵':'品';
       ic = n.ev.t==='hint'?'#1d5e8a':n.ev.t==='foe'?'#8a2a2a':'#2c6e3f';
     }
-    if (icon) s+='<text x="'+cx+'" y="'+(cy+(been?0:7))+'" text-anchor="middle" font-size="24" font-weight="700" fill="'+ic+'">'+icon+'</text>';
+    if (icon) s+='<text x="'+cx+'" y="'+(cy+(been?0:8))+'" text-anchor="middle" font-size="23" font-weight="700" fill="'+ic+'">'+icon+'</text>';
     if (been){
       var nm = labelOf(n); if (nm.length>6) nm=nm.slice(0,6);
-      s+='<text x="'+cx+'" y="'+(cy+sz/2-8)+'" text-anchor="middle" font-size="13.5" font-weight="600" fill="'
+      s+='<text x="'+cx+'" y="'+(py(n.y+n.h)-7)+'" text-anchor="middle" font-size="13" font-weight="600" fill="'
         +(n.revealed?'#7a5a12':'#5a5340')+'">'+nm+'</text>';
     }
   });
-  /* パーティの現在地。ぼかした赤点 */
-  var cur = null;
-  shapes.forEach(function(sh){ if (sh.n.id === S.at) cur = sh; });
-  if (cur){
-    var px, py;
-    if (cur.n.kind === 'corridor'){ px = cur.mx; py = cur.my; }
+
+  /* ⑤ パーティの現在地。ぼかした赤点 */
+  var cur = S.map.byId[S.at];
+  if (cur && S.seen[cur.id]){
+    var dx2, dy2;
+    if (cur.kind === 'corridor'){ dx2 = px(cur.gx); dy2 = py(cur.gy); }
     else {
-      px = cur.cx + (S.pos ? S.pos.ox : 0) * cur.w;
-      py = cur.cy + (S.pos ? S.pos.oy : 0) * cur.w;
+      dx2 = px(cur.gx) + (S.pos ? S.pos.ox : 0) * cur.w * CELL;
+      dy2 = py(cur.gy) + (S.pos ? S.pos.oy : 0) * cur.h * CELL;
     }
-    s+='<circle cx="'+px+'" cy="'+py+'" r="20" fill="url(#pg)"/>'
-      +'<circle cx="'+px+'" cy="'+py+'" r="7" fill="#b5372e" stroke="#f6f1e2" stroke-width="2"/>';
+    s+='<circle cx="'+dx2+'" cy="'+dy2+'" r="20" fill="url(#pg)"/>'
+      +'<circle cx="'+dx2+'" cy="'+dy2+'" r="7" fill="#b5372e" stroke="#f6f1e2" stroke-width="2"/>';
   }
   s+='</svg>';
   document.getElementById('mapwrap').innerHTML = s;
@@ -353,7 +393,7 @@ function revealName(n){
 /* ================= 場面の描写 ================= */
 function describeRoom(n, first){
   var ctx = S.ctx;
-  if (first) say(SHAPES[n.shape].d);
+  if (first) say(SHAPES[n.cls].d);
   else say(REVISIT);                        /* 再訪は短い確認。形の言い直しはしない */
   (n.features||[]).forEach(function(fid){
     if (S.fx[n.id+':'+fid]) return;
@@ -632,7 +672,18 @@ function preEntry(){
 }
 
 /* ================= 開始 ================= */
-var SETUP = { dun:'beast', rooms:10 };
+var SETUP = { dun:'beast', rooms:'few',
+  roomSize:'', corLen:'', corWidth:'', layout:'', shapes:'', rough:'', loops:'' };
+/* 生成の変数。'' は「その場所の流儀」に従う */
+var VARDEFS = [
+  ['roomSize','部屋の広さ', [['流儀',''],['狭め','cramped'],['標準','standard'],['広め','spacious']]],
+  ['corLen',  '廊下の長さ', [['流儀',''],['短い','compact'],['ふつう','normal'],['長い','sprawling']]],
+  ['corWidth','廊下の幅',   [['流儀',''],['狭い','narrow'],['広い','wide']]],
+  ['layout',  '道の形',     [['流儀',''],['一本道','straight'],['枝分かれ','forking'],['折衷','balanced'],['曲がりくねる','winding']]],
+  ['shapes',  '部屋の形',   [['流儀',''],['四角','square'],['不規則','irregular'],['丸','round'],['混合','mix']]],
+  ['rough',   '外周の粗さ', [['流儀',''],['なし','none'],['弱','light'],['中','medium'],['強','heavy']]],
+  ['loops',   '回廊',       [['流儀',''],['少ない','few'],['そこそこ','some'],['多い','many']]]
+];
 function goFullscreen(){
   try {
     if (!document.fullscreenElement && document.documentElement.requestFullscreen)
@@ -641,7 +692,13 @@ function goFullscreen(){
 }
 function begin(){
   goFullscreen();
-  var map = generate({ dungeon: SETUP.dun, rooms: SETUP.rooms });
+  var g = { dungeon: SETUP.dun, rooms: SETUP.rooms };
+  ['roomSize','corLen','corWidth','layout','rough','loops'].forEach(function(k){
+    if (SETUP[k]) g[k] = SETUP[k];
+  });
+  if (SETUP.shapes === 'mix') g.shapes = ['square','irregular','round'];
+  else if (SETUP.shapes) g.shapes = [SETUP.shapes];
+  var map = generate(g);
   verify(map);
   S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:{}, marks:{},
         did:{}, notes:{}, fx:{}, evDone:{},
@@ -668,12 +725,36 @@ document.addEventListener('DOMContentLoaded', function(){
     ds.appendChild(b);
   });
   document.getElementById('dsub').textContent=DUNGEONS[SETUP.dun].sub+'／'+DUNGEONS[SETUP.dun].open;
-  [['序盤',10],['中盤',18],['後半',26],['最奥',32]].forEach(function(p){
+  [['序盤','few'],['中盤','some'],['後半','many'],['最奥','lots']].forEach(function(p){
     var b=document.createElement('button'); b.className='opt'+(p[1]===SETUP.rooms?' on':'');
-    b.textContent=p[0]+' '+p[1]+'室';
+    b.textContent=p[0];
     b.onclick=function(){ SETUP.rooms=p[1]; [].forEach.call(rs.children,function(c){c.classList.remove('on');});
       b.classList.add('on'); };
     rs.appendChild(b);
+  });
+  /* 生成の変数 */
+  var vbox = document.getElementById('vopts');
+  VARDEFS.forEach(function(def){
+    var key=def[0], row=document.createElement('div'); row.className='vrow';
+    var lab=document.createElement('div'); lab.className='vlab'; lab.textContent=def[1];
+    var opts=document.createElement('div'); opts.className='opts';
+    def[2].forEach(function(o){
+      var b=document.createElement('button'); b.className='opt'+(SETUP[key]===o[1]?' on':'');
+      b.textContent=o[0];
+      b.onclick=function(){ SETUP[key]=o[1];
+        [].forEach.call(opts.children,function(c){c.classList.remove('on');});
+        b.classList.add('on'); };
+      opts.appendChild(b);
+    });
+    row.appendChild(lab); row.appendChild(opts); vbox.appendChild(row);
+  });
+  document.getElementById('vtog').onclick=function(){
+    var v=document.getElementById('vwrap');
+    v.style.display = v.style.display==='none' ? 'block' : 'none';
+  };
+  /* 地図をタップで拡大 */
+  document.getElementById('mapwrap').addEventListener('click', function(){
+    document.body.classList.toggle('mapzoom');
   });
   document.getElementById('go').onclick=begin;
 });
@@ -710,6 +791,9 @@ const BODY = `
   <h2>広さ</h2>
   <div class="opts" id="ropts"></div>
   <div class="dsub">物語が進むほど、深く、長くなります。</div>
+  <h2 id="vtog" style="cursor:pointer">生成の変数 ▾（ふだんは、その場所の流儀のまま）</h2>
+  <div id="vwrap" style="display:none"><div id="vopts"></div>
+  <div class="dsub">流儀＝その場所らしい地形。喰らいの洞は曲がりくねった洞窟、黙した坑道は長い直線の坑道、欲深き迷路は枝分かれと回廊、護りの神域は広く丸い間。</div></div>
   <button class="start" id="go">ダンジョンの前に立つ</button>
 </div></div>
 
