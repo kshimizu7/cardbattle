@@ -427,49 +427,99 @@ function drawMap(){
       + '<rect x="' + (ox + CELL * 0.8) + '" y="' + oy + '" width="5" height="' + (CELL * 0.72) + '" fill="' + INK + '"/>';
   }
 
-  /* 踏んだ部屋の出口：まだ歩いていない通路は「先の途切れた口」として輪郭に刻む
-     （入口の開口と同じ作り。先はぶった切れていて、どうなっているかは分からない） */
+  /* 踏んだ場所の縁：まだ知らない隣を、実際の地図から少しだけ見せる
+     ・踏んだ部屋 → 未知の通路 … 実物の通路を半マスだけ（先はぶった切り。部屋へは食い込まない）
+     ・踏んだ通路 → 未知の部屋 … つながる口のまわりだけチラ見せ（行き止まりに見せない） */
   var idx2 = cellIndex();
+  var clipN = 0;
+  var dirTo = function(e, node){
+    if ((idx2[(e[0] + 1) + ',' + e[1]] || {}).id === node.id) return 'E';
+    if ((idx2[(e[0] - 1) + ',' + e[1]] || {}).id === node.id) return 'W';
+    if ((idx2[e[0] + ',' + (e[1] + 1)] || {}).id === node.id) return 'S';
+    if ((idx2[e[0] + ',' + (e[1] - 1)] || {}).id === node.id) return 'N';
+    return null;
+  };
+  var endCell = function(c, n){
+    var e0 = c.cells[0], e1 = c.cells[c.cells.length - 1];
+    var d0 = Math.pow(e0[0] + 0.5 - n.gx, 2) + Math.pow(e0[1] + 0.5 - n.gy, 2);
+    var d1 = Math.pow(e1[0] + 0.5 - n.gx, 2) + Math.pow(e1[1] + 0.5 - n.gy, 2);
+    return d0 <= d1 ? e0 : e1;
+  };
+  var wallAt = function(e, nd){
+    return nd === 'E' ? px(e[0] + 1) : nd === 'W' ? px(e[0])
+         : nd === 'S' ? py(e[1] + 1) : py(e[1]);
+  };
+  var latOf = function(e, nd){
+    return (nd === 'E' || nd === 'W')
+      ? py(e[1]) + (CELL - corw) / 2
+      : px(e[0]) + (CELL - corw) / 2;
+  };
+  var rectOf = function(nd, a0, a1, l0, l1){
+    return (nd === 'E' || nd === 'W')
+      ? { x: a0, y: l0, w: a1 - a0, h: l1 - l0 }
+      : { x: l0, y: a0, w: l1 - l0, h: a1 - a0 };
+  };
+  var clipOpen = function(r2){
+    var cid = 'pk' + (clipN++);
+    s += '<clipPath id="' + cid + '"><rect x="' + r2.x + '" y="' + r2.y
+      + '" width="' + r2.w + '" height="' + r2.h + '"/></clipPath>'
+      + '<g clip-path="url(#' + cid + ')">';
+  };
+  var prims1 = function(node){ return mkPrims(function(z){ return z.id === node.id; }); };
+  var drawPiece = function(ps, floorFill){
+    if (S.map.roughPx){
+      s += '<g filter="url(#rgh)">';
+      ps.forEach(function(p2){ s += geom(p2, 12) + ' fill="#57503b" opacity="0.85"/>'; });
+      s += '</g>';
+    }
+    ps.forEach(function(p2){ s += geom(p2, 4) + ' fill="' + INK + '"/>'; });
+    ps.forEach(function(p2){ s += geom(p2, 0) + ' fill="' + floorFill + '"/>'; });
+  };
   ns.forEach(function(n){
-    if (n.kind !== 'room' || !S.been[n.id]) return;
-    n.links.forEach(function(lid){
-      var c = S.map.byId[lid];
-      if (!c || c.kind !== 'corridor' || knownFull(c)) return;
-      var cs2 = c.cells, e0 = cs2[0], e1 = cs2[cs2.length - 1];
-      var d0 = Math.pow(e0[0] + 0.5 - n.gx, 2) + Math.pow(e0[1] + 0.5 - n.gy, 2);
-      var d1 = Math.pow(e1[0] + 0.5 - n.gx, 2) + Math.pow(e1[1] + 0.5 - n.gy, 2);
-      var e = d0 <= d1 ? e0 : e1;
-      var sd = null;
-      if ((idx2[(e[0] + 1) + ',' + e[1]] || {}).id === n.id) sd = 'W';
-      else if ((idx2[(e[0] - 1) + ',' + e[1]] || {}).id === n.id) sd = 'E';
-      else if ((idx2[e[0] + ',' + (e[1] + 1)] || {}).id === n.id) sd = 'N';
-      else if ((idx2[e[0] + ',' + (e[1] - 1)] || {}).id === n.id) sd = 'S';
-      if (!sd){
-        sd = e[0] < n.x ? 'W' : e[0] >= n.x + n.w ? 'E' : e[1] < n.y ? 'N' : 'S';
-      }
-      var rr = n.shape === 'round';
-      var inn = rr ? CELL * 0.7 : 6;      /* 壁を破って部屋側へ食い込む量 */
-      var out2 = CELL * 0.7;              /* 外へ伸びる長さ。その先は闇 */
-      var wp = 5;
-      if (sd === 'E' || sd === 'W'){
-        var wx = sd === 'E' ? px(e[0]) : px(e[0] + 1);
-        var fy = py(e[1]) + (CELL - corw) / 2;
-        var fx = sd === 'E' ? wx - inn : wx - out2;
-        var wxs = sd === 'E' ? wx - (rr ? 0 : 6) : wx - out2;
-        var ww = out2 + (rr ? 0 : 6);
-        s += '<rect x="' + wxs + '" y="' + (fy - wp) + '" width="' + ww + '" height="' + wp + '" fill="' + INK + '"/>'
-           + '<rect x="' + wxs + '" y="' + (fy + corw) + '" width="' + ww + '" height="' + wp + '" fill="' + INK + '"/>'
-           + '<rect x="' + fx + '" y="' + fy + '" width="' + (inn + out2) + '" height="' + corw + '" fill="url(#gp)"/>';
-      } else {
-        var wy = sd === 'S' ? py(e[1]) : py(e[1] + 1);
-        var fx2 = px(e[0]) + (CELL - corw) / 2;
-        var fy2 = sd === 'S' ? wy - inn : wy - out2;
-        var wys = sd === 'S' ? wy - (rr ? 0 : 6) : wy - out2;
-        var wh = out2 + (rr ? 0 : 6);
-        s += '<rect x="' + (fx2 - wp) + '" y="' + wys + '" width="' + wp + '" height="' + wh + '" fill="' + INK + '"/>'
-           + '<rect x="' + (fx2 + corw) + '" y="' + wys + '" width="' + wp + '" height="' + wh + '" fill="' + INK + '"/>'
-           + '<rect x="' + fx2 + '" y="' + fy2 + '" width="' + corw + '" height="' + (inn + out2) + '" fill="url(#gp)"/>';
-      }
+    if (!S.been[n.id]) return;
+    if (n.kind === 'room'){
+      n.links.forEach(function(lid){
+        var c = S.map.byId[lid];
+        if (!c || c.kind !== 'corridor' || knownFull(c)) return;
+        var e = endCell(c, n);
+        var nd = dirTo(e, n); if (!nd) return;
+        var wall = wallAt(e, nd), lat = latOf(e, nd);
+        var L2 = CELL * 0.5;                    /* 見せるのは半マスだけ */
+        var far2 = (nd === 'E' || nd === 'S');  /* 部屋が奥側 → 通路は手前側 */
+        clipOpen(rectOf(nd, far2 ? wall - L2 : wall, far2 ? wall : wall + L2,
+                        lat - 18, lat + corw + 18));
+        drawPiece(prims1(c), '#d8d0b6');
+        s += '</g>';
+        if (n.shape === 'round'){
+          /* 丸い部屋は壁が弧なので、床だけ内側へ通して口をあける */
+          var rin = CELL * 0.55;
+          clipOpen(rectOf(nd, far2 ? wall : wall - rin, far2 ? wall + rin : wall,
+                          lat - 2, lat + corw + 2));
+          prims1(c).forEach(function(p2){ s += geom(p2, 0) + ' fill="#d8d0b6"/>'; });
+          prims1(n).forEach(function(p2){ s += geom(p2, 0) + ' fill="url(#gp)"/>'; });
+          s += '</g>';
+        }
+      });
+      return;
+    }
+    /* 踏んだ通路の先が未知の部屋なら、口だけ見せる */
+    [n.from, n.to].forEach(function(rid){
+      var r = S.map.byId[rid];
+      if (!r || knownFull(r)) return;
+      var e = endCell(n, r);
+      var nd = dirTo(e, r); if (!nd) return;
+      var wall = wallAt(e, nd), lat = latOf(e, nd);
+      var D2 = CELL * 0.45;
+      var far2 = (nd === 'E' || nd === 'S');    /* 部屋が奥側 */
+      clipOpen(rectOf(nd, far2 ? wall - 8 : wall - D2, far2 ? wall + D2 : wall + 8,
+                      lat - 22, lat + corw + 22));
+      drawPiece(prims1(r), '#d8d0b6');
+      /* 口：通路の床で壁を破り、部屋へ続いていることを示す */
+      var md = r.shape === 'round' ? CELL * 0.5 : 6;
+      var mr = rectOf(nd, far2 ? wall - 8 : wall - md, far2 ? wall + md : wall + 8,
+                      lat, lat + corw);
+      s += '<rect x="' + mr.x + '" y="' + mr.y + '" width="' + mr.w + '" height="' + mr.h + '" fill="url(#gp)"/>';
+      s += '</g>';
     });
   });
 
