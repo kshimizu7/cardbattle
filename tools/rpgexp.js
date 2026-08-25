@@ -343,9 +343,11 @@ function drawMap(){
     }
     if (icon) s+='<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" font-size="22" font-weight="700" fill="'+ic+'">'+icon+'</text>';
     if (been){
-      var nm = labelOf(n); if (nm.length>6) nm=nm.slice(0,6);
-      /* 名前は部屋の中央。印がある間は、その下に */
-      s+='<text x="'+cx+'" y="'+(cy+(icon?17:5))+'" text-anchor="middle" font-size="13" font-weight="600" fill="'
+      var nm = labelOf(n);
+      /* 名前は切らずに、部屋の幅へ合わせて文字を縮める */
+      var fpx = Math.min(13, Math.max(8.5, (n.w * CELL - 8) / Math.max(1, nm.length)));
+      if (fpx <= 8.6 && nm.length > 9) nm = nm.slice(0, 9);
+      s+='<text x="'+cx+'" y="'+(cy+(icon?17:5))+'" text-anchor="middle" font-size="'+fpx.toFixed(1)+'" font-weight="600" fill="'
         +(n.revealed?'#7a5a12':'#5a5340')+'">'+nm+'</text>';
     }
   });
@@ -424,15 +426,16 @@ function describeRoom(n, first){
   var pendingFoe = false;
   if (n.ev && !S.evDone[n.id]){
     var k2 = KEYS[n.ev.key];
-    if (n.ev.t === 'hint' && first){
-      say(k2.hint);
-      say('── 覚え書きを写した（' + k2.name + '）', 'sys');
-      S.notes[n.ev.key]=1; S.evDone[n.id]=1;
-      if (k2.cond.t === 'word'){
-        S.did['word:'+n.ev.gate] = 1;
-        say('── 書かれていた言葉を覚えた。どこかの扉の前で、唱えられる', 'sys');
-      }
-      revealName(n);
+    if (n.ev.t === 'hint'){
+      /* 自動では読まない。まず「そこに在る」ことだけを描き、
+         読むかどうかはプレイヤーの選択（行動が先、出来事はその結果） */
+      if (first)
+        say('{部屋の一隅に|壁際に|灯りの届く端に}、'
+          + '{何かを記した跡|残された書きつけらしきもの|文字の刻まれた面}がある。'
+          + '{近づけば、確かめられそうだ|読めるかどうかは、寄ってみないと分からない|'
+          + '$who が、それに目を留めた}。');
+      else if (rnd() < 0.4)
+        say('記されたものは、まだ読んでいない。');
     } else if (n.ev.t === 'seed' && first){
       say(k2.seed);
     } else if (n.ev.t === 'foe' && first){
@@ -572,6 +575,20 @@ function seedActs(n){
   return out;
 }
 
+/* 記されたものを読む。読んだ結果として、言葉や真名を得る */
+function readHint(n){
+  var k2 = KEYS[n.ev.key];
+  say(k2.hint);
+  say('── 覚え書きを写した（' + k2.name + '）', 'sys');
+  S.notes[n.ev.key] = 1; S.evDone[n.id] = 1;
+  if (k2.cond.t === 'word'){
+    S.did['word:'+n.ev.gate] = 1;
+    say('── 書かれていた言葉を覚えた。どこかの扉の前で、唱えられる', 'sys');
+  }
+  revealName(n);
+  render();
+}
+
 function encounter(){
   say('{$soundに混じって|灯りの輪の外で|前方の闇で}、{何かが動いた|気配が立ち上がった|'+
       '$lordではない、小さいものがこちらを向いた}。');
@@ -632,6 +649,9 @@ function render(){
       add(S.torch ? '火を伏せる' : '松明を掲げる', 'ここでは、灯りの扱いが鍵になる', 'act', function(){
         S.torch = !S.torch; reveal(); enter(n.id); });
   }
+
+  if (n.kind === 'room' && n.ev && n.ev.t === 'hint' && !S.evDone[n.id])
+    add('記されたものを確かめる', '読む', 'act', function(){ readHint(n); });
 
   seedActs(n).forEach(function(a){ add(a.l, a.k, 'act', function(){ a.f(); render(); }); });
 
