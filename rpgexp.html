@@ -2049,8 +2049,6 @@ function drawMap(){
     + '<stop offset="0" stop-color="#000"/>'
     + '<stop offset="0.7" stop-color="#000"/>'
     + '<stop offset="1" stop-color="#fff"/></radialGradient>'
-    + '<mask id="dk"><rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#fff"/>'
-    + '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#dkg)"/></mask>'
     + '<radialGradient id="warm">'
     + '<stop offset="0" stop-color="#ffd98a" stop-opacity="0.28"/>'
     + '<stop offset="0.75" stop-color="#ffd98a" stop-opacity="0.1"/>'
@@ -2133,6 +2131,52 @@ function drawMap(){
       + '<rect x="' + (ox + CELL * 0.8) + '" y="' + oy + '" width="5" height="' + (CELL * 0.72) + '" fill="' + INK + '"/>';
   }
 
+  /* 踏んだ部屋の出口：まだ歩いていない通路は「先の途切れた口」として輪郭に刻む
+     （入口の開口と同じ作り。先はぶった切れていて、どうなっているかは分からない） */
+  var idx2 = cellIndex();
+  ns.forEach(function(n){
+    if (n.kind !== 'room' || !S.been[n.id]) return;
+    n.links.forEach(function(lid){
+      var c = S.map.byId[lid];
+      if (!c || c.kind !== 'corridor' || knownFull(c)) return;
+      var cs2 = c.cells, e0 = cs2[0], e1 = cs2[cs2.length - 1];
+      var d0 = Math.pow(e0[0] + 0.5 - n.gx, 2) + Math.pow(e0[1] + 0.5 - n.gy, 2);
+      var d1 = Math.pow(e1[0] + 0.5 - n.gx, 2) + Math.pow(e1[1] + 0.5 - n.gy, 2);
+      var e = d0 <= d1 ? e0 : e1;
+      var sd = null;
+      if ((idx2[(e[0] + 1) + ',' + e[1]] || {}).id === n.id) sd = 'W';
+      else if ((idx2[(e[0] - 1) + ',' + e[1]] || {}).id === n.id) sd = 'E';
+      else if ((idx2[e[0] + ',' + (e[1] + 1)] || {}).id === n.id) sd = 'N';
+      else if ((idx2[e[0] + ',' + (e[1] - 1)] || {}).id === n.id) sd = 'S';
+      if (!sd){
+        sd = e[0] < n.x ? 'W' : e[0] >= n.x + n.w ? 'E' : e[1] < n.y ? 'N' : 'S';
+      }
+      var rr = n.shape === 'round';
+      var inn = rr ? CELL * 0.7 : 6;      /* 壁を破って部屋側へ食い込む量 */
+      var out2 = CELL * 0.7;              /* 外へ伸びる長さ。その先は闇 */
+      var wp = 5;
+      if (sd === 'E' || sd === 'W'){
+        var wx = sd === 'E' ? px(e[0]) : px(e[0] + 1);
+        var fy = py(e[1]) + (CELL - corw) / 2;
+        var fx = sd === 'E' ? wx - inn : wx - out2;
+        var wxs = sd === 'E' ? wx - (rr ? 0 : 6) : wx - out2;
+        var ww = out2 + (rr ? 0 : 6);
+        s += '<rect x="' + wxs + '" y="' + (fy - wp) + '" width="' + ww + '" height="' + wp + '" fill="' + INK + '"/>'
+           + '<rect x="' + wxs + '" y="' + (fy + corw) + '" width="' + ww + '" height="' + wp + '" fill="' + INK + '"/>'
+           + '<rect x="' + fx + '" y="' + fy + '" width="' + (inn + out2) + '" height="' + corw + '" fill="url(#gp)"/>';
+      } else {
+        var wy = sd === 'S' ? py(e[1]) : py(e[1] + 1);
+        var fx2 = px(e[0]) + (CELL - corw) / 2;
+        var fy2 = sd === 'S' ? wy - inn : wy - out2;
+        var wys = sd === 'S' ? wy - (rr ? 0 : 6) : wy - out2;
+        var wh = out2 + (rr ? 0 : 6);
+        s += '<rect x="' + (fx2 - wp) + '" y="' + wys + '" width="' + wp + '" height="' + wh + '" fill="' + INK + '"/>'
+           + '<rect x="' + (fx2 + corw) + '" y="' + wys + '" width="' + wp + '" height="' + wh + '" fill="' + INK + '"/>'
+           + '<rect x="' + fx2 + '" y="' + fy2 + '" width="' + corw + '" height="' + (inn + out2) + '" fill="url(#gp)"/>';
+      }
+    });
+  });
+
   /* 関門の閂（前に立って知ったものだけ）と、部屋の名前 */
   ns.forEach(function(n){
     if (n.kind === 'corridor'){
@@ -2156,11 +2200,21 @@ function drawMap(){
       + (n.revealed ? '#7a5a12' : '#5a5340') + '">' + nm + '</text>';
   });
 
-  /* 闇のとばり：円の外は、記録済みの場所も影に沈む（見えているのは円の中だけ） */
+  /* 闇のとばり：円の外は、記録済みの場所も影に沈む（見えているのは円の中だけ）。
+     魔術師のトーチが灯っている間は、精霊が探った範囲がまるごと明るい（安心の光） */
+  var dkm = '<mask id="dk"><rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#fff"/>'
+    + '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#dkg)"/>';
+  if (S.spellLeft > 0){
+    mkPrims(function(n){ return S.sensed[n.id]; }).forEach(function(p2){
+      dkm += geom(p2, 16) + ' fill="#000"/>';
+    });
+  }
+  dkm += '</mask>';
+  s += '<defs>' + dkm + '</defs>';
   s += '<rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#241c10" opacity="0.52" mask="url(#dk)"/>';
 
-  /* いまの光のあたたかい輪と、パーティの赤点 */
-  s += '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#warm)"/>';
+  /* 松明のあたたかい輪（トーチの間は輪を出さない）と、パーティの赤点 */
+  if (S.spellLeft <= 0) s += '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#warm)"/>';
   s += '<circle cx="' + LX + '" cy="' + LY + '" r="20" fill="url(#pg)"/>'
     + '<circle cx="' + LX + '" cy="' + LY + '" r="7" fill="#b5372e" stroke="#f6f1e2" stroke-width="2"/>';
   s += '</svg>';
