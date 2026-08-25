@@ -114,7 +114,10 @@ function generate(opts) {
   for (let z = 0; z < nZones; z++) if (share[z] < 3) share[z] = 3;
 
   /* ── ③ マス格子に、矩形の部屋と長さのある廊下を置く ── */
-  const G = nRooms >= 28 ? 60 : nRooms >= 18 ? 52 : 46;   /* 格子の一辺（マス） */
+  let G0 = nRooms >= 28 ? 60 : nRooms >= 18 ? 52 : 46;
+  if (P.corLen === 'sprawling') G0 += 10;                 /* 長い廊下は場所を食う */
+  if (P.roomSize === 'spacious') G0 += 6;
+  const G = G0;                                           /* 格子の一辺（マス） */
   const occ = new Array(G * G).fill(0);
   const at = (x, y) => (x >= 0 && y >= 0 && x < G && y < G) ? occ[y * G + x] : 9;
   const mark = (x, y, w, h, v) => { for (let b = y; b < y + h; b++) for (let a = x; a < x + w; a++) occ[b * G + a] = v; };
@@ -132,6 +135,19 @@ function generate(opts) {
     }
     return true;
   };
+  /* 部屋の余白：空きか、渡ってくる廊下のマスだけを許す */
+  const marginOK = (x, y, w, h, allowCells) => {
+    for (let b = y - 1; b < y + h + 1; b++) for (let a = x - 1; a < x + w + 1; a++) {
+      if (a >= x && a < x + w && b >= y && b < y + h) continue;
+      const v = at(a, b);
+      if (!v) continue;
+      if (v === 9) return false;
+      if (allowCells && allowCells.has(b * 1000 + a)) continue;
+      return false;
+    }
+    return true;
+  };
+  const OPP = [1, 0, 3, 2];
 
   const nodes = [], corridors = [];
   let nid = 0, cid = 0;
@@ -151,7 +167,9 @@ function generate(opts) {
     if (shape === 'irregular' && rnd() < 0.85) {
       for (let t = 0; t < 8; t++) {
         const side = Math.floor(rnd() * 4);
-        const ew = 1 + Math.floor(rnd() * 2), eh = 1 + Math.floor(rnd() * 2);
+        /* 1マスだけ飛び出た意味のない窪みは作らない。壁に沿って2マス以上 */
+        const ew = (side < 2) ? 2 : 1 + Math.floor(rnd() * 2);
+        const eh = (side < 2) ? 1 + Math.floor(rnd() * 2) : 2;
         let ex, ey;
         if (side === 0) { ex = x + Math.floor(rnd() * Math.max(1, w - ew + 1)); ey = y - eh; }
         else if (side === 1) { ex = x + Math.floor(rnd() * Math.max(1, w - ew + 1)); ey = y + h; }
@@ -165,7 +183,12 @@ function generate(opts) {
     return r;
   };
 
-  /* 廊下：部屋の縁のマスから方角 dir へ L マス。先に次の部屋 */
+  /* 廊下：部屋の縁のマスから方角 dir へ L マス。先に次の部屋。
+     守ること：
+     ・1つの辺に廊下は1本まで（「北へ進む」が2つ並ばない）
+     ・円形の部屋は、辺の中央にだけ廊下がつく（丸い床と必ず重なる）
+     ・新しい部屋の余白1マスは、渡ってきた廊下以外は空に（見た目の融合を防ぐ）
+     ・廊下は他の部屋の壁に沿って走らない                                     */
   const DIRS = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
   function tryGrow(from, zone, prefDir) {
     const [L0, L1] = COR_LEN[P.corLen];
@@ -173,31 +196,51 @@ function generate(opts) {
       ? [DIRS[prefDir]].concat(shuffle(rnd, DIRS.filter((d, i) => i !== prefDir)))
       : shuffle(rnd, DIRS);
     for (const d of dirs) {
-      for (let attempt = 0; attempt < 6; attempt++) {
-        const L = L0 + Math.floor(rnd() * (L1 - L0 + 1));
+      const di = DIRS.indexOf(d);
+      if (from.sides && from.sides[di]) continue;        /* この辺はもう使っている */
+      for (let attempt = 0; attempt < 9; attempt++) {
+        /* 置き場が見つからないときは、短い廊下も試して詰まりを防ぐ */
+        const lo = attempt < 4 ? L0 : 1;
+        const L = lo + Math.floor(rnd() * (L1 - lo + 1));
         const m = from.rects[0];
+        const roundFrom = from.shape === 'round';
         let sx, sy;
-        if (d.dy === -1) { sx = m.x + Math.floor(rnd() * m.w); sy = m.y - 1; }
-        else if (d.dy === 1) { sx = m.x + Math.floor(rnd() * m.w); sy = m.y + m.h; }
-        else if (d.dx === -1) { sx = m.x - 1; sy = m.y + Math.floor(rnd() * m.h); }
-        else { sx = m.x + m.w; sy = m.y + Math.floor(rnd() * m.h); }
+        if (d.dy === -1) { sx = roundFrom ? m.x + (m.w >> 1) : m.x + Math.floor(rnd() * m.w); sy = m.y - 1; }
+        else if (d.dy === 1) { sx = roundFrom ? m.x + (m.w >> 1) : m.x + Math.floor(rnd() * m.w); sy = m.y + m.h; }
+        else if (d.dx === -1) { sx = m.x - 1; sy = roundFrom ? m.y + (m.h >> 1) : m.y + Math.floor(rnd() * m.h); }
+        else { sx = m.x + m.w; sy = roundFrom ? m.y + (m.h >> 1) : m.y + Math.floor(rnd() * m.h); }
         const cells = [];
         let ok = true;
         for (let i = 0; i < L; i++) {
           const cx2 = sx + d.dx * i, cy2 = sy + d.dy * i;
           if (at(cx2, cy2)) { ok = false; break; }
+          /* 横腹が部屋に触れない（出発の1マス目だけ from はよい） */
+          const lat = d.dy === 0 ? [[cx2, cy2 - 1], [cx2, cy2 + 1]] : [[cx2 - 1, cy2], [cx2 + 1, cy2]];
+          for (const q of lat) {
+            const v = at(q[0], q[1]);
+            if (v && String(v)[0] === 'r' && !(i === 0 && v === from.id)) { ok = false; break; }
+          }
+          if (!ok) break;
           cells.push([cx2, cy2]);
         }
         if (!ok) continue;
         const f = footprint();
         let rx, ry;
         const ex = sx + d.dx * L, ey = sy + d.dy * L;
-        if (d.dy === -1) { rx = ex - Math.floor(rnd() * f.w); ry = ey - f.h + 1; }
-        else if (d.dy === 1) { rx = ex - Math.floor(rnd() * f.w); ry = ey; }
-        else if (d.dx === -1) { rx = ex - f.w + 1; ry = ey - Math.floor(rnd() * f.h); }
-        else { rx = ex; ry = ey - Math.floor(rnd() * f.h); }
-        if (ry + f.h - 1 > entryRow) continue;      /* 入口より外（南）に部屋を置かない */
+        if (f.shape === 'round') {
+          /* 円形は、廊下の軸が中央を通るように置く */
+          if (d.dy !== 0) { rx = ex - (f.w >> 1); ry = d.dy === -1 ? ey - f.h + 1 : ey; }
+          else { ry = ey - (f.h >> 1); rx = d.dx === -1 ? ex - f.w + 1 : ex; }
+        } else {
+          if (d.dy === -1) { rx = ex - Math.floor(rnd() * f.w); ry = ey - f.h + 1; }
+          else if (d.dy === 1) { rx = ex - Math.floor(rnd() * f.w); ry = ey; }
+          else if (d.dx === -1) { rx = ex - f.w + 1; ry = ey - Math.floor(rnd() * f.h); }
+          else { rx = ex; ry = ey - Math.floor(rnd() * f.h); }
+        }
+        if (ry + f.h - 1 > entryRow) continue;
         if (!freeRect(rx, ry, f.w, f.h)) continue;
+        const cellSet = new Set(cells.map(q => q[1] * 1000 + q[0]));
+        if (!marginOK(rx, ry, f.w, f.h, cellSet)) continue;   /* 余白に他人がいない */
         const c = { id: 'c' + (cid++), kind: 'corridor', zone,
           cells, horiz: d.dy === 0, gate: null,
           gx: cells.reduce((s2, p2) => s2 + p2[0], 0) / cells.length + 0.5,
@@ -207,30 +250,53 @@ function generate(opts) {
         const r = newRoom(rx, ry, f.w, f.h, f.shape, zone);
         c.to = r.id; c.links = [from.id, r.id];
         from.links.push(c.id); r.links.push(c.id);
+        from.sides = from.sides || {}; from.sides[di] = 1;
+        r.sides = r.sides || {}; r.sides[OPP[di]] = 1;
         corridors.push(c);
-        return { room: r, cor: c, dirIndex: DIRS.indexOf(d) };
+        return { room: r, cor: c, dirIndex: di };
       }
     }
     return null;
   }
 
-  /* 既存の部屋どうしを短い廊下で繋ぐ（回廊。新しい部屋は作らない） */
+  /* 既存の部屋どうしを短い廊下で繋ぐ（回廊。新しい部屋は作らない）。
+     tryGrow と同じ規則：辺は1本まで、円形は中央、壁沿いを走らない */
   function tryLink(A, zone) {
     const d = pick(rnd, DIRS);
+    const di = DIRS.indexOf(d);
+    if (A.sides && A.sides[di]) return null;
     const m = A.rects[0];
+    const roundA = A.shape === 'round';
     let sx, sy;
-    if (d.dy === -1) { sx = m.x + Math.floor(rnd() * m.w); sy = m.y - 1; }
-    else if (d.dy === 1) { sx = m.x + Math.floor(rnd() * m.w); sy = m.y + m.h; }
-    else if (d.dx === -1) { sx = m.x - 1; sy = m.y + Math.floor(rnd() * m.h); }
-    else { sx = m.x + m.w; sy = m.y + Math.floor(rnd() * m.h); }
+    if (d.dy === -1) { sx = roundA ? m.x + (m.w >> 1) : m.x + Math.floor(rnd() * m.w); sy = m.y - 1; }
+    else if (d.dy === 1) { sx = roundA ? m.x + (m.w >> 1) : m.x + Math.floor(rnd() * m.w); sy = m.y + m.h; }
+    else if (d.dx === -1) { sx = m.x - 1; sy = roundA ? m.y + (m.h >> 1) : m.y + Math.floor(rnd() * m.h); }
+    else { sx = m.x + m.w; sy = roundA ? m.y + (m.h >> 1) : m.y + Math.floor(rnd() * m.h); }
     const cells = [];
     for (let i = 0; i < 5; i++) {
       const a = sx + d.dx * i, b = sy + d.dy * i;
       const v = at(a, b);
-      if (!v) { cells.push([a, b]); continue; }
+      if (!v) {
+        /* 横腹が部屋に触れない */
+        const lat = d.dy === 0 ? [[a, b - 1], [a, b + 1]] : [[a - 1, b], [a + 1, b]];
+        for (const q of lat) {
+          const v2 = at(q[0], q[1]);
+          if (v2 && String(v2)[0] === 'r' && !(i === 0 && v2 === A.id)) return null;
+        }
+        cells.push([a, b]); continue;
+      }
       if (String(v)[0] === 'r' && cells.length > 0) {
         const B = nodes.find(n => n.id === v);
         if (!B || B.zone !== zone || B === A) return null;
+        if (B.sides && B.sides[OPP[di]]) return null;
+        /* 円形の相手には、中央の列（行）でしか繋がない */
+        if (B.shape === 'round') {
+          if (d.dy === 0) { if (b !== B.y + (B.h >> 1)) return null; }
+          else { if (a !== B.x + (B.w >> 1)) return null; }
+        }
+        /* 相手のメイン矩形の縁に当たっていること（出っ張りには繋がない） */
+        const mb = B.rects[0];
+        if (a < mb.x || a >= mb.x + mb.w || b < mb.y || b >= mb.y + mb.h) return null;
         if (A.links.some(l => { const c = corridors.find(x2 => x2.id === l);
           return c && (c.from === B.id || c.to === B.id); })) return null;
         const c = { id: 'c' + (cid++), kind: 'corridor', zone, cells, horiz: d.dy === 0, gate: null,
@@ -239,6 +305,8 @@ function generate(opts) {
           from: A.id, to: B.id, links: [A.id, B.id], name: null, ev: null };
         cells.forEach(([a2, b2]) => mark(a2, b2, 1, 1, c.id));
         A.links.push(c.id); B.links.push(c.id);
+        A.sides = A.sides || {}; A.sides[di] = 1;
+        B.sides = B.sides || {}; B.sides[OPP[di]] = 1;
         corridors.push(c);
         return c;
       }
@@ -247,57 +315,67 @@ function generate(opts) {
     return null;
   }
 
-  /* 入口：最下段の縁。外へ開く（描画側で南の壁を開ける） */
-  const f0 = footprint();
-  const ex0 = Math.floor(G / 2 - f0.w / 2);
-  const entry = newRoom(ex0, entryRow - f0.h + 1, f0.w, f0.h,
-    f0.shape === 'round' ? 'square' : f0.shape, 0);
-  entry.entrance = true;
+  /* 成長。自分を袋小路に閉じ込めて部屋が足りなくなったら、
+     同じ乱数列のまま置き直す（＝シードから決定的にやり直す） */
+  let zoneRooms;
+  const shareOrig = share.slice();
+  for (let attempt2 = 0; attempt2 < 3; attempt2++) {
+    occ.fill(0); nodes.length = 0; corridors.length = 0; nid = 0; cid = 0;
+    share.length = shareOrig.length;
+    for (let i2 = 0; i2 < shareOrig.length; i2++) share[i2] = shareOrig[i2];
+    zoneRooms = [];
 
-  /* 区画ごとに成長 */
-  const zoneRooms = [];
-  let seedRoom = entry, lastDir = 0;
-  let truncated = false;
-  for (let z = 0; z < nZones && !truncated; z++) {
-    const list = [seedRoom];
-    let last = seedRoom;
-    let guard = 0;
-    while (list.length < share[z] && guard++ < 240) {
-      let from, pref = null;
-      if (P.layout === 'straight') { from = last; pref = rnd() < 0.7 ? lastDir : null; }
-      else if (P.layout === 'winding') {
-        from = last;
-        pref = rnd() < 0.65 ? (lastDir < 2 ? pick(rnd, [2, 3]) : pick(rnd, [0, 1])) : null;
+    /* 入口：最下段の縁。外へ開く（描画側で南の壁を開ける） */
+    const f0 = footprint();
+    const ex0 = Math.floor(G / 2 - f0.w / 2);
+    const entry = newRoom(ex0, entryRow - f0.h + 1, f0.w, f0.h,
+      f0.shape === 'round' ? 'square' : f0.shape, 0);
+    entry.entrance = true;
+
+    let seedRoom = entry, lastDir = 0;
+    let truncated = false;
+    for (let z = 0; z < nZones && !truncated; z++) {
+      const list = [seedRoom];
+      let last = seedRoom;
+      let guard = 0;
+      while (list.length < share[z] && guard++ < 420) {
+        let from, pref = null;
+        if (P.layout === 'straight') { from = last; pref = rnd() < 0.7 ? lastDir : null; }
+        else if (P.layout === 'winding') {
+          from = last;
+          pref = rnd() < 0.65 ? (lastDir < 2 ? pick(rnd, [2, 3]) : pick(rnd, [0, 1])) : null;
+        }
+        else if (P.layout === 'forking') { from = pick(rnd, list); }
+        else { from = rnd() < 0.5 ? last : pick(rnd, list); }
+        const got = tryGrow(from, z, pref);
+        if (got) { list.push(got.room); last = got.room; lastDir = got.dirIndex; }
+        else { last = pick(rnd, list); }
       }
-      else if (P.layout === 'forking') { from = pick(rnd, list); }
-      else { from = rnd() < 0.5 ? last : pick(rnd, list); }
-      const got = tryGrow(from, z, pref);
-      if (got) { list.push(got.room); last = got.room; lastDir = got.dirIndex; }
-      else { last = pick(rnd, list); }
-    }
-    zoneRooms.push(list);
+      zoneRooms.push(list);
 
-    /* 回廊 */
-    const wantLoops = Math.round(list.length * LOOP_R[P.loops]);
-    let made = 0;
-    for (let t = 0; t < 40 && made < wantLoops; t++) {
-      if (tryLink(pick(rnd, list), z)) made++;
-    }
+      /* 回廊 */
+      const wantLoops = Math.round(list.length * LOOP_R[P.loops]);
+      let made = 0;
+      for (let t = 0; t < 40 && made < wantLoops; t++) {
+        if (tryLink(pick(rnd, list), z)) made++;
+      }
 
-    /* 次の区画：関門つきの廊下で */
-    if (z < nZones - 1) {
-      let got = null;
-      for (const from of shuffle(rnd, list)) { got = tryGrow(from, z + 1, null); if (got) break; }
-      if (!got) { share.length = z + 1; truncated = true; break; }
-      got.cor.gate = 'g' + z; got.cor.zone = z;
-      seedRoom = got.room;
-    } else {
-      list[list.length - 1].goal = true;
+      /* 次の区画：関門つきの廊下で */
+      if (z < nZones - 1) {
+        let got = null;
+        for (const from of shuffle(rnd, list)) { got = tryGrow(from, z + 1, null); if (got) break; }
+        if (!got) { share.length = z + 1; truncated = true; break; }
+        got.cor.gate = 'g' + z; got.cor.zone = z;
+        seedRoom = got.room;
+      } else {
+        list[list.length - 1].goal = true;
+      }
     }
-  }
-  if (truncated) {
-    const zl = zoneRooms[zoneRooms.length - 1];
-    zl[zl.length - 1].goal = true;
+    if (truncated) {
+      const zl = zoneRooms[zoneRooms.length - 1];
+      zl[zl.length - 1].goal = true;
+    }
+    if (nodes.length >= nRooms * 0.75) break;   /* 十分に育った */
   }
 
   /* 大広間：いちばん広い部屋に印（名前と特徴が寄る） */
@@ -368,7 +446,9 @@ function generate(opts) {
   nodes.forEach(r => {
     r.features = [];
     if (r.entrance || !fpool.length) return;
-    const n2 = (r.landmark ? 1 : 0) + (rnd() < 0.5 ? 1 : rnd() < 0.24 ? 2 : 0);
+    const hasAlcove = r.rects.length > 1;
+    let n2 = (r.landmark ? 1 : 0) + (rnd() < 0.5 ? 1 : rnd() < 0.24 ? 2 : 0);
+    if (hasAlcove && n2 < 1) n2 = 1;        /* 窪みのある部屋には、必ず何かがある */
     const cand = shuffle(rnd, fpool.filter(id => (fused[id] || 0) < 2));
     for (let i = 0; i < n2 && i < cand.length; i++) {
       if (r.features.indexOf(cand[i]) >= 0) continue;
@@ -383,6 +463,17 @@ function generate(opts) {
     r.fpos = {};
     const sl = shuffle(rnd, SLOTS);
     (r.features || []).forEach((fid, i) => { r.fpos[fid] = sl[i % sl.length]; });
+    /* 窪みがあるなら、最初の特徴はその窪みの側に置く（窪み＝それがある場所） */
+    if (r.rects.length > 1 && r.features.length) {
+      const m = r.rects[0], e = r.rects[1];
+      const excx = e.x + e.w / 2, excy = e.y + e.h / 2;
+      const ddx = excx - r.gx, ddy = excy - r.gy;
+      const slot = Math.abs(ddx) > Math.abs(ddy)
+        ? (ddx > 0 ? { dx: 0.3, dy: 0.02, w: '東' } : { dx: -0.3, dy: 0.02, w: '西' })
+        : (ddy > 0 ? { dx: 0, dy: 0.3, w: '南' } : { dx: 0, dy: -0.3, w: '北' });
+      r.fpos[r.features[0]] = slot;
+      r.alcoveFeat = r.features[0];
+    }
   });
 
   return {

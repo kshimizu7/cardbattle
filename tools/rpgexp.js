@@ -270,13 +270,21 @@ function drawMap(){
       var xs=n.cells.map(function(c){return c[0];}), ys=n.cells.map(function(c){return c[1];});
       var mnx=Math.min.apply(null,xs), mxx=Math.max.apply(null,xs);
       var mny=Math.min.apply(null,ys), mxy=Math.max.apply(null,ys);
-      var ext=10;                                   /* 部屋の壁の下まで差し込む */
-      if (n.horiz)
-        prims.push({ n:n, k:'r', x:px(mnx)-ext, y:py(mny)+(CELL-corw)/2,
-          w:(mxx-mnx+1)*CELL+ext*2, h:corw, cor:1 });
-      else
-        prims.push({ n:n, k:'r', x:px(mnx)+(CELL-corw)/2, y:py(mny)-ext,
-          w:corw, h:(mxy-mny+1)*CELL+ext*2, cor:1 });
+      /* 円形の部屋は床が丸く内側に引っ込むので、そこへは深く差し込む */
+      var A2=S.map.byId[n.from], B2=S.map.byId[n.to];
+      var dig=function(r2){ return (r2 && r2.shape==='round') ? CELL*0.7 : 10; };
+      var e0, e1;
+      if (n.horiz){
+        var leftIsFrom = A2 && A2.gx < (B2 ? B2.gx : 1e9);
+        e0 = dig(leftIsFrom ? A2 : B2); e1 = dig(leftIsFrom ? B2 : A2);
+        prims.push({ n:n, k:'r', x:px(mnx)-e0, y:py(mny)+(CELL-corw)/2,
+          w:(mxx-mnx+1)*CELL+e0+e1, h:corw, cor:1 });
+      } else {
+        var topIsFrom = A2 && A2.gy < (B2 ? B2.gy : 1e9);
+        e0 = dig(topIsFrom ? A2 : B2); e1 = dig(topIsFrom ? B2 : A2);
+        prims.push({ n:n, k:'r', x:px(mnx)+(CELL-corw)/2, y:py(mny)-e0,
+          w:corw, h:(mxy-mny+1)*CELL+e0+e1, cor:1 });
+      }
     }
   });
   var geom=function(p2, grow){
