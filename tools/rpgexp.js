@@ -199,7 +199,9 @@ function exitState(e){
    光はマス単位で届く。届いたマスだけが地図に描かれ、
    その先は闇に呑まれて途切れる（＝部屋の輪郭が先に分かってしまわない）。
    灯りなし: 2マス ／ 松明: 5マス ／ 魔術師のトーチ: 9マス（6歩つづく） */
-function lightRadius(){ return S.spellLeft > 0 ? 9 : S.torch ? 5 : 2; }
+/* 松明の光は、いま立っている場所を中心にした円。円の外は、部屋の途中でも闇。
+   灯りなし: 半径1.5マス ／ 松明: 半径3.2マス */
+function lightRadius(){ return S.torch ? 3.2 : 1.5; }
 
 function cellIndex(){
   if (S.cellIdx) return S.cellIdx;
@@ -217,25 +219,48 @@ function cellIndex(){
 
 function reveal(){
   var idx = cellIndex();
-  var R = lightRadius();
   var cur = S.map.byId[S.at];
-  var sx, sy;
-  if (cur.kind === 'corridor'){ var mid = cur.cells[cur.cells.length >> 1]; sx = mid[0]; sy = mid[1]; }
-  else { sx = Math.floor(cur.gx); sy = Math.floor(cur.gy); }
-  var q = [[sx, sy, 0]], vis = {}; vis[sx + ',' + sy] = 1;
+
+  /* ── 松明：立ち位置を中心にした光の円。壁と閉ざされた扉は光を通さない ── */
+  var pcx, pcy;
+  if (cur.kind === 'corridor'){ var mid = cur.cells[cur.cells.length >> 1]; pcx = mid[0] + 0.5; pcy = mid[1] + 0.5; }
+  else { pcx = cur.gx + (S.pos ? S.pos.ox : 0) * cur.w; pcy = cur.gy + (S.pos ? S.pos.oy : 0) * cur.h; }
+  var R = lightRadius();
+  var sx = Math.floor(pcx), sy = Math.floor(pcy);
+  var q = [[sx, sy]], vis = {}; vis[sx + ',' + sy] = 1;
   while (q.length){
-    var it = q.shift(), x = it[0], y = it[1], d = it[2];
+    var it = q.shift(), x = it[0], y = it[1];
     var key = x + ',' + y, n = idx[key];
     if (!n) continue;
     S.seen[n.id] = 1;
     (S.litCells[n.id] = S.litCells[n.id] || {})[key] = 1;
-    /* 閉ざされた関門の廊下は、光を通さない */
-    if (n.kind === 'corridor' && n.gate && !S.open[n.gate]) continue;
-    if (d >= R) continue;
+    if (n.kind === 'corridor' && n.gate && !S.open[n.gate]) continue;   /* 扉で光は途切れる */
     [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].forEach(function(t){
       var k2 = t[0] + ',' + t[1];
-      if (!vis[k2] && idx[k2]){ vis[k2] = 1; q.push([t[0], t[1], d + 1]); }
+      if (vis[k2] || !idx[k2]) return;
+      var dx3 = t[0] + 0.5 - pcx, dy3 = t[1] + 0.5 - pcy;
+      if (dx3 * dx3 + dy3 * dy3 > R * R) return;
+      vis[k2] = 1; q.push(t);
     });
+  }
+
+  /* ── 魔術師のトーチ：光の精霊が2部屋先まで飛び、部屋の「輪郭だけ」を探ってくる ── */
+  if (S.spellLeft > 0){
+    var nq = [[cur.id, 0]], nvis = {}; nvis[cur.id] = 1;
+    while (nq.length){
+      var e2 = nq.shift(), n2 = S.map.byId[e2[0]], d2 = e2[1];
+      S.sensed[n2.id] = 1;
+      n2.links.forEach(function(lid){
+        var l = S.map.byId[lid];
+        if (!l || nvis[l.id]) return;
+        if (l.kind === 'corridor' && l.gate && !S.open[l.gate]){
+          nvis[l.id] = 1; S.sensed[l.id] = 1; return;    /* 精霊も扉の先へは行けない */
+        }
+        var nd = l.kind === 'room' ? d2 + 1 : d2;
+        if (nd > 2) return;
+        nvis[l.id] = 1; nq.push([l.id, nd]);
+      });
+    }
   }
 }
 
@@ -248,7 +273,9 @@ var CORW = { narrow: 16, wide: 26 };
 var INK = '#241f14';
 var VIEW = 13;                       /* 窓表示の一辺（マス） */
 function nodeFull(n){
-  if (S.been[n.id]) return true;
+  /* 踏破しても、光の当たっていない隅は分からないまま。
+     全体の形が描けるのは「全マスに光が当たった」か「精霊が形を探った」とき */
+  if (S.sensed[n.id]) return true;
   var lit = S.litCells[n.id]; if (!lit) return false;
   var total = 0;
   if (n.kind === 'room') n.rects.forEach(function(q){ total += q.w * q.h; });
@@ -265,7 +292,7 @@ function drawMap(){
   var eat = function(x, y){ f.x0 = Math.min(f.x0, x); f.y0 = Math.min(f.y0, y);
     f.x1 = Math.max(f.x1, x + 1); f.y1 = Math.max(f.y1, y + 1); };
   ns.forEach(function(n){
-    if (!S.seen[n.id]) return;
+    if (!S.seen[n.id] && !S.sensed[n.id]) return;
     if (nodeFull(n)){
       if (n.kind === 'room') n.rects.forEach(function(q){ eat(q.x, q.y); eat(q.x + q.w - 1, q.y + q.h - 1); });
       else n.cells.forEach(function(c){ eat(c[0], c[1]); });
@@ -328,7 +355,7 @@ function drawMap(){
   /* 全体で「光が届いたマス」の集合（断片の切れ目の判定に使う） */
   var litAll = {};
   ns.forEach(function(n){
-    if (!S.seen[n.id]) return;
+    if (!S.seen[n.id] && !S.sensed[n.id]) return;
     if (nodeFull(n)){
       if (n.kind === 'room') n.rects.forEach(function(q){
         for (var b2 = q.y; b2 < q.y + q.h; b2++) for (var a2 = q.x; a2 < q.x + q.w; a2++) litAll[a2 + ',' + b2] = 1;
@@ -344,7 +371,7 @@ function drawMap(){
   /* 完全な形（踏破・全灯）の図形 */
   var prims = [];
   ns.forEach(function(n){
-    if (!S.seen[n.id] || !nodeFull(n)) return;
+    if (!(S.seen[n.id] || S.sensed[n.id]) || !nodeFull(n)) return;
     if (n.kind === 'room'){
       if (n.shape === 'round') prims.push({ n: n, k: 'c', cx: px(n.gx), cy: py(n.gy), r: n.w * CELL / 2 });
       else n.rects.forEach(function(q){
@@ -397,11 +424,12 @@ function drawMap(){
       var xy = k.split(','), cxx = +xy[0], cyy = +xy[1];
       var X = px(cxx), Y = py(cyy);
       var isCor = n.kind === 'corridor';
+      var ffill = S.been[n.id] ? 'url(#gp)' : '#ddd5bc';
       if (isCor){
-        if (n.horiz) s += '<rect x="' + X + '" y="' + (Y + (CELL - corw) / 2) + '" width="' + CELL + '" height="' + corw + '" fill="#ddd5bc"/>';
-        else s += '<rect x="' + (X + (CELL - corw) / 2) + '" y="' + Y + '" width="' + corw + '" height="' + CELL + '" fill="#ddd5bc"/>';
+        if (n.horiz) s += '<rect x="' + X + '" y="' + (Y + (CELL - corw) / 2) + '" width="' + CELL + '" height="' + corw + '" fill="' + ffill + '"/>';
+        else s += '<rect x="' + (X + (CELL - corw) / 2) + '" y="' + Y + '" width="' + corw + '" height="' + CELL + '" fill="' + ffill + '"/>';
       } else {
-        s += '<rect x="' + X + '" y="' + Y + '" width="' + CELL + '" height="' + CELL + '" fill="#ddd5bc"/>';
+        s += '<rect x="' + X + '" y="' + Y + '" width="' + CELL + '" height="' + CELL + '" fill="' + ffill + '"/>';
       }
       /* 切れ目：隣に「床はあるが、まだ光が届いていない」マスがある側を、闇でぼかす */
       var dirs = [ [0, -1, 'fN'], [0, 1, 'fS'], [-1, 0, 'fW'], [1, 0, 'fE'] ];
@@ -638,7 +666,7 @@ function useFeature(n, fid){
   var f = FEATURES[fid];
   S.fx[n.id+':'+fid] = 1;
   var fp = n.fpos && n.fpos[fid];
-  if (fp) S.pos = { ox: fp.dx, oy: fp.dy };
+  if (fp){ S.pos = { ox: fp.dx, oy: fp.dy }; reveal(); }
   var tot = f.out.reduce(function(a,o){ return a+o.w; }, 0);
   var roll = rnd()*tot, sel = f.out[0];
   for (var i=0;i<f.out.length;i++){ roll -= f.out[i].w; if (roll <= 0){ sel = f.out[i]; break; } }
@@ -799,16 +827,18 @@ function render(){
     say('── 討った数と傷は、帳消しになった。開いた道は、開いたまま。', 'sys');
     enter(S.map.start); });
 
-  add((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '灯り 5マス → 2マス' : '灯り 2マス → 5マス'), '', function(){
+  add((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '光の輪 大 → 小' : '光の輪 小 → 大'), '', function(){
     S.torch = !S.torch;
     say(S.torch ? '{松明に火を移した|$lightが、闇を押し戻す}。' : '{火を伏せた|$lightは、足元だけになった}。','sys');
     reveal(); render(); });
-  if (!S.spellUsed) add('魔術師のトーチ', '一度だけ・9マスの光が6歩つづく', '', function(){
+  if (!S.spellUsed) add('魔術師のトーチ', '一度だけ・光の精霊が2部屋先まで形を探る（6歩つづく）', '', function(){
     S.spellLeft = 6; S.spellUsed = 1;
-    say('{魔術師が短く唱えた|詠唱は、思ったより短かった}。{光が、届くはずのない先まで伸びる|'+
-        '$placeの闇が、まとめて一歩さがった}。','em');
+    say('{魔術師が短く唱えると、青白い小さな光が指先から離れた|'+
+        '詠唱の終わりに、ちいさな光がふわりと浮いた}。'+
+        '{光は先へ飛び、壁をなぞって、部屋の形だけを知らせてくる|'+
+        '灯りではない。だが、あれが触れた場所の輪郭が、頭に浮かぶ}。','em');
     reveal(); render(); });
-  else if (S.spellLeft > 0) add('（トーチの光）', 'あと ' + S.spellLeft + ' 歩', '', function(){});
+  else if (S.spellLeft > 0) add('（精霊の光）', 'あと ' + S.spellLeft + ' 歩', '', function(){});
   if (S.noise) add('物音のする方をうかがう', '遭遇するかもしれない', '', function(){ S.noise = 0; encounter(); });
 }
 
@@ -866,7 +896,7 @@ function begin(){
   var map = generate(g);
   verify(map);
   S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:{}, marks:{},
-        did:{}, notes:{}, fx:{}, evDone:{}, litCells:{}, cellIdx:null,
+        did:{}, notes:{}, fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
         kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0, z:1,
         ctx:ctxOf(SETUP.dun) };
   PARTY.forEach(function(p){ p.hp = p.mx; });
