@@ -87,7 +87,7 @@ function generate(opts) {
   const neighbors = (x, y) => [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]]
     .filter(([a, b]) => a >= 0 && b >= 0 && a < G && b < G);
 
-  const cx = Math.floor(G / 2), cy = G - 2;
+  const cx = Math.floor(G / 2), cy = G - 1;   /* 入口はマップの端。後ろは外の空間 */
   const zoneRooms = [];
   let entry = newRoom(cx, cy, 0);
   entry.entrance = true;
@@ -97,7 +97,7 @@ function generate(opts) {
     let frontier = [entry];
     while (list.length < share[z] && frontier.length) {
       const from = pick(rnd, frontier);
-      const free = neighbors(from.gx, from.gy).filter(([a, b]) => !occupied[cellOf(a, b)]);
+      const free = neighbors(from.gx, from.gy).filter(([a, b]) => !occupied[cellOf(a, b)] && b <= cy);
       if (!free.length) { frontier = frontier.filter(f => f !== from); continue; }
       const [a, b] = pick(rnd, free);
       const r = newRoom(a, b, z);
@@ -115,7 +115,7 @@ function generate(opts) {
     /* 次の区画の入口を、この区画の部屋の隣の空きに置く */
     if (z < nZones - 1) {
       const cands = shuffle(rnd, list).map(r => {
-        const free = neighbors(r.gx, r.gy).filter(([a, b]) => !occupied[cellOf(a, b)]);
+        const free = neighbors(r.gx, r.gy).filter(([a, b]) => !occupied[cellOf(a, b)] && b <= cy);
         return free.length ? { from: r, at: pick(rnd, free) } : null;
       }).filter(Boolean);
       if (!cands.length) { share.length = z + 1; list[list.length - 1].goal = true; break; }
@@ -200,6 +200,17 @@ function generate(opts) {
       if (r.features.indexOf(cand[i]) >= 0) continue;
       r.features.push(cand[i]); fused[cand[i]] = (fused[cand[i]] || 0) + 1;
     }
+  });
+
+  /* 特徴を部屋のどちら側に置くか */
+  const SLOTS = [
+    { dx: -0.27, dy: 0.02, w: '西' }, { dx: 0.27, dy: 0.02, w: '東' },
+    { dx: 0, dy: -0.26, w: '北' },   { dx: 0, dy: 0.26, w: '南' }
+  ];
+  nodes.forEach(r => {
+    r.fpos = {};
+    const sl = shuffle(rnd, SLOTS);
+    (r.features || []).forEach((fid, i) => { r.fpos[fid] = sl[i % sl.length]; });
   });
 
   return {

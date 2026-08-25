@@ -227,6 +227,10 @@ function drawMap(){
     +'<pattern id="dots" width="25" height="25" patternUnits="userSpaceOnUse">'
     +'<rect width="25" height="25" fill="#e6dfca"/>'
     +'<circle cx="12.5" cy="12.5" r="1.1" fill="#c7bd9f"/></pattern>'
+    +'<radialGradient id="pg">'
+    +'<stop offset="0" stop-color="#c33a2e" stop-opacity="0.5"/>'
+    +'<stop offset="0.7" stop-color="#c33a2e" stop-opacity="0.18"/>'
+    +'<stop offset="1" stop-color="#c33a2e" stop-opacity="0"/></radialGradient>'
     +'</defs>';
   s+='<rect x="0" y="0" width="'+W+'" height="'+W+'" fill="url(#dots)"/>';
 
@@ -278,8 +282,6 @@ function drawMap(){
           ? '<rect x="'+(sh.mx-5)+'" y="'+(sh.my-19)+'" width="10" height="38" rx="3" fill="#a03434"/>'
           : '<rect x="'+(sh.mx-19)+'" y="'+(sh.my-5)+'" width="38" height="10" rx="3" fill="#a03434"/>';
       }
-      if (n.id===S.at)
-        s+='<circle cx="'+sh.mx+'" cy="'+sh.my+'" r="8" fill="#b5372e" stroke="#f0ead9" stroke-width="2.5"/>';
       return;
     }
     var cx=sh.cx, cy=sh.cy, sz=sh.w;
@@ -292,15 +294,25 @@ function drawMap(){
       ic = n.ev.t==='hint'?'#1d5e8a':n.ev.t==='foe'?'#8a2a2a':'#2c6e3f';
     }
     if (icon) s+='<text x="'+cx+'" y="'+(cy+(been?0:7))+'" text-anchor="middle" font-size="24" font-weight="700" fill="'+ic+'">'+icon+'</text>';
-    if (here){
-      s+='<circle cx="'+cx+'" cy="'+(icon?cy+16:cy)+'" r="8" fill="#b5372e" stroke="#f0ead9" stroke-width="2.5"/>';
-    }
     if (been){
       var nm = labelOf(n); if (nm.length>6) nm=nm.slice(0,6);
       s+='<text x="'+cx+'" y="'+(cy+sz/2-8)+'" text-anchor="middle" font-size="13.5" font-weight="600" fill="'
         +(n.revealed?'#7a5a12':'#5a5340')+'">'+nm+'</text>';
     }
   });
+  /* パーティの現在地。ぼかした赤点 */
+  var cur = null;
+  shapes.forEach(function(sh){ if (sh.n.id === S.at) cur = sh; });
+  if (cur){
+    var px, py;
+    if (cur.n.kind === 'corridor'){ px = cur.mx; py = cur.my; }
+    else {
+      px = cur.cx + (S.pos ? S.pos.ox : 0) * cur.w;
+      py = cur.cy + (S.pos ? S.pos.oy : 0) * cur.w;
+    }
+    s+='<circle cx="'+px+'" cy="'+py+'" r="20" fill="url(#pg)"/>'
+      +'<circle cx="'+px+'" cy="'+py+'" r="7" fill="#b5372e" stroke="#f6f1e2" stroke-width="2"/>';
+  }
   s+='</svg>';
   document.getElementById('mapwrap').innerHTML = s;
 }
@@ -342,10 +354,15 @@ function revealName(n){
 function describeRoom(n, first){
   var ctx = S.ctx;
   if (first) say(SHAPES[n.shape].d);
-  /* 特徴。まだ調べていないものを描く */
+  else say(REVISIT);                        /* 再訪は短い確認。形の言い直しはしない */
   (n.features||[]).forEach(function(fid){
     if (S.fx[n.id+':'+fid]) return;
-    if (first || rnd() < 0.3) say(FEATURES[fid].desc);
+    if (first) say(FEATURES[fid].desc);
+    else if (rnd() < 0.35){
+      var fp2 = n.fpos && n.fpos[fid];
+      say((fp2 ? fp2.w + '側の' : '') + FEATURES[fid].noun +
+        '{は、そのままそこにある|は、変わらずそこにある|が、黙って同じ場所にある|には、まだ手を付けていない}。');
+    }
   });
   /* 出来事（ヒント・種・敵） */
   if (n.ev && !S.evDone[n.id]){
@@ -373,6 +390,7 @@ function describeRoom(n, first){
   var parts = [];
   exitsOf(n).forEach(function(e){
     var st = exitState(e);
+    if (st === 'been') return;
     var ctx2 = Object.assign({}, S.ctx, { dir: e.dir });
     parts.push(tidy(VARI.expand(EXIT_TXT[st], ctx2, rnd)));
   });
@@ -387,6 +405,7 @@ function describeRoom(n, first){
 function enter(id){
   var n = S.map.byId[id], first = !S.been[id];
   S.at = id; S.been[id] = 1; S.steps++;
+  S.pos = { ox: 0, oy: 0.14 };
   S.noise = (!S.enc && rnd() < 0.22) ? 1 : 0;
   reveal();
 
@@ -411,8 +430,9 @@ function enter(id){
     /* 通路の両端も方角で示す */
     var parts = [];
     exitsOf(n).forEach(function(e){
-      var ctx2 = Object.assign({}, S.ctx, { dir: e.dir });
       var st = S.been[e.far.id] ? 'been' : S.seen[e.far.id] ? 'seen' : 'unseen';
+      if (st === 'been') return;
+      var ctx2 = Object.assign({}, S.ctx, { dir: e.dir });
       parts.push(tidy(VARI.expand(EXIT_TXT[st], ctx2, rnd)));
     });
     if (parts.length) say(parts.join('。') + '。');
@@ -431,6 +451,8 @@ function enter(id){
 function useFeature(n, fid){
   var f = FEATURES[fid];
   S.fx[n.id+':'+fid] = 1;
+  var fp = n.fpos && n.fpos[fid];
+  if (fp) S.pos = { ox: fp.dx, oy: fp.dy };
   var tot = f.out.reduce(function(a,o){ return a+o.w; }, 0);
   var roll = rnd()*tot, sel = f.out[0];
   for (var i=0;i<f.out.length;i++){ roll -= f.out[i].w; if (roll <= 0){ sel = f.out[i]; break; } }
@@ -548,7 +570,8 @@ function render(){
   /* 特徴を調べる。描写に出たものだけがここに並ぶ */
   (n.features||[]).forEach(function(fid){
     if (S.fx[n.id+':'+fid]) return;
-    add(FEATURES[fid].act, '調べる', 'act', function(){ useFeature(n, fid); });
+    var fp = n.fpos && n.fpos[fid];
+    add((fp ? fp.w + '側の' : '') + FEATURES[fid].act, '調べる', 'act', function(){ useFeature(n, fid); });
   });
 
   /* 移動。方角＋行き先の様子 */
@@ -610,7 +633,14 @@ function preEntry(){
 
 /* ================= 開始 ================= */
 var SETUP = { dun:'beast', rooms:10 };
+function goFullscreen(){
+  try {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen)
+      document.documentElement.requestFullscreen().catch(function(){});
+  } catch (e) {}
+}
 function begin(){
+  goFullscreen();
   var map = generate({ dungeon: SETUP.dun, rooms: SETUP.rooms });
   verify(map);
   S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:{}, marks:{},

@@ -219,4 +219,10 @@ const EXIT_TXT = {
   gate:   '$dirの{道|口}は、{固く閉ざされている|塞がれている|通れない}'
 };
 
-module.exports = { SHAPES, FEATURES, DIRW, EXIT_TXT };
+const REVISIT =
+  '{様子は、さっきと変わらない|見覚えのある壁と床だ|空気は動いていない|'
+  + '一度通った部屋だ。足取りは自然と速くなる|$traceの位置さえ、覚えたとおりだ}。'
+  + '{|{$soundが、{まだ続いている|もう止んでいる}|$smellは、覚えたとおりだ|'
+  + '$who が、手早く四隅だけ確かめた|$hurt が、息を整える間だけ足を止めた}。}';
+
+module.exports = { SHAPES, FEATURES, DIRW, EXIT_TXT, REVISIT };
