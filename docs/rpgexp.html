@@ -1246,12 +1246,23 @@ const FEATURES = {
 
 /* ---------- 出口の文。方角＋様子 ---------- */
 const DIRW = { n: '北', s: '南', e: '東', w: '西' };
+/* 出口の文は「その先が気になる」内容があるときだけ語る。
+   「部屋の輪郭が見えている」のような、地図を見れば分かるだけの文は出さない */
 const EXIT_TXT = {
-  unseen: '$dirへ続く{口|通路}からは、{冷たい風が流れてくる|何の音もしない|'
-    + 'かすかに$soundが届く|$smellが強くなる気がする}',
-  seen:   '$dirの{口|通路}の先に、{部屋の輪郭が見えている|空間があるのが分かる}',
-  been:   '$dirは、{来た道だ|一度通った道だ}',
-  gate:   '$dirの{道|口}は、{固く閉ざされている|塞がれている|通れない}'
+  unseen:
+    '$dirへ続く{口|通路}{からは|の奥からは}、'
+    + '{冷たい空気が流れ込んでくる|'
+    + 'うめき声のようなものが、かすかに聞こえる|'
+    + '$soundが漏れてくる|'
+    + '$smellが、ひときわ強くなる|'
+    + '生ぬるい風が、間を置いて吹いてくる|'
+    + 'ぽつり、ぽつりと水音が届く|'
+    + '何の音もしない——それが、かえって気になる|'
+    + 'かすかな明かりが、揺れている気がする|'
+    + '空気の重さが、明らかに違う}',
+  seen:   '',
+  been:   '',
+  gate:   '$dirの{道|口}は、{固く閉ざされている|塞がれている|何かに護られている}'
 };
 
 const REVISIT =
@@ -2020,17 +2031,18 @@ function drawMap(){
     }
     var cx = px(n.gx), cy = py(n.gy);
     var been = S.been[n.id];
+    /* 「入」は出さない。外へ開いた通路で入口と分かる */
     var icon='', ic='';
-    if (n.entrance){ icon='入'; ic='#5a5340'; }
-    else if (n.goal && been){ icon='奥'; ic='#8a6a1a'; }
+    if (n.goal && been){ icon='奥'; ic='#8a6a1a'; }
     else if (been && n.ev && !S.evDone[n.id]){
       icon = n.ev.t==='hint'?'書':n.ev.t==='foe'?'敵':'品';
       ic = n.ev.t==='hint'?'#1d5e8a':n.ev.t==='foe'?'#8a2a2a':'#2c6e3f';
     }
-    if (icon) s+='<text x="'+cx+'" y="'+(cy+(been?0:8))+'" text-anchor="middle" font-size="23" font-weight="700" fill="'+ic+'">'+icon+'</text>';
+    if (icon) s+='<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" font-size="22" font-weight="700" fill="'+ic+'">'+icon+'</text>';
     if (been){
       var nm = labelOf(n); if (nm.length>6) nm=nm.slice(0,6);
-      s+='<text x="'+cx+'" y="'+(py(n.y+n.h)-7)+'" text-anchor="middle" font-size="13" font-weight="600" fill="'
+      /* 名前は部屋の中央。印がある間は、その下に */
+      s+='<text x="'+cx+'" y="'+(cy+(icon?17:5))+'" text-anchor="middle" font-size="13" font-weight="600" fill="'
         +(n.revealed?'#7a5a12':'#5a5340')+'">'+nm+'</text>';
     }
   });
@@ -2087,8 +2099,16 @@ function revealName(n){
 /* ================= 場面の描写 ================= */
 function describeRoom(n, first){
   var ctx = S.ctx;
+  /* ── 語りの順番 ──
+     ① 部屋の情景　② 部屋の中の特殊な状況（特徴・書きつけ・種）
+     ③ 方角ごとの「その先」の示唆（気になる内容があるときだけ）
+     ④ モンスター・大きな出来事の予感（最後。この先は語らず、選択肢へ落とす） */
+
+  /* ① 情景 */
   if (first) say(SHAPES[n.cls].d);
-  else say(REVISIT);                        /* 再訪は短い確認。形の言い直しはしない */
+  else say(REVISIT);
+
+  /* ② 部屋の中の特殊な状況 */
   (n.features||[]).forEach(function(fid){
     if (S.fx[n.id+':'+fid]) return;
     if (first) say(FEATURES[fid].desc);
@@ -2098,7 +2118,7 @@ function describeRoom(n, first){
         '{は、そのままそこにある|は、変わらずそこにある|が、黙って同じ場所にある|には、まだ手を付けていない}。');
     }
   });
-  /* 出来事（ヒント・種・敵） */
+  var pendingFoe = false;
   if (n.ev && !S.evDone[n.id]){
     var k2 = KEYS[n.ev.key];
     if (n.ev.t === 'hint' && first){
@@ -2113,25 +2133,36 @@ function describeRoom(n, first){
     } else if (n.ev.t === 'seed' && first){
       say(k2.seed);
     } else if (n.ev.t === 'foe' && first){
-      say('{$placeの奥から|部屋の中央に|灯りの輪の縁に}、{ひときわ大きいものが|'
-        + '他とは明らかに違う影が|$lordではないが、それに近いものが}{立ち上がった|こちらを向いた|'
-        + '身を起こした}。{ここを通るなら、これを越えるしかない|'
-        + '避けて通れる位置ではない|$who が、無言で武器を握り直した}。');
-      S.enc = { gate: n.ev.gate, room: n.id };
+      pendingFoe = true;                    /* ④で最後に語る */
     }
   }
-  /* 出口。方角と様子を必ず言う */
-  var parts = [];
-  exitsOf(n).forEach(function(e){
-    var st = exitState(e);
-    if (st === 'been') return;
-    var ctx2 = Object.assign({}, S.ctx, { dir: e.dir });
-    parts.push(tidy(VARI.expand(EXIT_TXT[st], ctx2, rnd)));
-  });
-  if (parts.length){
-    var p = document.createElement('p');
-    p.textContent = parts.join('。') + '。';
-    narrBox().appendChild(p);
+
+  /* ③ 方角の示唆。危機が迫っているときは語らない（緊張を切らさない） */
+  if (!pendingFoe){
+    var parts = [];
+    exitsOf(n).forEach(function(e){
+      var st = exitState(e);
+      if (st !== 'unseen' && st !== 'gate') return;
+      var t2 = EXIT_TXT[st];
+      if (!t2) return;
+      var ctx2 = Object.assign({}, S.ctx, { dir: e.dir });
+      parts.push(tidy(VARI.expand(t2, ctx2, rnd)));
+    });
+    if (parts.length > 2) parts = parts.slice(0, 2);   /* 語りすぎない */
+    if (parts.length){
+      var p = document.createElement('p');
+      p.textContent = parts.join('。') + '。';
+      narrBox().appendChild(p);
+    }
+  }
+
+  /* ④ 危機。ここで説明を止め、選択肢に落とす */
+  if (pendingFoe){
+    say('{$placeの奥から|部屋の中央に|灯りの輪の縁に}、{ひときわ大きいものが|'
+      + '他とは明らかに違う影が|$lordではないが、それに近いものが}{立ち上がった|こちらを向いた|'
+      + '身を起こした}。{ここを通るなら、これを越えるしかない|'
+      + '避けて通れる位置ではない|$who が、無言で武器を握り直した}。');
+    S.enc = { gate: n.ev.gate, room: n.id };
   }
 }
 
@@ -2139,7 +2170,7 @@ function describeRoom(n, first){
 function enter(id){
   var n = S.map.byId[id], first = !S.been[id];
   S.at = id; S.been[id] = 1; S.steps++;
-  S.pos = { ox: 0, oy: 0.14 };
+  S.pos = { ox: 0, oy: 0.24 };
   S.noise = (!S.enc && rnd() < 0.22) ? 1 : 0;
   reveal();
 
@@ -2161,14 +2192,14 @@ function enter(id){
       if (first) anchor = caption('通路');
       say(WALK.corridor);
     }
-    /* 通路の両端も方角で示す */
+    /* 通路の先も、気になる内容があるときだけ */
     var parts = [];
     exitsOf(n).forEach(function(e){
-      var st = S.been[e.far.id] ? 'been' : S.seen[e.far.id] ? 'seen' : 'unseen';
-      if (st === 'been') return;
+      if (S.been[e.far.id] || S.seen[e.far.id]) return;
       var ctx2 = Object.assign({}, S.ctx, { dir: e.dir });
-      parts.push(tidy(VARI.expand(EXIT_TXT[st], ctx2, rnd)));
+      parts.push(tidy(VARI.expand(EXIT_TXT.unseen, ctx2, rnd)));
     });
+    if (parts.length > 2) parts = parts.slice(0, 2);
     if (parts.length) say(parts.join('。') + '。');
   } else {
     if (first){
