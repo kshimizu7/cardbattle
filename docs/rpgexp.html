@@ -118,8 +118,13 @@ body.land .side{padding:8px 10px 0 0}
 .vrow .opts{flex:1}
 .vrow .opt{padding:5px 9px;font-size:11.5px}
 body.mapzoom .mapwrap{position:fixed;inset:0;z-index:8;background:rgba(4,6,11,.92);
-  display:flex;align-items:center;justify-content:center;padding:14px}
-body.mapzoom .mapwrap svg{max-width:min(96vw,92svh);max-height:92svh;width:auto}
+  display:block;overflow:auto;padding:20px;-webkit-overflow-scrolling:touch}
+body.mapzoom .mapwrap svg{margin:0 auto;display:block}
+.mapctl{position:fixed;top:12px;right:12px;display:flex;gap:8px;z-index:9}
+.mapctl button{font:inherit;font-size:18px;width:42px;height:42px;border-radius:10px;
+  border:1px solid var(--line2);background:var(--panel);color:var(--ink);cursor:pointer}
+.maphint{position:absolute;right:16px;bottom:6px;font-size:10px;color:#8a8264;pointer-events:none}
+.mapwrap{position:relative}
 </style>
 <script>/* 文章の組み合わせエンジン。
    {a|b|c} で言い換え（入れ子OK）、$name で状況に応じた語を差し込む。
@@ -1887,122 +1892,223 @@ function exitState(e){
   return 'unseen';
 }
 
-/* ================= 灯り ================= */
-function lightHops(){ return S.spell ? 6 : S.torch ? 4 : 2; }
+/* ================= 灯り =================
+   光はマス単位で届く。届いたマスだけが地図に描かれ、
+   その先は闇に呑まれて途切れる（＝部屋の輪郭が先に分かってしまわない）。
+   灯りなし: 2マス ／ 松明: 5マス ／ 魔術師のトーチ: 9マス（6歩つづく） */
+function lightRadius(){ return S.spellLeft > 0 ? 9 : S.torch ? 5 : 2; }
+
+function cellIndex(){
+  if (S.cellIdx) return S.cellIdx;
+  var idx = {};
+  S.map.nodes.forEach(function(n){
+    if (n.kind === 'room') n.rects.forEach(function(q){
+      for (var b2 = q.y; b2 < q.y + q.h; b2++)
+        for (var a2 = q.x; a2 < q.x + q.w; a2++) idx[a2 + ',' + b2] = n;
+    });
+    else n.cells.forEach(function(c){ idx[c[0] + ',' + c[1]] = n; });
+  });
+  S.cellIdx = idx;
+  return idx;
+}
+
 function reveal(){
-  var lim = lightHops(), q = [[S.at,0]], vis = {}; vis[S.at]=1;
+  var idx = cellIndex();
+  var R = lightRadius();
+  var cur = S.map.byId[S.at];
+  var sx, sy;
+  if (cur.kind === 'corridor'){ var mid = cur.cells[cur.cells.length >> 1]; sx = mid[0]; sy = mid[1]; }
+  else { sx = Math.floor(cur.gx); sy = Math.floor(cur.gy); }
+  var q = [[sx, sy, 0]], vis = {}; vis[sx + ',' + sy] = 1;
   while (q.length){
-    var it = q.shift(), n = S.map.byId[it[0]], d = it[1];
+    var it = q.shift(), x = it[0], y = it[1], d = it[2];
+    var key = x + ',' + y, n = idx[key];
+    if (!n) continue;
     S.seen[n.id] = 1;
-    if (d >= lim) continue;
+    (S.litCells[n.id] = S.litCells[n.id] || {})[key] = 1;
+    /* 閉ざされた関門の廊下は、光を通さない */
     if (n.kind === 'corridor' && n.gate && !S.open[n.gate]) continue;
-    for (var i=0;i<n.links.length;i++){
-      var l = n.links[i];
-      if (!vis[l]) { vis[l]=1; q.push([l, d+1]); }
-    }
+    if (d >= R) continue;
+    [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]].forEach(function(t){
+      var k2 = t[0] + ',' + t[1];
+      if (!vis[k2] && idx[k2]){ vis[k2] = 1; q.push([t[0], t[1], d + 1]); }
+    });
   }
 }
 
 /* ================= 地図の絵 =================
-   Roll20 風。マス目に沿った部屋（複数マス・円形・不規則形）、
-   長さと幅のある廊下、外へ開いた入口、粗さは流儀に従う。          */
+   Roll20 風。踏破した所は完全な形と方眼、光が届いただけの所は
+   床の断片が闇に溶けて途切れる。ふだんは現在地まわりの窓表示、
+   タップで全体表示（＋／－で拡大縮小）。                          */
 var CELL = 40;
 var CORW = { narrow: 16, wide: 26 };
 var INK = '#241f14';
+var VIEW = 13;                       /* 窓表示の一辺（マス） */
+function nodeFull(n){
+  if (S.been[n.id]) return true;
+  var lit = S.litCells[n.id]; if (!lit) return false;
+  var total = 0;
+  if (n.kind === 'room') n.rects.forEach(function(q){ total += q.w * q.h; });
+  else total = n.cells.length;
+  return Object.keys(lit).length >= total;
+}
 function drawMap(){
   var ns = S.map.nodes;
   var corw = CORW[S.map.profile.corWidth] || 16;
-  /* 見えた範囲（マス座標）。一度広がった枠は縮めない */
-  var f = S.frame || (S.frame = { x0:Infinity, y0:Infinity, x1:-Infinity, y1:-Infinity });
+  var zoomed = document.body.classList.contains('mapzoom');
+
+  /* 見えている範囲（マス座標） */
+  var f = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity };
+  var eat = function(x, y){ f.x0 = Math.min(f.x0, x); f.y0 = Math.min(f.y0, y);
+    f.x1 = Math.max(f.x1, x + 1); f.y1 = Math.max(f.y1, y + 1); };
   ns.forEach(function(n){
     if (!S.seen[n.id]) return;
-    if (n.kind === 'room') n.rects.forEach(function(q){
-      f.x0=Math.min(f.x0,q.x); f.y0=Math.min(f.y0,q.y);
-      f.x1=Math.max(f.x1,q.x+q.w); f.y1=Math.max(f.y1,q.y+q.h); });
-    else n.cells.forEach(function(c){
-      f.x0=Math.min(f.x0,c[0]); f.y0=Math.min(f.y0,c[1]);
-      f.x1=Math.max(f.x1,c[0]+1); f.y1=Math.max(f.y1,c[1]+1); });
+    if (nodeFull(n)){
+      if (n.kind === 'room') n.rects.forEach(function(q){ eat(q.x, q.y); eat(q.x + q.w - 1, q.y + q.h - 1); });
+      else n.cells.forEach(function(c){ eat(c[0], c[1]); });
+    } else {
+      var lit = S.litCells[n.id] || {};
+      for (var k in lit){ var xy = k.split(','); eat(+xy[0], +xy[1]); }
+    }
   });
-  if (!isFinite(f.x0)){ var e0=S.map.byId[S.at]; f.x0=e0.x; f.y0=e0.y; f.x1=e0.x+e0.w; f.y1=e0.y+e0.h; }
+  if (!isFinite(f.x0)){ var e0 = S.map.byId[S.at]; eat(Math.floor(e0.gx), Math.floor(e0.gy)); }
+
   var bx0 = Math.floor(f.x0) - 1, by0 = Math.floor(f.y0) - 1;
   var bw = Math.ceil(f.x1) - bx0 + 1, bh = Math.ceil(f.y1) - by0 + 1;
   var side = Math.max(bw, bh);
-  var x0 = bx0 - Math.floor((side - bw) / 2);   /* 内容を枠の中央へ（整数マスでずらし、方眼を保つ） */
-  var y0 = by0 - Math.floor((side - bh) / 2);
+  var x0, y0;
+  if (!zoomed && side > VIEW){
+    /* 窓表示：現在地を中心に、探索済みの範囲へ収める */
+    var cn = S.map.byId[S.at];
+    var ccx = Math.floor(cn.gx), ccy = Math.floor(cn.gy);
+    side = VIEW;
+    x0 = Math.max(bx0, Math.min(ccx - (VIEW >> 1), bx0 + bw - VIEW));
+    y0 = Math.max(by0, Math.min(ccy - (VIEW >> 1), by0 + bh - VIEW));
+  } else {
+    x0 = bx0 - Math.floor((side - bw) / 2);
+    y0 = by0 - Math.floor((side - bh) / 2);
+  }
   var W = Math.round(side * CELL);
   var px = function(x){ return (x - x0) * CELL; }, py = function(y){ return (y - y0) * CELL; };
 
-  var s='<svg viewBox="0 0 '+W+' '+W+'" role="img" aria-label="ダンジョンの地図">';
-  s+='<defs>'
-    +'<filter id="rgh" x="-20%" y="-20%" width="140%" height="140%">'
-    +'<feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="'
-    +(S.map.seed%97)+'" result="n"/>'
-    +'<feDisplacementMap in="SourceGraphic" in2="n" scale="'+(S.map.roughPx||0)+'"/></filter>'
-    +'<pattern id="gp" width="'+CELL+'" height="'+CELL+'" patternUnits="userSpaceOnUse">'
-    +'<rect width="'+CELL+'" height="'+CELL+'" fill="#f0ead9"/>'
-    +'<path d="M'+CELL+' 0H0V'+CELL+'" fill="none" stroke="#ccc1a1" stroke-width="1.6"/></pattern>'
-    +'<pattern id="dots" width="'+CELL+'" height="'+CELL+'" patternUnits="userSpaceOnUse">'
-    +'<rect width="'+CELL+'" height="'+CELL+'" fill="#e6dfca"/>'
-    +'<circle cx="'+(CELL/2)+'" cy="'+(CELL/2)+'" r="1.2" fill="#c7bd9f"/></pattern>'
-    +'<radialGradient id="pg">'
-    +'<stop offset="0" stop-color="#c33a2e" stop-opacity="0.5"/>'
-    +'<stop offset="0.7" stop-color="#c33a2e" stop-opacity="0.18"/>'
-    +'<stop offset="1" stop-color="#c33a2e" stop-opacity="0"/></radialGradient>'
-    +'</defs>';
-  s+='<rect x="0" y="0" width="'+W+'" height="'+W+'" fill="url(#dots)"/>';
+  var s = '<svg viewBox="0 0 ' + W + ' ' + W + '" role="img" aria-label="ダンジョンの地図">';
+  s += '<defs>'
+    + '<filter id="rgh" x="-20%" y="-20%" width="140%" height="140%">'
+    + '<feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="'
+    + (S.map.seed % 97) + '" result="n"/>'
+    + '<feDisplacementMap in="SourceGraphic" in2="n" scale="' + (S.map.roughPx || 0) + '"/></filter>'
+    + '<pattern id="gp" width="' + CELL + '" height="' + CELL + '" patternUnits="userSpaceOnUse">'
+    + '<rect width="' + CELL + '" height="' + CELL + '" fill="#f0ead9"/>'
+    + '<path d="M' + CELL + ' 0H0V' + CELL + '" fill="none" stroke="#ccc1a1" stroke-width="1.6"/></pattern>'
+    + '<pattern id="dots" width="' + CELL + '" height="' + CELL + '" patternUnits="userSpaceOnUse">'
+    + '<rect width="' + CELL + '" height="' + CELL + '" fill="#e6dfca"/>'
+    + '<circle cx="' + (CELL / 2) + '" cy="' + (CELL / 2) + '" r="1.2" fill="#c7bd9f"/></pattern>'
+    + '<radialGradient id="pg">'
+    + '<stop offset="0" stop-color="#c33a2e" stop-opacity="0.5"/>'
+    + '<stop offset="0.7" stop-color="#c33a2e" stop-opacity="0.18"/>'
+    + '<stop offset="1" stop-color="#c33a2e" stop-opacity="0"/></radialGradient>'
+    + '<linearGradient id="fN" x1="0" y1="0" x2="0" y2="1">'
+    + '<stop offset="0" stop-color="#332d1d" stop-opacity="0.95"/>'
+    + '<stop offset="1" stop-color="#332d1d" stop-opacity="0"/></linearGradient>'
+    + '<linearGradient id="fS" x1="0" y1="1" x2="0" y2="0">'
+    + '<stop offset="0" stop-color="#332d1d" stop-opacity="0.95"/>'
+    + '<stop offset="1" stop-color="#332d1d" stop-opacity="0"/></linearGradient>'
+    + '<linearGradient id="fW" x1="0" y1="0" x2="1" y2="0">'
+    + '<stop offset="0" stop-color="#332d1d" stop-opacity="0.95"/>'
+    + '<stop offset="1" stop-color="#332d1d" stop-opacity="0"/></linearGradient>'
+    + '<linearGradient id="fE" x1="1" y1="0" x2="0" y2="0">'
+    + '<stop offset="0" stop-color="#332d1d" stop-opacity="0.95"/>'
+    + '<stop offset="1" stop-color="#332d1d" stop-opacity="0"/></linearGradient>'
+    + '</defs>';
+  s += '<rect x="0" y="0" width="' + W + '" height="' + W + '" fill="url(#dots)"/>';
 
-  /* 図形（px単位）を集める */
-  var prims=[];
+  /* 全体で「光が届いたマス」の集合（断片の切れ目の判定に使う） */
+  var litAll = {};
   ns.forEach(function(n){
     if (!S.seen[n.id]) return;
-    if (n.kind === 'room'){
-      if (n.shape === 'round'){
-        prims.push({ n:n, k:'c', cx:px(n.gx), cy:py(n.gy), r:n.w*CELL/2 });
-      } else {
-        n.rects.forEach(function(q){
-          prims.push({ n:n, k:'r', x:px(q.x), y:py(q.y), w:q.w*CELL, h:q.h*CELL });
-        });
-      }
+    if (nodeFull(n)){
+      if (n.kind === 'room') n.rects.forEach(function(q){
+        for (var b2 = q.y; b2 < q.y + q.h; b2++) for (var a2 = q.x; a2 < q.x + q.w; a2++) litAll[a2 + ',' + b2] = 1;
+      });
+      else n.cells.forEach(function(c){ litAll[c[0] + ',' + c[1]] = 1; });
     } else {
-      var xs=n.cells.map(function(c){return c[0];}), ys=n.cells.map(function(c){return c[1];});
-      var mnx=Math.min.apply(null,xs), mxx=Math.max.apply(null,xs);
-      var mny=Math.min.apply(null,ys), mxy=Math.max.apply(null,ys);
-      /* 円形の部屋は床が丸く内側に引っ込むので、そこへは深く差し込む */
-      var A2=S.map.byId[n.from], B2=S.map.byId[n.to];
-      var dig=function(r2){ return (r2 && r2.shape==='round') ? CELL*0.7 : 10; };
-      var e0, e1;
+      var lit = S.litCells[n.id] || {};
+      for (var k in lit) litAll[k] = 1;
+    }
+  });
+  var idx = cellIndex();
+
+  /* 完全な形（踏破・全灯）の図形 */
+  var prims = [];
+  ns.forEach(function(n){
+    if (!S.seen[n.id] || !nodeFull(n)) return;
+    if (n.kind === 'room'){
+      if (n.shape === 'round') prims.push({ n: n, k: 'c', cx: px(n.gx), cy: py(n.gy), r: n.w * CELL / 2 });
+      else n.rects.forEach(function(q){
+        prims.push({ n: n, k: 'r', x: px(q.x), y: py(q.y), w: q.w * CELL, h: q.h * CELL });
+      });
+    } else {
+      var xs = n.cells.map(function(c){ return c[0]; }), ys2 = n.cells.map(function(c){ return c[1]; });
+      var mnx = Math.min.apply(null, xs), mxx = Math.max.apply(null, xs);
+      var mny = Math.min.apply(null, ys2), mxy = Math.max.apply(null, ys2);
+      var A2 = S.map.byId[n.from], B2 = S.map.byId[n.to];
+      var dig = function(r2){ return (r2 && r2.shape === 'round') ? CELL * 0.7 : 10; };
+      var e0b, e1b;
       if (n.horiz){
         var leftIsFrom = A2 && A2.gx < (B2 ? B2.gx : 1e9);
-        e0 = dig(leftIsFrom ? A2 : B2); e1 = dig(leftIsFrom ? B2 : A2);
-        prims.push({ n:n, k:'r', x:px(mnx)-e0, y:py(mny)+(CELL-corw)/2,
-          w:(mxx-mnx+1)*CELL+e0+e1, h:corw, cor:1 });
+        e0b = dig(leftIsFrom ? A2 : B2); e1b = dig(leftIsFrom ? B2 : A2);
+        prims.push({ n: n, k: 'r', x: px(mnx) - e0b, y: py(mny) + (CELL - corw) / 2,
+          w: (mxx - mnx + 1) * CELL + e0b + e1b, h: corw, cor: 1 });
       } else {
         var topIsFrom = A2 && A2.gy < (B2 ? B2.gy : 1e9);
-        e0 = dig(topIsFrom ? A2 : B2); e1 = dig(topIsFrom ? B2 : A2);
-        prims.push({ n:n, k:'r', x:px(mnx)+(CELL-corw)/2, y:py(mny)-e0,
-          w:corw, h:(mxy-mny+1)*CELL+e0+e1, cor:1 });
+        e0b = dig(topIsFrom ? A2 : B2); e1b = dig(topIsFrom ? B2 : A2);
+        prims.push({ n: n, k: 'r', x: px(mnx) + (CELL - corw) / 2, y: py(mny) - e0b,
+          w: corw, h: (mxy - mny + 1) * CELL + e0b + e1b, cor: 1 });
       }
     }
   });
-  var geom=function(p2, grow){
+  var geom = function(p2, grow){
     grow = grow || 0;
-    return p2.k==='c'
-      ? '<circle cx="'+p2.cx+'" cy="'+p2.cy+'" r="'+(p2.r+grow)+'"'
-      : '<rect x="'+(p2.x-grow)+'" y="'+(p2.y-grow)+'" width="'+(p2.w+grow*2)+'" height="'+(p2.h+grow*2)+'" rx="'+(4+grow)+'"';
+    return p2.k === 'c'
+      ? '<circle cx="' + p2.cx + '" cy="' + p2.cy + '" r="' + (p2.r + grow) + '"'
+      : '<rect x="' + (p2.x - grow) + '" y="' + (p2.y - grow) + '" width="' + (p2.w + grow * 2) + '" height="' + (p2.h + grow * 2) + '" rx="' + (4 + grow) + '"';
   };
 
-  /* ① 荒れた外周 → ② 黒壁 → ③ 床 */
   if (S.map.roughPx){
-    s+='<g filter="url(#rgh)">';
-    prims.forEach(function(p2){ s+=geom(p2,12)+' fill="#57503b" opacity="0.85"/>'; });
-    s+='</g>';
+    s += '<g filter="url(#rgh)">';
+    prims.forEach(function(p2){ s += geom(p2, 12) + ' fill="#57503b" opacity="0.85"/>'; });
+    s += '</g>';
   } else {
-    prims.forEach(function(p2){ s+=geom(p2,10)+' fill="#57503b" opacity="0.35"/>'; });
+    prims.forEach(function(p2){ s += geom(p2, 10) + ' fill="#57503b" opacity="0.35"/>'; });
   }
-  prims.forEach(function(p2){ s+=geom(p2,4)+' fill="'+INK+'"/>'; });
+  prims.forEach(function(p2){ s += geom(p2, 4) + ' fill="' + INK + '"/>'; });
   prims.forEach(function(p2){
-    var fill = S.been[p2.n.id] ? 'url(#gp)' : '#d8d0b6';
-    s+=geom(p2,0)+' fill="'+fill+'"/>';
+    s += geom(p2, 0) + ' fill="' + (S.been[p2.n.id] ? 'url(#gp)' : '#d8d0b6') + '"/>';
+  });
+
+  /* 光が届いただけの断片。輪郭は描かず、闇に溶けて途切れる */
+  ns.forEach(function(n){
+    if (!S.seen[n.id] || nodeFull(n)) return;
+    var lit = S.litCells[n.id] || {};
+    for (var k in lit){
+      var xy = k.split(','), cxx = +xy[0], cyy = +xy[1];
+      var X = px(cxx), Y = py(cyy);
+      var isCor = n.kind === 'corridor';
+      if (isCor){
+        if (n.horiz) s += '<rect x="' + X + '" y="' + (Y + (CELL - corw) / 2) + '" width="' + CELL + '" height="' + corw + '" fill="#ddd5bc"/>';
+        else s += '<rect x="' + (X + (CELL - corw) / 2) + '" y="' + Y + '" width="' + corw + '" height="' + CELL + '" fill="#ddd5bc"/>';
+      } else {
+        s += '<rect x="' + X + '" y="' + Y + '" width="' + CELL + '" height="' + CELL + '" fill="#ddd5bc"/>';
+      }
+      /* 切れ目：隣に「床はあるが、まだ光が届いていない」マスがある側を、闇でぼかす */
+      var dirs = [ [0, -1, 'fN'], [0, 1, 'fS'], [-1, 0, 'fW'], [1, 0, 'fE'] ];
+      dirs.forEach(function(dd){
+        var nk = (cxx + dd[0]) + ',' + (cyy + dd[1]);
+        if (idx[nk] && !litAll[nk]){
+          s += '<rect x="' + X + '" y="' + Y + '" width="' + CELL + '" height="' + CELL + '" fill="url(#' + dd[2] + ')"/>';
+        }
+      });
+    }
   });
 
   /* 入口：南の壁を外へ開ける */
@@ -2010,46 +2116,40 @@ function drawMap(){
   ns.forEach(function(n){ if (n.entrance) ent = n; });
   if (ent && S.seen[ent.id]){
     var m = ent.rects[0];
-    var ox = px(m.x + m.w/2) - CELL*0.4, oy = py(m.y + m.h) - 6;
-    s+='<rect x="'+ox+'" y="'+oy+'" width="'+(CELL*0.8)+'" height="'+(CELL*0.72)+'" fill="'
-      +(S.been[ent.id]?'url(#gp)':'#d8d0b6')+'"/>'
-      +'<rect x="'+(ox-5)+'" y="'+oy+'" width="5" height="'+(CELL*0.72)+'" fill="'+INK+'"/>'
-      +'<rect x="'+(ox+CELL*0.8)+'" y="'+oy+'" width="5" height="'+(CELL*0.72)+'" fill="'+INK+'"/>';
+    var ox = px(m.x + m.w / 2) - CELL * 0.4, oy = py(m.y + m.h) - 6;
+    s += '<rect x="' + ox + '" y="' + oy + '" width="' + (CELL * 0.8) + '" height="' + (CELL * 0.72) + '" fill="'
+      + (S.been[ent.id] ? 'url(#gp)' : '#d8d0b6') + '"/>'
+      + '<rect x="' + (ox - 5) + '" y="' + oy + '" width="5" height="' + (CELL * 0.72) + '" fill="' + INK + '"/>'
+      + '<rect x="' + (ox + CELL * 0.8) + '" y="' + oy + '" width="5" height="' + (CELL * 0.72) + '" fill="' + INK + '"/>';
   }
 
-  /* ④ 関門・印・名前 */
+  /* 印は出さない（説明文に任せる）。関門の閂も、実際に前に立ってから */
   ns.forEach(function(n){
     if (!S.seen[n.id]) return;
     if (n.kind === 'corridor'){
-      if (n.gate && !S.open[n.gate]){
+      if (n.gate && !S.open[n.gate] && S.been[n.id]){
         var gx2 = px(n.gx), gy2 = py(n.gy);
-        s+= n.horiz
-          ? '<rect x="'+(gx2-5)+'" y="'+(gy2-corw/2-8)+'" width="10" height="'+(corw+16)+'" rx="3" fill="#a03434"/>'
-          : '<rect x="'+(gx2-corw/2-8)+'" y="'+(gy2-5)+'" width="'+(corw+16)+'" height="10" rx="3" fill="#a03434"/>';
+        s += n.horiz
+          ? '<rect x="' + (gx2 - 5) + '" y="' + (gy2 - corw / 2 - 8) + '" width="10" height="' + (corw + 16) + '" rx="3" fill="#a03434"/>'
+          : '<rect x="' + (gx2 - corw / 2 - 8) + '" y="' + (gy2 - 5) + '" width="' + (corw + 16) + '" height="10" rx="3" fill="#a03434"/>';
       }
       return;
     }
     var cx = px(n.gx), cy = py(n.gy);
     var been = S.been[n.id];
-    /* 「入」は出さない。外へ開いた通路で入口と分かる */
-    var icon='', ic='';
-    if (n.goal && been){ icon='奥'; ic='#8a6a1a'; }
-    else if (been && n.ev && !S.evDone[n.id]){
-      icon = n.ev.t==='hint'?'書':n.ev.t==='foe'?'敵':'品';
-      ic = n.ev.t==='hint'?'#1d5e8a':n.ev.t==='foe'?'#8a2a2a':'#2c6e3f';
-    }
-    if (icon) s+='<text x="'+cx+'" y="'+(cy-4)+'" text-anchor="middle" font-size="22" font-weight="700" fill="'+ic+'">'+icon+'</text>';
+    var icon = '', ic = '';
+    if (n.goal && been){ icon = '奥'; ic = '#8a6a1a'; }
+    if (icon) s += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="22" font-weight="700" fill="' + ic + '">' + icon + '</text>';
     if (been){
       var nm = labelOf(n);
-      /* 名前は切らずに、部屋の幅へ合わせて文字を縮める */
       var fpx = Math.min(13, Math.max(8.5, (n.w * CELL - 8) / Math.max(1, nm.length)));
       if (fpx <= 8.6 && nm.length > 9) nm = nm.slice(0, 9);
-      s+='<text x="'+cx+'" y="'+(cy+(icon?17:5))+'" text-anchor="middle" font-size="'+fpx.toFixed(1)+'" font-weight="600" fill="'
-        +(n.revealed?'#7a5a12':'#5a5340')+'">'+nm+'</text>';
+      s += '<text x="' + cx + '" y="' + (cy + (icon ? 17 : 5)) + '" text-anchor="middle" font-size="' + fpx.toFixed(1) + '" font-weight="600" fill="'
+        + (n.revealed ? '#7a5a12' : '#5a5340') + '">' + nm + '</text>';
     }
   });
 
-  /* ⑤ パーティの現在地。ぼかした赤点 */
+  /* パーティの現在地 */
   var cur = S.map.byId[S.at];
   if (cur && S.seen[cur.id]){
     var dx2, dy2;
@@ -2058,11 +2158,25 @@ function drawMap(){
       dx2 = px(cur.gx) + (S.pos ? S.pos.ox : 0) * cur.w * CELL;
       dy2 = py(cur.gy) + (S.pos ? S.pos.oy : 0) * cur.h * CELL;
     }
-    s+='<circle cx="'+dx2+'" cy="'+dy2+'" r="20" fill="url(#pg)"/>'
-      +'<circle cx="'+dx2+'" cy="'+dy2+'" r="7" fill="#b5372e" stroke="#f6f1e2" stroke-width="2"/>';
+    s += '<circle cx="' + dx2 + '" cy="' + dy2 + '" r="20" fill="url(#pg)"/>'
+      + '<circle cx="' + dx2 + '" cy="' + dy2 + '" r="7" fill="#b5372e" stroke="#f6f1e2" stroke-width="2"/>';
   }
-  s+='</svg>';
-  document.getElementById('mapwrap').innerHTML = s;
+  s += '</svg>';
+
+  var wrap2 = document.getElementById('mapwrap');
+  wrap2.innerHTML = s + (zoomed
+    ? '<div class="mapctl"><button id="mz_in">＋</button><button id="mz_out">－</button><button id="mz_x">✕</button></div>'
+    : '<div class="maphint">タップで全体</div>');
+  if (zoomed){
+    var svg = wrap2.querySelector('svg');
+    var base = Math.min(innerWidth * 0.94, innerHeight * 0.88);
+    svg.style.width = Math.round(base * (S.z || 1)) + 'px';
+    svg.style.maxWidth = 'none'; svg.style.maxHeight = 'none';
+    var stop = function(fn){ return function(ev){ ev.stopPropagation(); fn(); }; };
+    wrap2.querySelector('#mz_in').onclick = stop(function(){ S.z = Math.min(4, (S.z || 1) * 1.4); drawMap(); });
+    wrap2.querySelector('#mz_out').onclick = stop(function(){ S.z = Math.max(1, (S.z || 1) / 1.4); drawMap(); });
+    wrap2.querySelector('#mz_x').onclick = stop(function(){ document.body.classList.remove('mapzoom'); S.z = 1; drawMap(); });
+  }
 }
 
 /* ================= 判定 ================= */
@@ -2145,11 +2259,11 @@ function describeRoom(n, first){
     var parts = [];
     exitsOf(n).forEach(function(e){
       var st = exitState(e);
-      if (st !== 'unseen' && st !== 'gate') return;
-      var t2 = EXIT_TXT[st];
-      if (!t2) return;
+      /* 関門も、前に立つまでは普通の闇として語る（先に特別だと分からせない） */
+      if (st === 'gate'){ if (e.via && S.been[e.via.id]) return; st = 'unseen'; }
+      if (st !== 'unseen') return;
       var ctx2 = Object.assign({}, S.ctx, { dir: e.dir });
-      parts.push(tidy(VARI.expand(t2, ctx2, rnd)));
+      parts.push(tidy(VARI.expand(EXIT_TXT.unseen, ctx2, rnd)));
     });
     if (parts.length > 2) parts = parts.slice(0, 2);   /* 語りすぎない */
     if (parts.length){
@@ -2173,6 +2287,7 @@ function describeRoom(n, first){
 function enter(id){
   var n = S.map.byId[id], first = !S.been[id];
   S.at = id; S.been[id] = 1; S.steps++;
+  if (S.spellLeft > 0){ S.spellLeft--; if (S.spellLeft === 0) say('トーチの光が、静かに消えた。', 'sys'); }
   S.pos = { ox: 0, oy: 0.24 };
   S.noise = (!S.enc && rnd() < 0.22) ? 1 : 0;
   reveal();
@@ -2361,11 +2476,12 @@ function render(){
 
   /* 移動。方角＋行き先の様子 */
   exitsOf(n).forEach(function(e){
-    var st = e.via ? exitState(e) : (S.been[e.far.id] ? 'been' : S.seen[e.far.id] ? 'seen' : 'unseen');
-    var note =
-      st === 'gate' ? '関門' :
-      st === 'been' ? '来た道——' + labelOf(e.far) :
-      st === 'seen' ? '部屋の輪郭が見えている' : '未踏——闇の先';
+    var shut = e.via && e.via.gate && !S.open[e.via.gate];
+    var note;
+    if (shut && S.been[e.via.id]) note = '閉ざされた道';          /* 一度立って知ったあとだけ */
+    else if (S.been[e.far.id]) note = '来た道——' + labelOf(e.far);
+    else if (S.seen[e.far.id] || (e.via && S.seen[e.via.id])) note = '未踏——床が先へ続いている';
+    else note = '未踏——闇の先';
     add(e.dir + 'へ進む', note, 'go', function(){ enter(e.via ? e.via.id : e.far.id); });
   });
 
@@ -2380,15 +2496,16 @@ function render(){
     say('── 討った数と傷は、帳消しになった。開いた道は、開いたまま。', 'sys');
     enter(S.map.start); });
 
-  add((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '灯り 2部屋 → 1部屋' : '灯り 1部屋 → 2部屋'), '', function(){
+  add((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '灯り 5マス → 2マス' : '灯り 2マス → 5マス'), '', function(){
     S.torch = !S.torch;
-    say(S.torch ? '{松明に火を移した|$lightが、闇を一歩ぶん押し戻す}。' : '{火を伏せた|$lightは、足元だけになった}。','sys');
+    say(S.torch ? '{松明に火を移した|$lightが、闇を押し戻す}。' : '{火を伏せた|$lightは、足元だけになった}。','sys');
     reveal(); render(); });
-  if (!S.spellUsed) add('魔術師のトーチ', '一度だけ 3部屋ぶん', '', function(){
-    S.spell = 1; S.spellUsed = 1;
-    say('{魔術師が短く唱えた|詠唱は、思ったより短かった}。{$placeが、奥まで見えた|'+
-        '$lightが、届くはずのない先まで伸びる}。','em');
-    reveal(); S.spell = 0; render(); });
+  if (!S.spellUsed) add('魔術師のトーチ', '一度だけ・9マスの光が6歩つづく', '', function(){
+    S.spellLeft = 6; S.spellUsed = 1;
+    say('{魔術師が短く唱えた|詠唱は、思ったより短かった}。{光が、届くはずのない先まで伸びる|'+
+        '$placeの闇が、まとめて一歩さがった}。','em');
+    reveal(); render(); });
+  else if (S.spellLeft > 0) add('（トーチの光）', 'あと ' + S.spellLeft + ' 歩', '', function(){});
   if (S.noise) add('物音のする方をうかがう', '遭遇するかもしれない', '', function(){ S.noise = 0; encounter(); });
 }
 
@@ -2446,8 +2563,8 @@ function begin(){
   var map = generate(g);
   verify(map);
   S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:{}, marks:{},
-        did:{}, notes:{}, fx:{}, evDone:{},
-        kills:0, hurt:0, steps:0, torch:false, spell:0, spellUsed:0, enc:0, noise:0,
+        did:{}, notes:{}, fx:{}, evDone:{}, litCells:{}, cellIdx:null,
+        kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0, z:1,
         ctx:ctxOf(SETUP.dun) };
   PARTY.forEach(function(p){ p.hp = p.mx; });
   document.getElementById('setup').style.display='none';
@@ -2498,8 +2615,10 @@ document.addEventListener('DOMContentLoaded', function(){
     v.style.display = v.style.display==='none' ? 'block' : 'none';
   };
   /* 地図をタップで拡大 */
-  document.getElementById('mapwrap').addEventListener('click', function(){
+  document.getElementById('mapwrap').addEventListener('click', function(ev){
+    if (ev.target && /^mz_/.test(ev.target.id || '')) return;
     document.body.classList.toggle('mapzoom');
+    if (S) { S.z = 1; drawMap(); }
   });
   document.getElementById('go').onclick=begin;
 });
