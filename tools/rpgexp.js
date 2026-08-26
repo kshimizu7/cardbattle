@@ -34,8 +34,10 @@ const CSS = `
 }
 *{box-sizing:border-box}
 html,body{height:100%}
+html,body{overscroll-behavior:none}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
-  font-size:14px;line-height:1.75;-webkit-text-size-adjust:100%;overflow:hidden}
+  font-size:14px;line-height:1.75;-webkit-text-size-adjust:100%;
+  position:fixed;inset:0;overflow:hidden}
 .wrap{display:flex;flex-direction:column;height:100svh}
 .top{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px;
   flex-wrap:nowrap;overflow:hidden;
@@ -54,28 +56,41 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   border-top:2px solid #241f14;touch-action:none;user-select:none;-webkit-user-select:none}
 #mapsvg{position:absolute;inset:0}
 #mapsvg svg{position:absolute;display:block;will-change:left,top,width}
-.mapname{position:absolute;top:8px;left:8px;z-index:3;font-size:12px;color:#f6efd9;
-  background:rgba(22,17,9,.66);border-radius:999px;padding:4px 12px;max-width:72%;
-  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
-.mapx{position:absolute;top:8px;right:8px;z-index:3;height:32px;border-radius:999px;
-  border:0;background:rgba(22,17,9,.66);color:#f6efd9;font-size:12px;cursor:pointer;
-  padding:0 13px;white-space:nowrap}
-.pad{position:absolute;right:10px;bottom:10px;z-index:5;display:grid;
-  grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,54px);gap:5px}
-.pad button{touch-action:manipulation}
-.pad.lockpad .pd{opacity:.15;pointer-events:none}
-.pd{border-radius:12px;border:1px solid var(--line2);background:rgba(13,18,32,.8);
-  color:var(--ink2);font-size:17px;font:inherit;cursor:pointer;padding:0}
-.pd:active{background:#1a2740}
-.pd.unex{border-color:var(--gold);color:var(--gold)}
-.pd.back{opacity:.5}
-.pd.shut{border-color:#a03434;color:#c98a7a}
-.pd.off{opacity:.13;pointer-events:none}
-.pd.c{border-radius:50%;font-size:19px;background:rgba(13,18,32,.35);
-  border-color:rgba(43,55,82,.5);color:rgba(148,164,196,.35)}
-.pd.c.has{background:var(--gold);color:#1a1305;border-color:var(--gold);
-  animation:cpulse 1.5s infinite}
-@keyframes cpulse{50%{box-shadow:0 0 0 8px rgba(242,198,92,.16)}}
+.pad{position:absolute;right:2px;bottom:0;z-index:5;width:196px;height:178px;
+  transition:opacity .2s}
+.pad.away{opacity:0;pointer-events:none}
+.pad svg{width:100%;height:100%;overflow:visible}
+.pd{cursor:pointer}
+.pd>path:first-child,.pd>circle:first-child{fill:url(#arm);fill-opacity:.5;
+  stroke:#c9a24a;stroke-opacity:.3;stroke-width:1.5}
+.pd .ar{fill:#6f6a58}
+.pd.unex .ar{fill:#f2c65c}
+.pd.unex>path:first-child{stroke-opacity:.7}
+.pd.unex .ar{filter:drop-shadow(0 0 3px rgba(242,198,92,.5))}
+.pd.shut .ar{fill:#d08a7a}
+.pd.shut>path:first-child{stroke:#a03434;stroke-opacity:.8}
+.pd.off{opacity:.26;pointer-events:none}
+.pd:active>path:first-child{fill-opacity:.96}
+.pd.c>circle:first-child{fill:#241b0c;fill-opacity:.66;stroke:#c9a24a;stroke-opacity:.35;stroke-width:2}
+.pd.c .gr,.pd.c .gt{stroke:#6f6a58}
+.pd.c.has>circle:first-child{fill:#3a2c10;stroke-opacity:.9}
+.pd.c.has .gr,.pd.c.has .gt{stroke:#f2c65c}
+.pd.c.has{animation:cglow 1.8s infinite}
+@keyframes cglow{50%{filter:drop-shadow(0 0 7px rgba(242,198,92,.55))}}
+.pd.k .fl{fill:#6f6a58}
+.pd.k.has .fl{fill:#f2c65c}
+.pd.k.off{opacity:.26;pointer-events:none}
+.pad.lockpad .pd:not(.c){opacity:.16;pointer-events:none}
+.topbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:7px 10px;
+  background:var(--panel);border-bottom:1px solid var(--line)}
+.topbar b{color:var(--gold);font-size:13.5px;white-space:nowrap;flex:0 1 auto;
+  min-width:3.2em;overflow:hidden;text-overflow:ellipsis}
+.topbar .spot{font-size:11.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis;max-width:9em}
+.topbar .spot:before{content:"／ ";color:var(--ink3)}
+.topbar .sp{flex:1}
+.tb{flex:0 0 auto;font:inherit;font-size:11.5px;color:var(--ink2);background:var(--panel2);
+  border:1px solid var(--line2);border-radius:999px;padding:4px 11px;cursor:pointer;white-space:nowrap}
 .sheet{position:absolute;left:8px;right:8px;bottom:8px;max-height:calc(100% - 52px);z-index:6;
   touch-action:pan-y;
   background:var(--panel);border:1px solid var(--line2);border-radius:12px;
@@ -85,7 +100,7 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   padding:8px 12px 4px;color:var(--ink3);font-size:11.5px;flex:0 0 auto}
 .sheethead button{font:inherit;font-size:13px;width:30px;height:30px;border-radius:8px;
   border:1px solid var(--line2);background:var(--panel2);color:var(--ink2);cursor:pointer}
-#sheetbody{overflow-y:auto;padding:2px 8px 8px;display:flex;flex-direction:column;gap:6px;
+#sheetbody{overflow-y:auto;overscroll-behavior:contain;padding:2px 8px 8px;display:flex;flex-direction:column;gap:6px;
   -webkit-overflow-scrolling:touch}
 .statline{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--ink3);
   padding:5px 4px 2px;flex-wrap:wrap}
@@ -94,7 +109,7 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   border:1px solid var(--line2);border-radius:999px;padding:2px 10px;cursor:pointer}
 .side{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 10px 0;
   position:relative}
-.narr{flex:1 1 0;overflow-y:auto;min-height:7.5em;padding:10px 12px;
+.narr{flex:1 1 0;overflow-y:auto;overscroll-behavior:contain;min-height:7.5em;padding:10px 12px;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;
   -webkit-overflow-scrolling:touch}
 .narr p{margin:0 0 10px}
@@ -818,9 +833,20 @@ function camInit(){
       }
     }
   });
-  var up = function(ev){ delete ptrs[ev.pointerId]; pinch0 = 0; };
+  var down0 = null;
+  el.addEventListener('pointerdown', function(ev){
+    if (ev.target.closest && ev.target.closest('.pad, .sheet')) { down0 = null; return; }
+    down0 = { x: ev.clientX, y: ev.clientY, t: 1 };
+  });
+  var up = function(ev){
+    delete ptrs[ev.pointerId]; pinch0 = 0;
+    if (down0 && Math.hypot(ev.clientX - down0.x, ev.clientY - down0.y) < 8){
+      document.getElementById('pad').classList.toggle('away');   /* 地図をよく見たいとき */
+    }
+    down0 = null;
+  };
   el.addEventListener('pointerup', up);
-  el.addEventListener('pointercancel', up);
+  el.addEventListener('pointercancel', function(ev){ delete ptrs[ev.pointerId]; pinch0 = 0; down0 = null; });
   el.addEventListener('wheel', function(ev){
     if (!S) return;
     if (ev.target.closest && ev.target.closest('.sheet')) return;   /* シートのスクロールを妨げない */
@@ -1024,7 +1050,7 @@ function enter(id){
    文字を一度に流さず、間を置いて達成を味わえるようにする */
 function bossFight(){
   S.boss = 0; S.bossDown = 1;
-  S.ui.lock = 1; S.ui.sheet = false; S.ui.forced = false; syncSheet();
+  S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
   say('得物が抜かれる。誰も、口をきかなかった。', 'em');
   setTimeout(function(){
     say('長い戦いだった。壁が震え、灯りは幾度も掻き消えかけた。', 'em');
@@ -1043,7 +1069,7 @@ function bossFight(){
   }, 6400);
 }
 function exitDungeon(){
-  S.ui.lock = 1; S.ui.sheet = false; S.ui.forced = false; syncSheet();
+  S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
   say('南の口から、外の光が差し込んでいる。', 'em');
   setTimeout(function(){
     say(S.qdone
@@ -1076,9 +1102,33 @@ function makeNote(){
   ];
   return { t: tidy(VARI.expand(LORE[Math.floor(rnd() * LORE.length)], S.ctx, rnd)) + '。', goal: 1 };
 }
+function showInfo(){
+  var d = DUNGEONS[S ? S.dun : SETUP.dun];
+  var bd = document.getElementById('bookbody');
+  document.querySelector('#bookov h1').textContent = RPGQ ? '依頼：' + RPGQ.name : d.name;
+  bd.innerHTML = '';
+  var p1 = document.createElement('p');
+  p1.className = 'lead';
+  p1.textContent = RPGQ ? RPGQ.lead + '（報酬：硬貨 ' + RPGQ.coin + ' 枚）' : d.sub;
+  bd.appendChild(p1);
+  var p2 = document.createElement('p');
+  p2.textContent = d.open;
+  bd.appendChild(p2);
+  if (S){
+    var p3 = document.createElement('p');
+    p3.className = 'lead';
+    var rooms3 = S.map.nodes.filter(function(x){ return x.kind === 'room'; }).length;
+    var been3 = Object.keys(S.been).filter(function(k){ return S.map.byId[k].kind === 'room'; }).length;
+    p3.textContent = '踏破 ' + been3 + '/' + rooms3 + ' 室　討った数 ' + S.kills
+      + '　傷 ' + S.hurt + (S.qdone ? '　── 主は討ち果たした。あとは帰るだけだ' : '');
+    bd.appendChild(p3);
+  }
+  document.getElementById('bookov').classList.add('on');
+}
 function showBook(){
   var ov = document.getElementById('bookov');
   var bd = document.getElementById('bookbody');
+  document.querySelector('#bookov h1').textContent = '帳面';
   bd.innerHTML = '';
   if (!S.book.length){
     var p0 = document.createElement('p'); p0.className = 'lead';
@@ -1221,8 +1271,8 @@ function encounter(){
 function render(){
   drawMap();
   var n = S.map.byId[S.at];
-  document.getElementById('mapname').textContent =
-    DUNGEONS[S.dun].name + '　' + (S.pre ? '入口の前' : labelOf(n));
+  document.getElementById('dunname').textContent = DUNGEONS[S.dun].name;
+  document.getElementById('spot').textContent = S.pre ? '入口の前' : labelOf(n);
   document.getElementById('bookx').onclick = function(){ document.getElementById('bookov').classList.remove('on'); };
   document.getElementById('party').innerHTML = PARTY.map(function(p){
     var pct = Math.max(0, Math.round(p.hp / p.mx * 100));
@@ -1233,16 +1283,21 @@ function render(){
       + '<div class="bar"><i style="width:'+pct+'%;background:'+col+'"></i></div></div>';
   }).join('');
 
-  var body2 = document.getElementById('sheetbody');
-  body2.innerHTML = '';
   var notable = 0;
-  var add = function(label, key, cls, fn){
+  S.ui.acts = []; S.ui.skills = [];
+  var mkbtn = function(label, key, cls, fn){
     var b = document.createElement('button');
     b.className = 'btn ' + (cls || '');
-    if (cls === 'act') notable++;
     b.innerHTML = label + (key ? '<span class="k">' + key + '</span>' : '');
-    b.onclick = function(){ S.ui.sheet = false; fn(); };
-    body2.appendChild(b);
+    b.onclick = function(){ S.ui.sheet = 0; fn(); };
+    return b;
+  };
+  var add = function(label, key, cls, fn){
+    if (cls === 'act') notable++;
+    S.ui.acts.push(mkbtn(label, key, cls, fn));
+  };
+  var addSkill = function(label, key, cls, fn){
+    S.ui.skills.push(mkbtn(label, key, cls, fn));
   };
 
   var forced = false;
@@ -1264,7 +1319,7 @@ function render(){
       else say('{息を殺して、やり過ごした|向こうは、こちらに関心を示さなかった}。','em');
       render(); });
   } else if (S.pre){
-    add('入る', '', 'act', function(){ S.pre = 0; S.ui.sheet = false; enter(S.map.start); });
+    add('入る', '', 'act', function(){ S.pre = 0; S.ui.sheet = 0; enter(S.map.start); });
     add('装備を整える', 'Phase 2 で追加予定', '', function(){
       say('（装備は Phase 2 で。いまは身ひとつでもぐる）', 'sys'); render(); });
     add('引き返す', RPGQ ? '依頼を諦めて街へ戻る' : 'ダンジョン選択へ戻る', '', function(){
@@ -1315,32 +1370,32 @@ function render(){
     say('── 討った数と傷は、帳消しになった。開いた道は、開いたまま。', 'sys');
     enter(S.map.start); });
 
-  add((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '光の輪 大 → 小' : '光の輪 小 → 大'), '', function(){
+  addSkill((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '光の輪 大 → 小' : '光の輪 小 → 大'), 'act', function(){
     S.torch = !S.torch;
     say(S.torch ? '{松明に火を移した|$lightが、闇を押し戻す}。' : '{火を伏せた|$lightは、足元だけになった}。','sys');
     reveal(); render(); });
-  if (!S.spellUsed) add('魔法使いのトーチ', '一度だけ・光の精霊が2部屋先まで形を探る（6歩つづく）', '', function(){
+  if (!S.spellUsed) addSkill('魔法使いのトーチ', '一度だけ・光の精霊が2部屋先まで形を探る（6歩つづく）', 'act', function(){
     S.spellLeft = 6; S.spellUsed = 1;
     say('{魔法使いが短く唱えると、青白い小さな光が指先から離れた|'+
         '詠唱の終わりに、ちいさな光がふわりと浮いた}。'+
         '{光は先へ飛び、壁をなぞって、部屋の形だけを知らせてくる|'+
         '灯りではない。だが、あれが触れた場所の輪郭が、頭に浮かぶ}。','em');
     reveal(); render(); });
-  else if (S.spellLeft > 0) add('（精霊の光）', 'あと ' + S.spellLeft + ' 歩', '', function(){});
+  else if (S.spellLeft > 0) addSkill('（精霊の光）', 'あと ' + S.spellLeft + ' 歩', '', function(){});
 
   }
 
   /* ステータス行（シートの底） */
   var st2 = document.createElement('div');
   st2.className = 'statline';
+  st2.id = 'statline';
   var rooms2 = S.map.nodes.filter(function(x){ return x.kind === 'room'; }).length;
   var been2 = Object.keys(S.been).filter(function(k){ return S.map.byId[k].kind === 'room'; }).length;
   st2.innerHTML = '<span>踏破 ' + been2 + '/' + rooms2 + '</span>'
     + '<span>討 ' + S.kills + '</span><span>傷 ' + S.hurt + '</span>'
     + '<span class="' + (S.torch ? 'on' : '') + '">' + (S.torch ? '松明 ON' : '松明 OFF') + '</span>'
     + '<button id="bok2">帳面 ' + S.book.length + '</button>';
-  body2.appendChild(st2);
-  document.getElementById('bok2').onclick = showBook;
+  S.ui.acts.push(st2);
 
   /* 十字キー：矢印の色で行き先の状態を伝える（金＝未踏／薄い＝来た道／赤＝閉ざされた） */
   var dirId = { '北':'pd_n', '南':'pd_s', '西':'pd_w', '東':'pd_e' };
@@ -1354,13 +1409,17 @@ function render(){
       var shut = e.via && e.via.gate && !S.open[e.via.gate];
       cls = (shut && S.been[e.via.id]) ? 'shut' : 'unex';   /* 動けるなら一律で点灯 */
     }
-    b.className = 'pd ' + cls;
+    b.setAttribute('class', 'pd ' + cls);
     b.onclick = e ? (function(e2){ return function(){ enter(e2.via ? e2.via.id : e2.far.id); }; })(e) : null;
   });
   var pc2 = document.getElementById('pd_c');
-  pc2.className = 'pd c' + (notable && !forced ? ' has' : '');
-  pc2.onclick = function(){ S.ui.sheet = !S.ui.sheet; syncSheet(); };
-  document.getElementById('sheetx').onclick = function(){ S.ui.sheet = false; syncSheet(); };
+  pc2.setAttribute('class', 'pd c' + (notable && !forced ? ' has' : ''));
+  pc2.onclick = function(){ S.ui.sheet = (S.ui.sheet === 'act') ? 0 : 'act'; syncSheet(); };
+  var pk = document.getElementById('pd_k');
+  var skillOK = S.ui.skills.length && !forced && !S.ui.lock;
+  pk.setAttribute('class', 'pd k' + (skillOK ? ' has' : ' off'));
+  pk.onclick = skillOK ? function(){ S.ui.sheet = (S.ui.sheet === 'skill') ? 0 : 'skill'; syncSheet(); } : null;
+  document.getElementById('sheetx').onclick = function(){ S.ui.sheet = 0; syncSheet(); };
 
   S.ui.forced = forced;
   syncSheet();
@@ -1368,12 +1427,20 @@ function render(){
 
 /* シートの開閉と、強制場面（遭遇・対峙・入口の前）の扱い */
 function syncSheet(){
-  var on = S.ui.forced || S.ui.sheet;
+  var mode = S.ui.forced ? 'act' : S.ui.sheet;
   var sh = document.getElementById('sheet');
-  sh.classList.toggle('on', !!on && !S.ui.lock);
+  var body2 = document.getElementById('sheetbody');
+  body2.innerHTML = '';
+  if (mode){
+    (mode === 'skill' ? S.ui.skills : S.ui.acts).forEach(function(el){ body2.appendChild(el); });
+    var bk2 = document.getElementById('bok2');
+    if (bk2) bk2.onclick = showBook;
+  }
+  sh.classList.toggle('on', !!mode && !S.ui.lock);
   document.getElementById('sheetx').style.display = S.ui.forced ? 'none' : '';
   document.getElementById('sheettl').textContent =
-    S.ui.forced ? (S.enc ? '——どうする' : '決断のとき') : '行動';
+    S.ui.forced ? (S.enc ? '——どうする' : '決断のとき')
+    : mode === 'skill' ? '灯りと術' : '行動';
   document.getElementById('pad').classList.toggle('lockpad', !!S.ui.forced || !!S.ui.lock);
 }
 
@@ -1386,7 +1453,7 @@ function preEntry(){
   say('{口を開けた闇の前に、一行は立った|入口の前で、誰からともなく足が止まった|'
     + '$smellが、中から流れてくる}。'
     + '{ここから先は、$lightだけが頼りになる|引き返すなら、いまのうちだ}。');
-  S.pre = 1; S.ui.sheet = true;
+  S.pre = 1; S.ui.sheet = 'act';
   render();
   narrBox().scrollTop = 0;
 }
@@ -1431,11 +1498,12 @@ function begin(){
         did:{}, notes:{}, book:[], fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
         kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0,
         cam:{ z:1, panx:0, pany:0, fit:false },
-        ui:{ sheet:false, forced:false, lock:0 }, pre:0,
+        ui:{ sheet:0, forced:false, lock:0, acts:[], skills:[] }, pre:0,
         ctx:ctxOf(SETUP.dun) };
   PARTY.forEach(function(p){ p.hp = p.mx; });
   document.getElementById('setup').style.display='none';
-  document.getElementById('mapname').textContent = DUNGEONS[SETUP.dun].name + ' ── 入口の前';
+  document.getElementById('dunname').textContent = DUNGEONS[SETUP.dun].name;
+  document.getElementById('spot').textContent = '入口の前';
 
   S.seen[map.start] = 1;
   preEntry();
@@ -1499,6 +1567,7 @@ document.addEventListener('DOMContentLoaded', function(){
   document.addEventListener('click', function(){
     if (S && !document.fullscreenElement) goFullscreen();
   }, true);
+  document.getElementById('tb_info').onclick = showInfo;
   document.getElementById('mapx').onclick = function(){
     if (RPGQ){
       if (confirm('依頼を中断して街へ戻りますか？（報酬・拾いものはありません）')){
@@ -1514,17 +1583,56 @@ document.addEventListener('DOMContentLoaded', function(){
 
 const BODY = `
 <div class="wrap">
+  <div class="topbar">
+    <b id="dunname">—</b>
+    <span class="spot" id="spot"></span>
+    <span class="sp"></span>
+    <button class="tb" id="tb_info">📜 依頼</button>
+    <button class="tb" id="mapx">✕ 中断</button>
+  </div>
   <div class="side">
     <div class="narr" id="narr"></div>
   </div>
   <div class="mapwrap" id="mapwrap">
     <div id="mapsvg"></div>
-    <div class="mapname" id="mapname">—</div>
-    <button class="mapx" id="mapx">✕ 冒険を中断</button>
     <div class="pad" id="pad">
-      <span></span><button class="pd" id="pd_n">▲</button><span></span>
-      <button class="pd" id="pd_w">◀</button><button class="pd c" id="pd_c">●</button><button class="pd" id="pd_e">▶</button>
-      <span></span><button class="pd" id="pd_s">▼</button><span></span>
+      <svg viewBox="0 0 232 210" aria-label="操作盤">
+        <defs>
+          <radialGradient id="brs" cx="0.4" cy="0.32">
+            <stop offset="0" stop-color="#8b7340"/><stop offset="0.55" stop-color="#5d4a23"/>
+            <stop offset="1" stop-color="#33280f"/>
+          </radialGradient>
+          <linearGradient id="arm" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#3b3018"/><stop offset="1" stop-color="#241b0c"/>
+          </linearGradient>
+        </defs>
+        <g id="dial" transform="translate(16,22)">
+          <circle cx="90" cy="90" r="88" fill="url(#brs)" fill-opacity="0.42"
+            stroke="#c9a24a" stroke-opacity="0.55" stroke-width="3"/>
+          <circle cx="90" cy="90" r="79" fill="none" stroke="#0e0a04" stroke-opacity="0.5" stroke-width="2"/>
+          <g id="pd_n" class="pd"><path d="M62 26 h56 v34 l-28 24 -28-24z"/>
+            <path class="ar" d="M78 60 L90 46 L102 60 L97 64.5 L90 56.5 L83 64.5z"/></g>
+          <g id="pd_s" class="pd"><path d="M62 154 h56 v-34 l-28-24 -28 24z"/>
+            <path class="ar" d="M78 120 L90 134 L102 120 L97 115.5 L90 123.5 L83 115.5z"/></g>
+          <g id="pd_w" class="pd"><path d="M26 62 v56 h34 l24-28 -24-28z"/>
+            <path class="ar" d="M60 78 L46 90 L60 102 L64.5 97 L56.5 90 L64.5 83z"/></g>
+          <g id="pd_e" class="pd"><path d="M154 62 v56 h-34 l-24-28 24-28z"/>
+            <path class="ar" d="M120 78 L134 90 L120 102 L115.5 97 L123.5 90 L115.5 83z"/></g>
+          <g id="pd_c" class="pd c">
+            <circle cx="90" cy="90" r="30"/>
+            <g class="gear" stroke-linecap="round">
+              <circle class="gr" cx="90" cy="90" r="17" fill="none" stroke-width="4"/>
+              <circle class="gr" cx="90" cy="90" r="6" fill="none" stroke-width="3"/>
+              <g class="gt"><path d="M90 68v7M90 105v7M68 90h7M105 90h7M74 74l5 5M101 101l5 5M106 74l-5 5M79 101l-5 5"/></g>
+            </g>
+          </g>
+        </g>
+        <g id="pd_k" class="pd k" transform="translate(178,16)">
+          <circle cx="0" cy="0" r="27" fill="url(#brs)" fill-opacity="0.55"
+            stroke="#c9a24a" stroke-opacity="0.6" stroke-width="2.5"/>
+          <path class="fl" d="M0 -13c5 6 8 10 8 15 0 5-3.6 9-8 9s-8-4-8-9c0-5 3-8 8-15z"/>
+        </g>
+      </svg>
     </div>
     <div class="sheet" id="sheet">
       <div class="sheethead"><span id="sheettl">行動</span><button id="sheetx">✕</button></div>

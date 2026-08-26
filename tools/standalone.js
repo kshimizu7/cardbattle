@@ -13,7 +13,7 @@ function wrap(src, fallbackTitle) {
   const body = m ? src.replace(m[0], '') : src;
   return '<!DOCTYPE html>\n<html lang="ja">\n<head>\n' +
     '<meta charset="utf-8">\n' +
-    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n' +
+    '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">\n' +
     '<meta name="theme-color" content="#080b12">\n' +
     '<title>' + title + '</title>\n' +
     '</head>\n<body>\n' + body.replace(/^\s*\n/, '') + '\n</body>\n</html>\n';

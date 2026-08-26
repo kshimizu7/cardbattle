@@ -804,7 +804,8 @@
     ov.id = 'rpgov';
     ov.style.cssText = 'position:fixed;inset:0;z-index:400;background:#000;display:flex;flex-direction:column';
     var f = document.createElement('iframe');
-    f.style.cssText = 'flex:1;border:0;width:100%';
+    f.style.cssText = 'flex:1;border:0;width:100%;height:100%';
+    f.setAttribute('scrolling', 'no');
     f.setAttribute('allow', 'fullscreen');
     f.allowFullscreen = true;
     f.name = JSON.stringify({ rpgq: 1, id: q.id, name: q.name, lead: q.lead, coin: q.coin, dun: q.dun, rooms: q.rooms });
