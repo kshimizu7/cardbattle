@@ -10,11 +10,14 @@
   </div>
   <div class="side">
     <div class="narr" id="narr"></div>
+    <div class="fade" id="nfade"></div>
+    <button class="more" id="nmore"><span class="mchev">▼</span> 続きがある</button>
   </div>
   <div class="mapwrap" id="mapwrap">
     <div id="mapsvg"></div>
+    <button class="mapbig mapui" id="mz_full" title="地図を大きく">⛶</button>
     <div class="pad" id="pad">
-      <svg viewBox="0 0 200 196" aria-label="操作盤">
+      <svg viewBox="20 20 154 154" aria-label="操作盤">
         <defs><linearGradient id="brs" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0" stop-color="#7a6334"/><stop offset="0.5" stop-color="#4a3a1a"/><stop offset="1" stop-color="#2a2110"/></linearGradient></defs>
         <g id="pd_n" class="pd"><path class="plate" d="M70 64 V44 H77 V33 L86 23 H104 L113 33 V44 H120 V64 L112 64 L104 66 L95 76 L86 66 L78 64 Z"/><path class="ar" d="M83.5 57 L95 43 L106.5 57 L101 61 L95 53.5 L89 61 Z"/></g>
         <g id="pd_e" class="pd" transform="rotate(90 95 95)"><path class="plate" d="M70 64 V44 H77 V33 L86 23 H104 L113 33 V44 H120 V64 L112 64 L104 66 L95 76 L86 66 L78 64 Z"/><path class="ar" d="M83.5 57 L95 43 L106.5 57 L101 61 L95 53.5 L89 61 Z"/></g>
@@ -26,7 +29,7 @@
           <circle class="gr" cx="95" cy="95" r="16" fill="none"/>
           <circle class="gr2" cx="95" cy="95" r="6.5"/>
         </g>
-        <g id="pd_k" class="pd k" transform="translate(170,22)">
+        <g id="pd_k" class="pd k" transform="translate(143,47) scale(0.86)">
           <path class="plate" d="M0 -26 L18 -18 L26 0 L18 18 L0 26 L-18 18 L-26 0 L-18 -18 Z"/>
           <path class="fl" d="M0 -13c5.5 6.5 8.5 10.5 8.5 15.5 0 5.2-3.8 9.2-8.5 9.2s-8.5-4-8.5-9.2c0-5 3-9 8.5-15.5z"/>
         </g>
@@ -95,15 +98,20 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   border-top:2px solid #241f14;touch-action:none;user-select:none;-webkit-user-select:none}
 #mapsvg{position:absolute;inset:0}
 #mapsvg svg{position:absolute;display:block;will-change:left,top,width}
-.pad{position:absolute;right:-4px;bottom:0;z-index:5;width:190px;height:186px;
+.mapbig{position:absolute;top:6px;right:6px;z-index:5;width:34px;height:34px;border-radius:9px;
+  border:1px solid rgba(201,162,74,.4);background:rgba(22,17,9,.6);color:#f6efd9;
+  font-size:15px;cursor:pointer;padding:0}
+body.mapbig .mapwrap{position:fixed;inset:0;z-index:12;flex:none;border:0}
+body.mapbig .mapbig{background:rgba(22,17,9,.8)}
+.pad{position:absolute;right:2px;bottom:2px;z-index:5;width:152px;height:152px;
   transition:opacity .2s}
 .pad.away{opacity:0;pointer-events:none}
 .pad svg{width:100%;height:100%;overflow:visible}
 .pd{cursor:pointer}
 .pd .plate{fill:url(#brs);fill-opacity:.62;stroke:#c9a24a;stroke-opacity:.32;stroke-width:1.6;
   stroke-linejoin:round}
-.pd .ar{fill:#6f6a58}
-.pd.unex .ar{fill:#f2c65c;filter:drop-shadow(0 0 3px rgba(242,198,92,.55))}
+.pd .ar{fill:#efe9dc}
+.pd.unex .ar{fill:#fff;filter:drop-shadow(0 0 3px rgba(255,255,255,.4))}
 .pd.unex .plate{stroke-opacity:.8;fill-opacity:.72}
 .pd.shut .ar{fill:#d08a7a}
 .pd.shut .plate{stroke:#a03434;stroke-opacity:.85}
@@ -116,8 +124,8 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
 .pd.c.has .gr2{fill:#f2c65c}
 .pd.c.has{animation:cglow 1.9s infinite}
 @keyframes cglow{50%{filter:drop-shadow(0 0 8px rgba(242,198,92,.5))}}
-.pd.k .fl{fill:#6f6a58}
-.pd.k.has .fl{fill:#f2c65c;filter:drop-shadow(0 0 4px rgba(242,198,92,.5))}
+.pd.k .fl{fill:#efe9dc}
+.pd.k.has .fl{fill:#fff;filter:drop-shadow(0 0 4px rgba(255,255,255,.4))}
 .pd.k.off{opacity:.22;pointer-events:none}
 .entrybar{flex:0 0 auto;display:none;gap:8px;align-items:stretch;padding:8px 10px 4px}
 .entrybar.on{display:flex}
@@ -159,6 +167,18 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   -webkit-overflow-scrolling:touch}
 .narr p{margin:0 0 10px}
 .narr p:last-child{margin-bottom:0}
+.side{position:relative}
+.more{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:4;
+  display:none;align-items:center;gap:5px;font:inherit;font-size:11px;color:#1a1305;
+  background:var(--gold);border:0;border-radius:999px;padding:3px 12px;cursor:pointer;
+  box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.more.on{display:inline-flex}
+.more .mchev{display:inline-block;animation:mbob 1.5s infinite}
+@keyframes mbob{50%{transform:translateY(3px)}}
+.fade{position:absolute;left:10px;right:10px;bottom:0;height:44px;z-index:3;pointer-events:none;
+  border-radius:0 0 10px 10px;opacity:0;transition:opacity .2s;
+  background:linear-gradient(to bottom,rgba(13,18,32,0),rgba(13,18,32,.96))}
+.fade.on{opacity:1}
 .narr .cap{color:var(--gold);font-weight:700;font-size:15px;margin:4px 0 8px;
   padding-top:10px;border-top:1px dashed var(--line2)}
 .narr .cap:first-child{border-top:0;padding-top:0}
@@ -2074,6 +2094,7 @@ function say(t, cls, ctx2){
   box.appendChild(p);
   while (box.children.length > 60) box.removeChild(box.firstChild);
   box.scrollTop = box.scrollHeight;
+  if (window.syncMore) setTimeout(syncMore, 20);
   return p;
 }
 function caption(txt){
@@ -2672,7 +2693,7 @@ function camInit(){
   var ptrs = {};
   var pinch0 = 0, z0 = 1;
   el.addEventListener('pointerdown', function(ev){
-    if (ev.target.closest && ev.target.closest('.pad, .sheet, .mapx')) return;
+    if (ev.target.closest && ev.target.closest('.pad, .sheet, .mapui')) return;
     el.setPointerCapture(ev.pointerId);
     ptrs[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
     var ks = Object.keys(ptrs);
@@ -2703,7 +2724,7 @@ function camInit(){
   });
   var down0 = null;
   el.addEventListener('pointerdown', function(ev){
-    if (ev.target.closest && ev.target.closest('.pad, .sheet')) { down0 = null; return; }
+    if (ev.target.closest && ev.target.closest('.pad, .sheet, .mapui')) { down0 = null; return; }
     down0 = { x: ev.clientX, y: ev.clientY, t: 1 };
   });
   var up = function(ev){
@@ -2912,6 +2933,7 @@ function enter(id){
       + '……何かが動く気配が、壁越しに伝わってきた}。{遠くない|方角の見当は、つく}。');
   render();
   if (anchor) narrBox().scrollTop = Math.max(0, anchor.offsetTop - 8);
+  if (window.syncMore) setTimeout(syncMore, 40);
 }
 
 /* ================= 依頼：主との対決と脱出 =================
@@ -3305,6 +3327,7 @@ function render(){
 
   S.ui.forced = forced;
   syncSheet();
+  if (window.syncMore) setTimeout(syncMore, 30);
 }
 
 /* シートの開閉と、強制場面（遭遇・対峙・入口の前）の扱い */
@@ -3451,6 +3474,22 @@ document.addEventListener('DOMContentLoaded', function(){
   document.addEventListener('click', function(){
     if (S && !document.fullscreenElement) goFullscreen();
   }, true);
+  /* 文章の続きがあることを知らせる（下端のぼかし＋「続きがある」） */
+  var nEl = document.getElementById('narr'), fEl = document.getElementById('nfade'),
+      mEl = document.getElementById('nmore');
+  window.syncMore = function(){
+    var more = nEl.scrollHeight - nEl.scrollTop - nEl.clientHeight > 12;
+    fEl.classList.toggle('on', more);
+    mEl.classList.toggle('on', more);
+  };
+  nEl.addEventListener('scroll', syncMore, { passive: true });
+  mEl.onclick = function(){ nEl.scrollTo({ top: nEl.scrollHeight, behavior: 'smooth' }); };
+  addEventListener('resize', function(){ setTimeout(syncMore, 60); });
+
+  document.getElementById('mz_full').onclick = function(){
+    document.body.classList.toggle('mapbig');
+    setTimeout(function(){ if (S) camApply(); }, 30);
+  };
   document.getElementById('tb_info').onclick = showInfo;
   document.getElementById('mapx').onclick = function(){
     if (RPGQ){
