@@ -174,7 +174,7 @@ var CB = (function () {
         {key:'mass',    name:'大治癒', kind:'heal', range:'all_ally', value:7, fx:'heal', cd:2},
         {key:'martyr',  name:'殉教', kind:'revive', range:'dead_ally', fx:'revive', uses:1}
       ],
-      passives:[],
+      passives:['longreach'],   /* 後衛からでも聖なる裁きを撃てる。大治癒を切る間を自分で選べる */
       flavor:'己の命を差し出してでも、仲間をもう一度立たせる。' },
 
     /* --- 精霊（下位） --- */

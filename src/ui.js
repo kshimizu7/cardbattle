@@ -825,7 +825,22 @@
     function closeRPG() { ov.remove(); window.RPGDONE = null; syncBgm(); }
     window.RPGDONE = function (res) {
       closeRPG();
-      if (!(res && res.cleared)) { renderTitle(); return; }
+      if (!res) { renderTitle(); return; }
+      if (!res.cleared) {
+        if (res.coin) {
+          var r3 = SAVE.rpgReward(null, res.coin);
+          var m3 = document.createElement('div');
+          m3.className = 'modal';
+          m3.innerHTML = '<div class="box"><div class="rules" style="text-align:center">' +
+            '<h3>引き上げた</h3>' +
+            '<p>依頼は果たせなかったが、拾い集めた硬貨 <b>' + res.coin + '</b> 枚は持ち帰った。</p>' +
+            '<p>所持硬貨：<b>' + r3.coin + '</b> 枚</p>' +
+            '<button class="btn primary" id="rok3" style="width:100%">とじる</button></div></div>';
+          document.body.appendChild(m3);
+          m3.querySelector('#rok3').onclick = function () { m3.remove(); renderTitle(); };
+        } else renderTitle();
+        return;
+      }
       var r2 = SAVE.rpgReward(res.id, res.coin);
       var mm = document.createElement('div');
       mm.className = 'modal';

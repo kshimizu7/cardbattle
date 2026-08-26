@@ -2767,10 +2767,10 @@ function enter(id){
         say('{探していたものは、この奥にある|ここが最奥だ|——ここまで来た}。', 'em');
         var bg = S.book.filter(function(b){ return b.goal && !b.used; })[0];
         if (bg){ bg.used = 1; say('── 帳面に写した話は、本当だったということだ', 'sys'); }
-        if (RPGQ && !S.qdone){
-          S.qdone = 1;
-          say('奥の間の主は、こちらを待っていた。誰も口をきかないまま、得物が抜かれ——長い戦いの末、それは動かなくなった。', 'em');
-          say('── 依頼達成：' + RPGQ.name + '（主との本式の戦闘は、次の段で入ります）', 'sys');
+        if (RPGQ && !S.qdone && !S.bossDown){
+          say('部屋の最奥で、ひときわ大きな影が、ゆっくりと身を起こした。——主だ。'
+            + 'こちらを認めて、もう目を離さない。', 'em');
+          S.boss = 1;
         }
       }
     }
@@ -2783,6 +2783,43 @@ function enter(id){
       + '……何かが動く気配が、壁越しに伝わってきた}。{遠くない|方角の見当は、つく}。');
   render();
   if (anchor) narrBox().scrollTop = Math.max(0, anchor.offsetTop - 8);
+}
+
+/* ================= 依頼：主との対決と脱出 =================
+   文字を一度に流さず、間を置いて達成を味わえるようにする */
+function bossFight(){
+  S.boss = 0; S.bossDown = 1;
+  document.getElementById('choices').innerHTML = '';
+  say('得物が抜かれる。誰も、口をきかなかった。', 'em');
+  setTimeout(function(){
+    say('長い戦いだった。壁が震え、灯りは幾度も掻き消えかけた。', 'em');
+  }, 1600);
+  setTimeout(function(){
+    say('——終わった。それは、二度と動かなかった。', 'em');
+  }, 3400);
+  setTimeout(function(){
+    say('── 依頼達成：' + RPGQ.name, 'sys');
+    say('（主との本式の戦闘は、次の段で入ります。いまは幕だけ下ろしています）', 'sys');
+  }, 5000);
+  setTimeout(function(){
+    S.qdone = 1;
+    say('あとは、来た道を戻るだけだ。生きて、外の光を見る。', 'em');
+    render();
+  }, 6400);
+}
+function exitDungeon(){
+  document.getElementById('choices').innerHTML = '';
+  say('南の口から、外の光が差し込んでいる。', 'em');
+  setTimeout(function(){
+    say(S.qdone
+      ? '外に出ると、風の匂いが変わった。誰かが大きく息を吐き——それから、ようやく誰かが笑った。'
+      : '外の光は、まぶしかった。今回は、ここまでだ。', 'em');
+  }, 1500);
+  setTimeout(function(){
+    try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: !!S.qdone,
+      coin: (S.qdone ? (RPGQ.coin || 0) : 0) + (S.loot || 0) * 10,
+      loot: S.loot || 0, kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
+  }, 3400);
 }
 
 /* ================= 帳面 =================
@@ -2976,6 +3013,10 @@ function render(){
     b.onclick = fn; box.appendChild(b);
   };
 
+  if (RPGQ && S.boss && !S.bossDown){
+    add('討ちかかる', '退路はない', 'act', bossFight);
+    return;
+  }
   if (S.enc){
     var gid0 = S.enc.gate;
     add('斬りかかる', gid0 ? '倒せば、道が変わる' : '倒せば、不殺の条件は消える', 'act', function(){
@@ -3017,11 +3058,12 @@ function render(){
     add((fp ? fp.w + '側の' : '') + FEATURES[fid].act, '', 'act', function(){ useFeature(n, fid); });
   });
 
-  if (RPGQ && S.qdone) add('街へ戻る', '報酬を受け取る', 'act', function(){
-    var coin = (RPGQ.coin || 0) + (S.loot || 0) * 10;
-    try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: true, coin: coin,
-      loot: S.loot || 0, kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
-  });
+  if (RPGQ && n.entrance && n.kind === 'room'){
+    if (S.qdone) add('外へ出る──依頼を果たして街へ戻る', '', 'act', exitDungeon);
+    else add('外へ出る──引き上げる', '依頼は未達。拾ったものは持ち帰れる', '', function(){
+      exitDungeon();
+    });
+  }
 
   /* 移動。方角＋行き先の様子 */
   exitsOf(n).forEach(function(e){
