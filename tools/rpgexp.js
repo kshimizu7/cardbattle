@@ -636,7 +636,7 @@ function describeRoom(n, first){
         '{は、そのままそこにある|は、変わらずそこにある|が、黙って同じ場所にある|には、まだ手を付けていない}。');
     }
   });
-  var pendingFoe = false;
+  var pendingFoe = false, seedText = null;
   if (n.ev && !S.evDone[n.id]){
     var k2 = KEYS[n.ev.key];
     if (n.ev.t === 'hint'){
@@ -650,7 +650,7 @@ function describeRoom(n, first){
       else if (rnd() < 0.4)
         say('記されたものは、まだ読んでいない。');
     } else if (n.ev.t === 'seed' && first){
-      say(k2.seed);
+      seedText = k2.seed;                   /* ③のあと、選択肢の直前で語る */
     } else if (n.ev.t === 'foe' && first){
       pendingFoe = true;                    /* ④で最後に語る */
     }
@@ -674,6 +674,9 @@ function describeRoom(n, first){
       narrBox().appendChild(p);
     }
   }
+
+  /* ③のあと：見つけたもの。選択肢の直前に置き、行動と地続きにする */
+  if (seedText) say(seedText);
 
   /* ④ 危機。ここで説明を止め、選択肢に落とす */
   if (pendingFoe){
@@ -770,7 +773,9 @@ function seedActs(n){
     S.did['favor:'+gid]=1; done();
     say('{$who が、黙って手を貸した|時間は食った。それだけのことだ|'+
       '$hurt が、自分の水を分けた}。{相手は、何も言わなかった|礼らしい礼は、無かった}。','em'); } });
-  if (c.t === 'carry' || c.t === 'offer') out.push({ l:'持っていく', k:'荷が一つ増える', f:function(){
+  var NOUN = { key:'鍵', scale:'鱗', tablet:'石板', food:'食料' };
+  var nn = NOUN[c.item];
+  if (c.t === 'carry' || c.t === 'offer') out.push({ l: nn ? nn + 'を、持っていく' : '持っていく', k:'荷が一つ増える', f:function(){
     S.bag[c.item]=1; done();
     say('{$who が、それを荷に収めた|重いが、置いていく気にはならない|'+
       '使い道は、そのうち分かる}。','em'); } });
