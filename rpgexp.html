@@ -3202,9 +3202,7 @@ function render(){
     var cls = 'off';
     if (e){
       var shut = e.via && e.via.gate && !S.open[e.via.gate];
-      if (shut && S.been[e.via.id]) cls = 'shut';
-      else if (S.been[e.far.id]) cls = 'back';
-      else cls = 'unex';
+      cls = (shut && S.been[e.via.id]) ? 'shut' : 'unex';   /* 動けるなら一律で点灯 */
     }
     b.className = 'pd ' + cls;
     b.onclick = e ? (function(e2){ return function(){ enter(e2.via ? e2.via.id : e2.far.id); }; })(e) : null;
