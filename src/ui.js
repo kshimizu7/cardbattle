@@ -798,8 +798,16 @@
       };
     });
   }
+  window.RPGFULL = function () {
+    try {
+      var el = document.documentElement;
+      if (!document.fullscreenElement && el.requestFullscreen) el.requestFullscreen().catch(function () {});
+      else if (!document.webkitFullscreenElement && el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    } catch (e) {}
+  };
   function openRPGQuest(q) {
     BGM.stop && BGM.stop();
+    window.RPGFULL();
     var ov = document.createElement('div');
     ov.id = 'rpgov';
     ov.style.cssText = 'position:fixed;inset:0;z-index:400;background:#000;display:flex;flex-direction:column';

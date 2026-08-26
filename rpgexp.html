@@ -21,41 +21,21 @@
   <div class="mapwrap" id="mapwrap">
     <div id="mapsvg"></div>
     <div class="pad" id="pad">
-      <svg viewBox="0 0 232 210" aria-label="操作盤">
-        <defs>
-          <radialGradient id="brs" cx="0.4" cy="0.32">
-            <stop offset="0" stop-color="#8b7340"/><stop offset="0.55" stop-color="#5d4a23"/>
-            <stop offset="1" stop-color="#33280f"/>
-          </radialGradient>
-          <linearGradient id="arm" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#3b3018"/><stop offset="1" stop-color="#241b0c"/>
-          </linearGradient>
-        </defs>
-        <g id="dial" transform="translate(16,22)">
-          <circle cx="90" cy="90" r="88" fill="url(#brs)" fill-opacity="0.42"
-            stroke="#c9a24a" stroke-opacity="0.55" stroke-width="3"/>
-          <circle cx="90" cy="90" r="79" fill="none" stroke="#0e0a04" stroke-opacity="0.5" stroke-width="2"/>
-          <g id="pd_n" class="pd"><path d="M62 26 h56 v34 l-28 24 -28-24z"/>
-            <path class="ar" d="M78 60 L90 46 L102 60 L97 64.5 L90 56.5 L83 64.5z"/></g>
-          <g id="pd_s" class="pd"><path d="M62 154 h56 v-34 l-28-24 -28 24z"/>
-            <path class="ar" d="M78 120 L90 134 L102 120 L97 115.5 L90 123.5 L83 115.5z"/></g>
-          <g id="pd_w" class="pd"><path d="M26 62 v56 h34 l24-28 -24-28z"/>
-            <path class="ar" d="M60 78 L46 90 L60 102 L64.5 97 L56.5 90 L64.5 83z"/></g>
-          <g id="pd_e" class="pd"><path d="M154 62 v56 h-34 l-24-28 24-28z"/>
-            <path class="ar" d="M120 78 L134 90 L120 102 L115.5 97 L123.5 90 L115.5 83z"/></g>
-          <g id="pd_c" class="pd c">
-            <circle cx="90" cy="90" r="30"/>
-            <g class="gear" stroke-linecap="round">
-              <circle class="gr" cx="90" cy="90" r="17" fill="none" stroke-width="4"/>
-              <circle class="gr" cx="90" cy="90" r="6" fill="none" stroke-width="3"/>
-              <g class="gt"><path d="M90 68v7M90 105v7M68 90h7M105 90h7M74 74l5 5M101 101l5 5M106 74l-5 5M79 101l-5 5"/></g>
-            </g>
-          </g>
+      <svg viewBox="0 0 200 196" aria-label="操作盤">
+        <defs><linearGradient id="brs" x1="0" y1="0" x2="0.3" y2="1"><stop offset="0" stop-color="#7a6334"/><stop offset="0.5" stop-color="#4a3a1a"/><stop offset="1" stop-color="#2a2110"/></linearGradient></defs>
+        <g id="pd_n" class="pd"><path class="plate" d="M70 64 V44 H77 V33 L86 23 H104 L113 33 V44 H120 V64 L112 64 L104 66 L95 76 L86 66 L78 64 Z"/><path class="ar" d="M83.5 57 L95 43 L106.5 57 L101 61 L95 53.5 L89 61 Z"/></g>
+        <g id="pd_e" class="pd" transform="rotate(90 95 95)"><path class="plate" d="M70 64 V44 H77 V33 L86 23 H104 L113 33 V44 H120 V64 L112 64 L104 66 L95 76 L86 66 L78 64 Z"/><path class="ar" d="M83.5 57 L95 43 L106.5 57 L101 61 L95 53.5 L89 61 Z"/></g>
+        <g id="pd_s" class="pd" transform="rotate(180 95 95)"><path class="plate" d="M70 64 V44 H77 V33 L86 23 H104 L113 33 V44 H120 V64 L112 64 L104 66 L95 76 L86 66 L78 64 Z"/><path class="ar" d="M83.5 57 L95 43 L106.5 57 L101 61 L95 53.5 L89 61 Z"/></g>
+        <g id="pd_w" class="pd" transform="rotate(270 95 95)"><path class="plate" d="M70 64 V44 H77 V33 L86 23 H104 L113 33 V44 H120 V64 L112 64 L104 66 L95 76 L86 66 L78 64 Z"/><path class="ar" d="M83.5 57 L95 43 L106.5 57 L101 61 L95 53.5 L89 61 Z"/></g>
+        <g id="pd_c" class="pd c">
+          <path class="plate" d="M95 68 L112 75 L122 95 L112 115 L95 122 L78 115 L68 95 L78 75 Z"/>
+          <g class="gt"><path d="M95 70v-7M95 120v7M70 95h-7M120 95h7M78 78l-5-5M112 112l5 5M112 78l5-5M78 112l-5 5"/></g>
+          <circle class="gr" cx="95" cy="95" r="16" fill="none"/>
+          <circle class="gr2" cx="95" cy="95" r="6.5"/>
         </g>
-        <g id="pd_k" class="pd k" transform="translate(178,16)">
-          <circle cx="0" cy="0" r="27" fill="url(#brs)" fill-opacity="0.55"
-            stroke="#c9a24a" stroke-opacity="0.6" stroke-width="2.5"/>
-          <path class="fl" d="M0 -13c5 6 8 10 8 15 0 5-3.6 9-8 9s-8-4-8-9c0-5 3-8 8-15z"/>
+        <g id="pd_k" class="pd k" transform="translate(170,22)">
+          <path class="plate" d="M0 -26 L18 -18 L26 0 L18 18 L0 26 L-18 18 L-26 0 L-18 -18 Z"/>
+          <path class="fl" d="M0 -13c5.5 6.5 8.5 10.5 8.5 15.5 0 5.2-3.8 9.2-8.5 9.2s-8.5-4-8.5-9.2c0-5 3-9 8.5-15.5z"/>
         </g>
       </svg>
     </div>
@@ -64,6 +44,7 @@
       <div id="sheetbody"></div>
     </div>
   </div>
+  <div class="entrybar" id="entrybar"></div>
   <div class="party" id="party"></div>
 </div>
 
@@ -121,30 +102,36 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   border-top:2px solid #241f14;touch-action:none;user-select:none;-webkit-user-select:none}
 #mapsvg{position:absolute;inset:0}
 #mapsvg svg{position:absolute;display:block;will-change:left,top,width}
-.pad{position:absolute;right:2px;bottom:0;z-index:5;width:196px;height:178px;
+.pad{position:absolute;right:-4px;bottom:0;z-index:5;width:190px;height:186px;
   transition:opacity .2s}
 .pad.away{opacity:0;pointer-events:none}
 .pad svg{width:100%;height:100%;overflow:visible}
 .pd{cursor:pointer}
-.pd>path:first-child,.pd>circle:first-child{fill:url(#arm);fill-opacity:.5;
-  stroke:#c9a24a;stroke-opacity:.3;stroke-width:1.5}
+.pd .plate{fill:url(#brs);fill-opacity:.62;stroke:#c9a24a;stroke-opacity:.32;stroke-width:1.6;
+  stroke-linejoin:round}
 .pd .ar{fill:#6f6a58}
-.pd.unex .ar{fill:#f2c65c}
-.pd.unex>path:first-child{stroke-opacity:.7}
-.pd.unex .ar{filter:drop-shadow(0 0 3px rgba(242,198,92,.5))}
+.pd.unex .ar{fill:#f2c65c;filter:drop-shadow(0 0 3px rgba(242,198,92,.55))}
+.pd.unex .plate{stroke-opacity:.8;fill-opacity:.72}
 .pd.shut .ar{fill:#d08a7a}
-.pd.shut>path:first-child{stroke:#a03434;stroke-opacity:.8}
-.pd.off{opacity:.26;pointer-events:none}
-.pd:active>path:first-child{fill-opacity:.96}
-.pd.c>circle:first-child{fill:#241b0c;fill-opacity:.66;stroke:#c9a24a;stroke-opacity:.35;stroke-width:2}
-.pd.c .gr,.pd.c .gt{stroke:#6f6a58}
-.pd.c.has>circle:first-child{fill:#3a2c10;stroke-opacity:.9}
+.pd.shut .plate{stroke:#a03434;stroke-opacity:.85}
+.pd.off{opacity:.22;pointer-events:none}
+.pd:active .plate{fill-opacity:.95}
+.pd.c .gr,.pd.c .gt{stroke:#6f6a58;stroke-width:3.4;fill:none;stroke-linecap:round}
+.pd.c .gr2{fill:#6f6a58}
+.pd.c.has .plate{fill-opacity:.8;stroke-opacity:.95}
 .pd.c.has .gr,.pd.c.has .gt{stroke:#f2c65c}
-.pd.c.has{animation:cglow 1.8s infinite}
-@keyframes cglow{50%{filter:drop-shadow(0 0 7px rgba(242,198,92,.55))}}
+.pd.c.has .gr2{fill:#f2c65c}
+.pd.c.has{animation:cglow 1.9s infinite}
+@keyframes cglow{50%{filter:drop-shadow(0 0 8px rgba(242,198,92,.5))}}
 .pd.k .fl{fill:#6f6a58}
-.pd.k.has .fl{fill:#f2c65c}
-.pd.k.off{opacity:.26;pointer-events:none}
+.pd.k.has .fl{fill:#f2c65c;filter:drop-shadow(0 0 4px rgba(242,198,92,.5))}
+.pd.k.off{opacity:.22;pointer-events:none}
+.entrybar{flex:0 0 auto;display:none;gap:8px;align-items:stretch;padding:8px 10px 4px}
+.entrybar.on{display:flex}
+.entrybar button{font:inherit;border-radius:11px;cursor:pointer;padding:10px 6px;
+  border:1px solid var(--line2);background:var(--panel2);color:var(--ink2);font-size:12.5px;flex:1 1 0}
+.entrybar button.main{flex:1.7 1 0;font-size:16px;font-weight:700;color:#1a1305;
+  background:var(--gold);border-color:var(--gold)}
 .pad.lockpad .pd:not(.c){opacity:.16;pointer-events:none}
 .topbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:7px 10px;
   background:var(--panel);border-bottom:1px solid var(--line)}
@@ -3207,12 +3194,7 @@ function render(){
       else say('{息を殺して、やり過ごした|向こうは、こちらに関心を示さなかった}。','em');
       render(); });
   } else if (S.pre){
-    add('入る', '', 'act', function(){ S.pre = 0; S.ui.sheet = 0; enter(S.map.start); });
-    add('装備を整える', 'Phase 2 で追加予定', '', function(){
-      say('（装備は Phase 2 で。いまは身ひとつでもぐる）', 'sys'); render(); });
-    add('引き返す', RPGQ ? '依頼を諦めて街へ戻る' : 'ダンジョン選択へ戻る', '', function(){
-      if (RPGQ){ try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: false }); } catch (e) {} return; }
-      document.getElementById('setup').style.display='flex'; });
+    /* 入口の前だけは、最下段の一列に大きく */
   } else {
 
   /* 関門の前でだけ出せる行動 */
@@ -3309,13 +3291,32 @@ function render(){
   pk.onclick = skillOK ? function(){ S.ui.sheet = (S.ui.sheet === 'skill') ? 0 : 'skill'; syncSheet(); } : null;
   document.getElementById('sheetx').onclick = function(){ S.ui.sheet = 0; syncSheet(); };
 
+  /* 入口の前：最下段の一列（真ん中に大きく「入る」） */
+  var eb = document.getElementById('entrybar');
+  eb.classList.toggle('on', !!S.pre);
+  if (S.pre){
+    eb.innerHTML = '';
+    var mk2 = function(label, cls, fn){
+      var b = document.createElement('button');
+      if (cls) b.className = cls;
+      b.textContent = label; b.onclick = fn; eb.appendChild(b);
+    };
+    mk2('装備を整える', '', function(){
+      say('（装備は Phase 2 で。いまは身ひとつでもぐる）', 'sys'); });
+    mk2('入 る', 'main', function(){ S.pre = 0; enter(S.map.start); });
+    mk2(RPGQ ? '戻る' : '選び直す', '', function(){
+      if (RPGQ){ try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: false }); } catch (e) {} return; }
+      document.getElementById('setup').style.display='flex'; });
+  }
+  document.getElementById('pad').style.display = S.pre ? 'none' : '';
+
   S.ui.forced = forced;
   syncSheet();
 }
 
 /* シートの開閉と、強制場面（遭遇・対峙・入口の前）の扱い */
 function syncSheet(){
-  var mode = S.ui.forced ? 'act' : S.ui.sheet;
+  var mode = S.pre ? 0 : (S.ui.forced ? 'act' : S.ui.sheet);
   var sh = document.getElementById('sheet');
   var body2 = document.getElementById('sheetbody');
   body2.innerHTML = '';
@@ -3341,7 +3342,7 @@ function preEntry(){
   say('{口を開けた闇の前に、一行は立った|入口の前で、誰からともなく足が止まった|'
     + '$smellが、中から流れてくる}。'
     + '{ここから先は、$lightだけが頼りになる|引き返すなら、いまのうちだ}。');
-  S.pre = 1; S.ui.sheet = 'act';
+  S.pre = 1; S.ui.sheet = 0;
   render();
   narrBox().scrollTop = 0;
 }
@@ -3367,6 +3368,8 @@ var VARDEFS = [
   ['loops',   '回廊',       [['流儀',''],['少ない','few'],['そこそこ','some'],['多い','many']]]
 ];
 function goFullscreen(){
+  /* iframe の中からより、親ページごと全画面にするほうが確実に効く */
+  try { if (parent !== window && parent.RPGFULL){ parent.RPGFULL(); return; } } catch (e) {}
   try {
     if (!document.fullscreenElement && document.documentElement.requestFullscreen)
       document.documentElement.requestFullscreen().catch(function(){});
