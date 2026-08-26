@@ -14,7 +14,15 @@
   <div class="col">
     <div class="side">
       <div class="narr" id="narr"></div>
-      <div class="choices" id="choices"></div>
+      <div class="pad" id="pad">
+        <span></span><button class="pd" id="pd_n">▲</button><span></span>
+        <button class="pd" id="pd_w">◀</button><button class="pd c" id="pd_c">●</button><button class="pd" id="pd_e">▶</button>
+        <span></span><button class="pd" id="pd_s">▼</button><span></span>
+      </div>
+      <div class="sheet" id="sheet">
+        <div class="sheethead"><span id="sheettl">行動</span><button id="sheetx">✕</button></div>
+        <div id="sheetbody"></div>
+      </div>
     </div>
     <div class="party" id="party"></div>
   </div>
@@ -69,7 +77,7 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   border-radius:999px;padding:2px 9px;white-space:nowrap;background:var(--panel2)}
 @media (max-width:392px){ .top .spot{display:none} .chip{padding:2px 7px;font-size:10.5px} }
 .chip.on{color:var(--gold);border-color:var(--gold)}
-.mapwrap{flex:0 0 42svh;position:relative;overflow:hidden;background:#e6dfca;
+.mapwrap{flex:0 0 42svh;position:relative;overflow:hidden;background:#7f7866;
   border-bottom:2px solid #241f14;touch-action:none;user-select:none;-webkit-user-select:none}
 #mapsvg{position:absolute;inset:0}
 #mapsvg svg{position:absolute;display:block;will-change:left,top,width}
@@ -81,13 +89,40 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
 .mapctl2{position:absolute;right:6px;bottom:8px;z-index:3;display:flex;flex-direction:column;gap:6px}
 .mapctl2 button{width:38px;height:38px;border-radius:10px;border:0;font:inherit;font-size:13px;
   background:rgba(22,17,9,.66);color:#f6efd9;cursor:pointer}
+.pad{position:absolute;right:12px;bottom:12px;z-index:5;display:grid;
+  grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:5px;
+  opacity:1;transition:opacity .25s}
+.pad.hidden{opacity:0;pointer-events:none}
+.pad.lockpad .pd{opacity:.15;pointer-events:none}
+.pd{border-radius:12px;border:1px solid var(--line2);background:rgba(13,18,32,.8);
+  color:var(--ink2);font-size:17px;font:inherit;cursor:pointer;padding:0}
+.pd:active{background:#1a2740}
+.pd.unex{border-color:var(--gold);color:var(--gold)}
+.pd.back{opacity:.5}
+.pd.shut{border-color:#a03434;color:#c98a7a}
+.pd.off{opacity:.13;pointer-events:none}
+.pd.c{border-radius:50%;font-size:19px;background:rgba(13,18,32,.35);
+  border-color:rgba(43,55,82,.5);color:rgba(148,164,196,.35)}
+.pd.c.has{background:var(--gold);color:#1a1305;border-color:var(--gold);
+  animation:cpulse 1.5s infinite}
+@keyframes cpulse{50%{box-shadow:0 0 0 8px rgba(242,198,92,.16)}}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;max-height:58%;z-index:6;
+  background:var(--panel);border:1px solid var(--line2);border-radius:12px;
+  display:none;flex-direction:column;box-shadow:0 -8px 28px rgba(0,0,0,.55)}
+.sheet.on{display:flex}
+.sheethead{display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px 4px;color:var(--ink3);font-size:11.5px;flex:0 0 auto}
+.sheethead button{font:inherit;font-size:13px;width:30px;height:30px;border-radius:8px;
+  border:1px solid var(--line2);background:var(--panel2);color:var(--ink2);cursor:pointer}
+#sheetbody{overflow-y:auto;padding:2px 8px 8px;display:flex;flex-direction:column;gap:6px;
+  -webkit-overflow-scrolling:touch}
 .statline{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--ink3);
   padding:5px 4px 2px;flex-wrap:wrap}
 .statline .on{color:var(--gold)}
 .statline button{font:inherit;font-size:11px;color:var(--ink2);background:var(--panel2);
   border:1px solid var(--line2);border-radius:999px;padding:2px 10px;cursor:pointer}
 .side{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 10px 0}
-.narr{flex:1 1 0;overflow-y:auto;min-height:7.5em;padding:10px 12px;
+.narr{flex:1 1 0;overflow-y:auto;min-height:7.5em;padding:10px 12px 110px;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;
   -webkit-overflow-scrolling:touch}
 .narr p{margin:0 0 10px}
@@ -2850,7 +2885,7 @@ function enter(id){
    文字を一度に流さず、間を置いて達成を味わえるようにする */
 function bossFight(){
   S.boss = 0; S.bossDown = 1;
-  document.getElementById('choices').innerHTML = '';
+  S.ui.lock = 1; S.ui.sheet = false; S.ui.forced = false; syncSheet();
   say('得物が抜かれる。誰も、口をきかなかった。', 'em');
   setTimeout(function(){
     say('長い戦いだった。壁が震え、灯りは幾度も掻き消えかけた。', 'em');
@@ -2863,13 +2898,13 @@ function bossFight(){
     say('（主との本式の戦闘は、次の段で入ります。いまは幕だけ下ろしています）', 'sys');
   }, 5000);
   setTimeout(function(){
-    S.qdone = 1;
+    S.qdone = 1; S.ui.lock = 0;
     say('あとは、来た道を戻るだけだ。生きて、外の光を見る。', 'em');
     render();
   }, 6400);
 }
 function exitDungeon(){
-  document.getElementById('choices').innerHTML = '';
+  S.ui.lock = 1; S.ui.sheet = false; S.ui.forced = false; syncSheet();
   say('南の口から、外の光が差し込んでいる。', 'em');
   setTimeout(function(){
     say(S.qdone
@@ -3046,11 +3081,9 @@ function encounter(){
 /* ================= 描画 ================= */
 function render(){
   drawMap();
-  var n = S.map.byId[S.at], box = document.getElementById('choices');
-  box.innerHTML = '';
-
+  var n = S.map.byId[S.at];
   document.getElementById('mapname').textContent =
-    DUNGEONS[S.dun].name + '　' + labelOf(n);
+    DUNGEONS[S.dun].name + '　' + (S.pre ? '入口の前' : labelOf(n));
   document.getElementById('bookx').onclick = function(){ document.getElementById('bookov').classList.remove('on'); };
   document.getElementById('party').innerHTML = PARTY.map(function(p){
     var pct = Math.max(0, Math.round(p.hp / p.mx * 100));
@@ -3061,18 +3094,24 @@ function render(){
       + '<div class="bar"><i style="width:'+pct+'%;background:'+col+'"></i></div></div>';
   }).join('');
 
+  var body2 = document.getElementById('sheetbody');
+  body2.innerHTML = '';
+  var notable = 0;
   var add = function(label, key, cls, fn){
     var b = document.createElement('button');
-    b.className = 'btn ' + (cls||'');
+    b.className = 'btn ' + (cls || '');
+    if (cls === 'act') notable++;
     b.innerHTML = label + (key ? '<span class="k">' + key + '</span>' : '');
-    b.onclick = fn; box.appendChild(b);
+    b.onclick = function(){ S.ui.sheet = false; fn(); };
+    body2.appendChild(b);
   };
 
+  var forced = false;
   if (RPGQ && S.boss && !S.bossDown){
+    forced = true;
     add('討ちかかる', '退路はない', 'act', bossFight);
-    return;
-  }
-  if (S.enc){
+  } else if (S.enc){
+    forced = true;
     var gid0 = S.enc.gate;
     add('斬りかかる', gid0 ? '倒せば、道が変わる' : '倒せば、不殺の条件は消える', 'act', function(){
       S.kills++; if (gid0) S.did['slay:'+gid0] = 1;
@@ -3085,8 +3124,14 @@ function render(){
       if (rnd()<0.4){ S.hurt++; say('{擦れ違いざま、$hurt が浅く裂かれた|通り抜けたが、無傷とはいかない}。','bad'); }
       else say('{息を殺して、やり過ごした|向こうは、こちらに関心を示さなかった}。','em');
       render(); });
-    return;
-  }
+  } else if (S.pre){
+    add('入る', '', 'act', function(){ S.pre = 0; S.ui.sheet = false; enter(S.map.start); });
+    add('装備を整える', 'Phase 2 で追加予定', '', function(){
+      say('（装備は Phase 2 で。いまは身ひとつでもぐる）', 'sys'); render(); });
+    add('引き返す', RPGQ ? '依頼を諦めて街へ戻る' : 'ダンジョン選択へ戻る', '', function(){
+      if (RPGQ){ try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: false }); } catch (e) {} return; }
+      document.getElementById('setup').style.display='flex'; });
+  } else {
 
   /* 関門の前でだけ出せる行動 */
   if (n.kind === 'corridor' && n.gate && !S.open[n.gate]){
@@ -3115,21 +3160,10 @@ function render(){
 
   if (RPGQ && n.entrance && n.kind === 'room'){
     if (S.qdone) add('外へ出る──依頼を果たして街へ戻る', '', 'act', exitDungeon);
-    else add('外へ出る──引き上げる', '依頼は未達。拾ったものは持ち帰れる', '', function(){
-      exitDungeon();
-    });
+    else add('外へ出る──引き上げる', '依頼は未達。拾ったものは持ち帰れる', 'act', exitDungeon);
   }
 
-  /* 移動。方角＋行き先の様子 */
-  exitsOf(n).forEach(function(e){
-    var shut = e.via && e.via.gate && !S.open[e.via.gate];
-    var note;
-    if (shut && S.been[e.via.id]) note = '閉ざされた道';          /* 一度立って知ったあとだけ */
-    else if (S.been[e.far.id]) note = '来た道——' + labelOf(e.far);
-    else if (S.seen[e.far.id] || (e.via && S.seen[e.via.id])) note = '未踏——床が先へ続いている';
-    else note = '未踏——闇の先';
-    add(e.dir + 'へ進む', note, 'go', function(){ enter(e.via ? e.via.id : e.far.id); });
-  });
+  if (S.noise) add('物音のする方をうかがう', '遭遇するかもしれない', 'act', function(){ S.noise = 0; encounter(); });
 
   if (S.kills || S.hurt) add('入口まで引き返して、出直す', '敵は生き返る／条件はやり直せる', '', function(){
     S.kills = 0; S.hurt = 0; S.enc = 0; S.noise = 0;
@@ -3154,9 +3188,10 @@ function render(){
         '灯りではない。だが、あれが触れた場所の輪郭が、頭に浮かぶ}。','em');
     reveal(); render(); });
   else if (S.spellLeft > 0) add('（精霊の光）', 'あと ' + S.spellLeft + ' 歩', '', function(){});
-  if (S.noise) add('物音のする方をうかがう', '遭遇するかもしれない', '', function(){ S.noise = 0; encounter(); });
 
-  /* ステータス行（第2弾で行動シートへ移す予定の置き場） */
+  }
+
+  /* ステータス行（シートの底） */
   var st2 = document.createElement('div');
   st2.className = 'statline';
   var rooms2 = S.map.nodes.filter(function(x){ return x.kind === 'room'; }).length;
@@ -3165,8 +3200,44 @@ function render(){
     + '<span>討 ' + S.kills + '</span><span>傷 ' + S.hurt + '</span>'
     + '<span class="' + (S.torch ? 'on' : '') + '">' + (S.torch ? '松明 ON' : '松明 OFF') + '</span>'
     + '<button id="bok2">帳面 ' + S.book.length + '</button>';
-  box.appendChild(st2);
+  body2.appendChild(st2);
   document.getElementById('bok2').onclick = showBook;
+
+  /* 十字キー：矢印の色で行き先の状態を伝える（金＝未踏／薄い＝来た道／赤＝閉ざされた） */
+  var dirId = { '北':'pd_n', '南':'pd_s', '西':'pd_w', '東':'pd_e' };
+  var pads = { pd_n:null, pd_s:null, pd_w:null, pd_e:null };
+  if (!forced && !S.pre && !S.ui.lock)
+    exitsOf(n).forEach(function(e){ pads[dirId[e.dir]] = e; });
+  Object.keys(pads).forEach(function(id){
+    var b = document.getElementById(id), e = pads[id];
+    var cls = 'off';
+    if (e){
+      var shut = e.via && e.via.gate && !S.open[e.via.gate];
+      if (shut && S.been[e.via.id]) cls = 'shut';
+      else if (S.been[e.far.id]) cls = 'back';
+      else cls = 'unex';
+    }
+    b.className = 'pd ' + cls;
+    b.onclick = e ? (function(e2){ return function(){ enter(e2.via ? e2.via.id : e2.far.id); }; })(e) : null;
+  });
+  var pc2 = document.getElementById('pd_c');
+  pc2.className = 'pd c' + (notable && !forced ? ' has' : '');
+  pc2.onclick = function(){ S.ui.sheet = !S.ui.sheet; syncSheet(); };
+  document.getElementById('sheetx').onclick = function(){ S.ui.sheet = false; syncSheet(); };
+
+  S.ui.forced = forced;
+  syncSheet();
+}
+
+/* シートの開閉と、強制場面（遭遇・対峙・入口の前）の扱い */
+function syncSheet(){
+  var on = S.ui.forced || S.ui.sheet;
+  var sh = document.getElementById('sheet');
+  sh.classList.toggle('on', !!on && !S.ui.lock);
+  document.getElementById('sheetx').style.display = S.ui.forced ? 'none' : '';
+  document.getElementById('sheettl').textContent =
+    S.ui.forced ? (S.enc ? '——どうする' : '決断のとき') : '行動';
+  document.getElementById('pad').classList.toggle('lockpad', !!S.ui.forced || !!S.ui.lock);
 }
 
 /* ================= 入口の前 ================= */
@@ -3178,19 +3249,8 @@ function preEntry(){
   say('{口を開けた闇の前に、一行は立った|入口の前で、誰からともなく足が止まった|'
     + '$smellが、中から流れてくる}。'
     + '{ここから先は、$lightだけが頼りになる|引き返すなら、いまのうちだ}。');
-  var box = document.getElementById('choices');
-  box.innerHTML = '';
-  var add = function(label, key, cls, fn){
-    var b=document.createElement('button'); b.className='btn '+(cls||'');
-    b.innerHTML=label+(key?'<span class="k">'+key+'</span>':''); b.onclick=fn; box.appendChild(b);
-  };
-  add('入る', '', 'act', function(){ enter(S.map.start); });
-  add('装備を整える', 'Phase 2 で追加予定', '', function(){
-    say('（装備は Phase 2 で。いまは身ひとつでもぐる）', 'sys'); });
-  add('引き返す', RPGQ ? '依頼を諦めて街へ戻る' : 'ダンジョン選択へ戻る', '', function(){
-    if (RPGQ){ try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: false }); } catch (e) {} return; }
-    document.getElementById('setup').style.display='flex'; });
-  drawMap();
+  S.pre = 1; S.ui.sheet = true;
+  render();
   narrBox().scrollTop = 0;
 }
 
@@ -3234,6 +3294,7 @@ function begin(){
         did:{}, notes:{}, book:[], fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
         kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0,
         cam:{ z:1, panx:0, pany:0, fit:false },
+        ui:{ sheet:false, forced:false, lock:0 }, pre:0,
         ctx:ctxOf(SETUP.dun) };
   PARTY.forEach(function(p){ p.hp = p.mx; });
   document.getElementById('setup').style.display='none';
@@ -3297,6 +3358,16 @@ document.addEventListener('DOMContentLoaded', function(){
     v.style.display = v.style.display==='none' ? 'block' : 'none';
   };
   camInit();
+  var narrEl = document.getElementById('narr'), padEl = document.getElementById('pad');
+  var padT = null;
+  var padHide = function(){
+    padEl.classList.add('hidden');
+    clearTimeout(padT);
+    padT = setTimeout(function(){ padEl.classList.remove('hidden'); }, 750);
+  };
+  /* 自動スクロール（新しい文の追記）では隠さない。指とホイールのときだけ */
+  narrEl.addEventListener('wheel', padHide, { passive: true });
+  narrEl.addEventListener('touchmove', padHide, { passive: true });
   document.getElementById('mapx').onclick = function(){
     if (RPGQ){
       if (confirm('依頼を中断して街へ戻りますか？（報酬・拾いものはありません）')){
