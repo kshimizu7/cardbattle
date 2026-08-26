@@ -167,6 +167,14 @@ body.land .wrap{display:grid;grid-template-columns:46% 1fr;grid-template-rows:1f
 body.land .mapwrap{grid-column:1;grid-row:1/3;height:100svh;flex:none;border-top:0;border-right:2px solid #241f14}
 body.land .side{grid-column:2;grid-row:1;min-height:0}
 body.land .party{grid-column:2;grid-row:2}
+.askrow{display:flex;justify-content:space-between;gap:10px;margin:5px 0;font-size:12.5px}
+.askrow span{color:var(--ink3)}
+.askrow b{color:var(--ink);text-align:right}
+.askrow b.ok{color:var(--ok)}
+.askrow b.ng{color:var(--warn)}
+.askbtns{display:flex;gap:8px;align-items:center;margin:16px 0 0}
+.pd.out .ar{fill:#9fe6c0}
+.pd.out .plate{stroke:#7de8a4;stroke-opacity:.75}
 .bookov{display:none !important}
 .bookov.on{display:flex !important}
 .setup{position:fixed;inset:0;background:rgba(4,6,11,.94);display:flex;
@@ -1125,6 +1133,33 @@ function makeNote(){
   ];
   return { t: tidy(VARI.expand(LORE[Math.floor(rnd() * LORE.length)], S.ctx, rnd)) + '。', goal: 1 };
 }
+function showExitAsk(){
+  var ov = document.getElementById('askov');
+  var bd = document.getElementById('askbody');
+  var rooms = S.map.nodes.filter(function(x){ return x.kind === 'room'; }).length;
+  var been = Object.keys(S.been).filter(function(k){ return S.map.byId[k].kind === 'room'; }).length;
+  var rows = [];
+  if (RPGQ) rows.push(S.qdone
+    ? ['依頼', '達成——' + RPGQ.name + '（報酬 硬貨 ' + RPGQ.coin + ' 枚）', 'ok']
+    : ['依頼', 'まだ果たしていない。奥の主は生きている', 'ng']);
+  rows.push(['踏破', been + ' / ' + rooms + ' 室', '']);
+  rows.push(['討った数', String(S.kills), '']);
+  rows.push(['傷', String(S.hurt), '']);
+  rows.push(['拾った硬貨', S.loot ? (S.loot + ' 束（' + (S.loot * 10) + ' 枚）') : 'なし', '']);
+  if (S.bag.salve) rows.push(['傷薬', S.bag.salve + ' つ', '']);
+  bd.innerHTML = '<p class="lead">南の口から、外の光が差している。ここから出られる。</p>'
+    + rows.map(function(r){
+        return '<p class="askrow"><span>' + r[0] + '</span><b class="' + r[2] + '">' + r[1] + '</b></p>';
+      }).join('')
+    + '<p class="lead">' + (S.qdone
+        ? '外へ出れば、依頼は完了し、報酬を受け取る。'
+        : '外へ出れば、今回の探索はここまで。拾ったものは持ち帰れる。')
+    + '</p>';
+  ov.classList.add('on');
+  document.getElementById('ask_yes').textContent = S.qdone ? '外へ出る（依頼を果たす）' : '外へ出る';
+  document.getElementById('ask_yes').onclick = function(){ ov.classList.remove('on'); exitDungeon(); };
+  document.getElementById('ask_no').onclick = function(){ ov.classList.remove('on'); };
+}
 function showInfo(){
   var d = DUNGEONS[S ? S.dun : SETUP.dun];
   var bd = document.getElementById('bookbody');
@@ -1200,11 +1235,8 @@ function useFeature(n, fid){
   }
   if (e.get){
     var giveSalve = function(pre){
-      var h2 = PARTY.filter(function(p){ return p.hp>0 && p.hp<p.mx; })
-        .sort(function(a,b){ return (a.hp/a.mx)-(b.hp/b.mx); })[0];
-      if (h2){ h2.hp = Math.min(h2.mx, h2.hp + 2);
-        say('── ' + pre + '傷薬だった。' + h2.n + ' の傷が少し塞がった', 'sys'); }
-      else say('── ' + pre + '傷薬だった。いつか要る。荷の底に収めた', 'sys');
+      S.bag.salve = (S.bag.salve || 0) + 1;
+      say('── ' + pre + '傷薬だった。荷に加えた（傷薬 ' + S.bag.salve + '）', 'sys');
     };
     var giveCoin = function(pre){
       S.loot = (S.loot || 0) + 1;
@@ -1369,11 +1401,6 @@ function render(){
     add((fp ? fp.w + '側の' : '') + FEATURES[fid].act, '', 'act', function(){ useFeature(n, fid); });
   });
 
-  if (RPGQ && n.entrance && n.kind === 'room'){
-    if (S.qdone) add('外へ出る──依頼を果たして街へ戻る', '', 'act', exitDungeon);
-    else add('外へ出る──引き上げる', '依頼は未達。拾ったものは持ち帰れる', 'act', exitDungeon);
-  }
-
   if (S.noise) add('物音のする方をうかがう', '遭遇するかもしれない', 'act', function(){ S.noise = 0; encounter(); });
 
   addSkill((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '光の輪 大 → 小' : '光の輪 小 → 大'), 'act', function(){
@@ -1388,6 +1415,27 @@ function render(){
         '灯りではない。だが、あれが触れた場所の輪郭が、頭に浮かぶ}。','em');
     reveal(); render(); });
   else if (S.spellLeft > 0) addSkill('（精霊の光）', 'あと ' + S.spellLeft + ' 歩', '', function(){});
+
+  /* ── 荷 ── */
+  var hurtOne = PARTY.filter(function(p){ return p.hp > 0 && p.hp < p.mx; })
+    .sort(function(a,b){ return (a.hp/a.mx) - (b.hp/b.mx); })[0];
+  if (S.bag.salve > 0) addSkill('傷薬をつかう　×' + S.bag.salve,
+    hurtOne ? hurtOne.n + ' の傷が塞がる' : '傷を負った者がいない', hurtOne ? 'act' : '', function(){
+      if (!hurtOne){ say('── いまは、使うまでもない', 'sys'); render(); return; }
+      S.bag.salve--;
+      hurtOne.hp = Math.min(hurtOne.mx, hurtOne.hp + 3);
+      say('{布を裂いて、傷に当てる|$who が、手早く手当てをした}。'
+        + hurtOne.n + ' の傷が塞がった。', 'em');
+      say('── 傷薬 のこり ' + S.bag.salve, 'sys');
+      render(); });
+  var ITEMS = [['key','鍵'],['scale','鱗'],['tablet','石板'],['food','保存食']];
+  ITEMS.forEach(function(it){
+    if (S.bag[it[0]]) addSkill(it[1], '関門で使う', '', function(){
+      say('── ' + it[1] + 'は、要る場所で自然と出番が来る', 'sys'); render(); });
+  });
+  if (S.loot) addSkill('拾った硬貨　×' + S.loot, '持ち帰れば ' + (S.loot * 10) + ' 枚', '', function(){});
+  if (!S.bag.salve && !S.loot && !ITEMS.some(function(it){ return S.bag[it[0]]; }))
+    addSkill('（荷は、軽いままだ）', '', '', function(){});
 
   }
 
@@ -1417,7 +1465,15 @@ function render(){
     }
     b.setAttribute('class', 'pd ' + cls);
     b.onclick = e ? (function(e2){ return function(){ enter(e2.via ? e2.via.id : e2.far.id); }; })(e) : null;
+    b.style.display = '';
   });
+  /* 入口の部屋の南は「外」。押すと、出るかどうかを尋ねる */
+  if (!forced && !S.pre && !S.ui.lock && n.entrance && n.kind === 'room' && !pads.pd_s){
+    var sb = document.getElementById('pd_s');
+    sb.setAttribute('class', 'pd out');
+    sb.onclick = showExitAsk;
+  }
+
   var pc2 = document.getElementById('pd_c');
   pc2.setAttribute('class', 'pd c' + (notable && !forced ? ' has' : ''));
   pc2.onclick = function(){ S.ui.sheet = (S.ui.sheet === 'act') ? 0 : 'act'; syncSheet(); };
@@ -1669,6 +1725,13 @@ const BODY = `
   <div class="entrybar" id="entrybar"></div>
   <div class="party" id="party"></div>
 </div>
+
+<div class="setup bookov" id="askov"><div class="card">
+  <h1>ダンジョンから出ますか？</h1>
+  <div id="askbody"></div>
+  <p class="askbtns"><button class="opt" id="ask_no">まだ戻らない</button>
+    <button class="start" id="ask_yes" style="margin:0;width:auto;flex:1">外へ出る</button></p>
+</div></div>
 
 <div class="setup bookov" id="bookov"><div class="card">
   <h1>帳面</h1>
