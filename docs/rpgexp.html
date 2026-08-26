@@ -2253,7 +2253,7 @@ function drawMap(){
     ps.forEach(function(p2){ s += geom(p2, 0) + ' fill="' + floorFill + '"/>'; });
   };
   ns.forEach(function(n){
-    if (!S.been[n.id]) return;
+    if (!knownFull(n)) return;
     if (n.kind === 'room'){
       n.links.forEach(function(lid){
         var c = S.map.byId[lid];
@@ -2273,13 +2273,16 @@ function drawMap(){
           clipOpen(rectOf(nd, far2 ? wall : wall - rin, far2 ? wall + rin : wall,
                           lat - 2, lat + corw + 2));
           prims1(c).forEach(function(p2){ s += geom(p2, 0) + ' fill="#d8d0b6"/>'; });
-          prims1(n).forEach(function(p2){ s += geom(p2, 0) + ' fill="url(#gp)"/>'; });
+          var rf = S.been[n.id] ? 'url(#gp)' : '#d8d0b6';
+          prims1(n).forEach(function(p2){ s += geom(p2, 0) + ' fill="' + rf + '"/>'; });
           s += '</g>';
         }
       });
       return;
     }
-    /* 踏んだ通路の先が未知の部屋なら、口だけ見せる */
+    /* 輪郭を知っている通路の先が未知の部屋なら、口だけ見せる（行き止まりに見せない）。
+       ただし閉ざされた関門の先は、光もここを通れないので見せない */
+    if (n.gate && !S.open[n.gate]) return;
     [n.from, n.to].forEach(function(rid){
       var r = S.map.byId[rid];
       if (!r || knownFull(r)) return;
@@ -2295,7 +2298,8 @@ function drawMap(){
       var md = r.shape === 'round' ? CELL * 0.5 : 6;
       var mr = rectOf(nd, far2 ? wall - 8 : wall - md, far2 ? wall + md : wall + 8,
                       lat, lat + corw);
-      s += '<rect x="' + mr.x + '" y="' + mr.y + '" width="' + mr.w + '" height="' + mr.h + '" fill="url(#gp)"/>';
+      s += '<rect x="' + mr.x + '" y="' + mr.y + '" width="' + mr.w + '" height="' + mr.h
+        + '" fill="' + (S.been[n.id] ? 'url(#gp)' : '#d8d0b6') + '"/>';
       s += '</g>';
     });
   });
@@ -2445,7 +2449,7 @@ function drawMap(){
   /* 関門の閂（前に立って知ったものだけ）と、部屋の名前 */
   ns.forEach(function(n){
     if (n.kind === 'corridor'){
-      if (n.gate && !S.open[n.gate] && S.been[n.id]){
+      if (n.gate && !S.open[n.gate] && (S.been[n.id] || S.sensed[n.id])){
         var gx2 = px(n.gx), gy2 = py(n.gy);
         s += n.horiz
           ? '<rect x="' + (gx2 - 5) + '" y="' + (gy2 - corw / 2 - 8) + '" width="10" height="' + (corw + 16) + '" rx="3" fill="#a03434"/>'
