@@ -690,11 +690,28 @@ function drawMap(){
     var cx = px(n.gx), cy = py(n.gy);
     var icon = '', ic = '';
     if (n.goal){ icon = '奥'; ic = '#8a6a1a'; }
-    if (icon) s += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="22" font-weight="700" fill="' + ic + '">' + icon + '</text>';
+    if (icon) s += '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-size="22" font-weight="700" stroke="#efe8d6" stroke-width="3.4" paint-order="stroke" stroke-linejoin="round" fill="' + ic + '">' + icon + '</text>';
     var nm = labelOf(n);
     var fpx = Math.min(13, Math.max(8.5, (n.w * CELL - 8) / Math.max(1, nm.length)));
     if (fpx <= 8.6 && nm.length > 9) nm = nm.slice(0, 9);
-    s += '<text x="' + cx + '" y="' + (cy + (icon ? 17 : 5)) + '" text-anchor="middle" font-size="' + fpx.toFixed(1) + '" font-weight="600" fill="'
+    /* 絵とぶつかるなら、空いている上下へ名前をずらす */
+    var ly = cy + (icon ? 17 : 5);
+    var occ = [];
+    (n.features || []).forEach(function(fid){
+      var fp3 = n.fpos && n.fpos[fid];
+      occ.push({ x: px(n.gx + (fp3 ? fp3.dx : 0) * n.w), y: py(n.gy + (fp3 ? fp3.dy : 0) * n.h) });
+    });
+    if (n.fform && Object.keys(n.fform).length) occ.push({ x: cx, y: cy });
+    var halfW = Math.min(n.w * CELL * 0.45, nm.length * fpx * 0.55);
+    if (occ.some(function(o){ return Math.abs(o.y - ly) < 16 && Math.abs(o.x - cx) < halfW + 10; })){
+      var upBusy = occ.some(function(o){ return o.y < cy - 6; });
+      var dnBusy = occ.some(function(o){ return o.y > cy + 6; });
+      var sh = Math.max(12, n.h * CELL * 0.30);
+      if (!dnBusy) ly = cy + sh + 4;
+      else if (!upBusy) ly = cy - sh + 6;
+    }
+    s += '<text x="' + cx + '" y="' + ly + '" text-anchor="middle" font-size="' + fpx.toFixed(1)
+      + '" font-weight="600" stroke="#efe8d6" stroke-width="3.4" paint-order="stroke" stroke-linejoin="round" fill="'
       + (n.revealed ? '#7a5a12' : '#5a5340') + '">' + nm + '</text>';
   });
 
@@ -895,6 +912,11 @@ function enter(id){
     }
     describeRoom(n, first);
   }
+  /* 物音: 危機と重なるときは立てない。立てたら必ず文で語ってから選択肢に出す */
+  if (S.enc) S.noise = 0;
+  if (S.noise)
+    say('{……どこかで、低い物音がした|……短い音がした。石が転がるような音だ|'
+      + '……何かが動く気配が、壁越しに伝わってきた}。{遠くない|方角の見当は、つく}。');
   render();
   if (anchor) narrBox().scrollTop = Math.max(0, anchor.offsetTop - 8);
 }
@@ -902,12 +924,20 @@ function enter(id){
 /* ================= 特徴を調べる ================= */
 function useFeature(n, fid){
   var f = FEATURES[fid];
+  var firstFx = true;
+  for (var k3 in S.fx){ firstFx = false; break; }
   S.fx[n.id+':'+fid] = 1;
   var fp = n.fpos && n.fpos[fid];
   if (fp){ S.pos = { ox: fp.dx, oy: fp.dy }; reveal(); }
-  var tot = f.out.reduce(function(a,o){ return a+o.w; }, 0);
-  var roll = rnd()*tot, sel = f.out[0];
-  for (var i=0;i<f.out.length;i++){ roll -= f.out[i].w; if (roll <= 0){ sel = f.out[i]; break; } }
+  /* このダンジョンで最初に調べたものでは、けがはしない */
+  var cand = f.out;
+  if (firstFx){
+    var safe = f.out.filter(function(o){ return !(o.eff && o.eff.dmg); });
+    if (safe.length) cand = safe;
+  }
+  var tot = cand.reduce(function(a,o){ return a+o.w; }, 0);
+  var roll = rnd()*tot, sel = cand[0];
+  for (var i=0;i<cand.length;i++){ roll -= cand[i].w; if (roll <= 0){ sel = cand[i]; break; } }
   say(sel.t, 'em');
   var e = sel.eff || {};
   if (e.heal){
@@ -921,6 +951,27 @@ function useFeature(n, fid){
     var t2 = v[Math.floor(rnd()*v.length)];
     t2.hp = Math.max(1, t2.hp - e.dmg); S.hurt++;
     say('── ' + t2.n + ' が傷を負った', 'bad');
+  }
+  if (e.get){
+    var giveSalve = function(pre){
+      var h2 = PARTY.filter(function(p){ return p.hp>0 && p.hp<p.mx; })
+        .sort(function(a,b){ return (a.hp/a.mx)-(b.hp/b.mx); })[0];
+      if (h2){ h2.hp = Math.min(h2.mx, h2.hp + 2);
+        say('── ' + pre + '傷薬だった。' + h2.n + ' の傷が少し塞がった', 'sys'); }
+      else say('── ' + pre + '傷薬だった。いつか要る。荷の底に収めた', 'sys');
+    };
+    var giveCoin = function(pre){
+      S.loot = (S.loot || 0) + 1;
+      say('── ' + pre + '古い硬貨がひと握り。荷の底に収めた（戦利品 ' + S.loot + '）', 'sys');
+    };
+    if (e.get === 'note') say('── 分かったことを、帳面に書き留めた', 'sys');
+    else if (e.get === 'food'){ S.bag.food = 1; say('── 保存の効く食料を、荷に加えた', 'sys'); }
+    else if (e.get === 'salve') giveSalve('中身は');
+    else if (e.get === 'coin') giveCoin('');
+    else if (e.get === 'pack'){
+      if (rnd() < 0.5) giveSalve('包みを開けた。中身は');
+      else giveCoin('包みを開けた。');
+    }
   }
   if (e.noise) S.noise = 1;
   if (n.ev && n.ev.t !== 'foe') revealName(n);
