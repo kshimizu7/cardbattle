@@ -420,6 +420,10 @@ function drawMap(){
     s += '<g mask="url(#lm)">';
     spill.forEach(function(p2){ s += geom(p2, 4) + ' fill="' + INK + '"/>'; });
     spill.forEach(function(p2){ s += geom(p2, 0) + ' fill="#ddd5bc"/>'; });
+    /* 既知の床を描き直して、通路の端の墨が部屋の中に「蓋」を作らないようにする */
+    known.forEach(function(p2){
+      s += geom(p2, 0) + ' fill="' + (S.been[p2.n.id] ? 'url(#gp)' : '#d8d0b6') + '"/>';
+    });
     s += '</g>';
   }
 
@@ -987,7 +991,8 @@ function useFeature(n, fid){
   var tot = cand.reduce(function(a,o){ return a+o.w; }, 0);
   var roll = rnd()*tot, sel = cand[0];
   for (var i=0;i<cand.length;i++){ roll -= cand[i].w; if (roll <= 0){ sel = cand[i]; break; } }
-  say(sel.t, 'em');
+  /* 行動 → 結果を、ひとつづきの文で */
+  say((fp ? fp.w + '側の' : '') + (f.echo || '') + sel.t, 'em');
   var e = sel.eff || {};
   if (e.heal){
     var hurt = PARTY.filter(function(p){return p.hp>0 && p.hp<p.mx;})
