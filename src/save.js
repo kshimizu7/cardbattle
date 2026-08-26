@@ -24,7 +24,7 @@ var CBSAVE = (function () {
   } catch (e) { store = null; }
 
   function blank() {
-    return { v: 1, created: Date.now(), games: [], decks: [], settings: {}, reps: [] };
+    return { v: 1, created: Date.now(), games: [], decks: [], settings: {}, reps: [], rpg: { coin: 0, clears: {} } };
   }
 
   function normalize(d) {
@@ -33,6 +33,9 @@ var CBSAVE = (function () {
     if (!Array.isArray(d.decks)) d.decks = [];
     if (!d.settings || typeof d.settings !== 'object') d.settings = {};
     if (!Array.isArray(d.reps)) d.reps = [];        // 不具合調べ用の再現データ
+    if (!d.rpg || typeof d.rpg !== 'object') d.rpg = {};
+    if (typeof d.rpg.coin !== 'number') d.rpg.coin = 0;
+    if (!d.rpg.clears || typeof d.rpg.clears !== 'object') d.rpg.clears = {};
     d.v = 1;
     return d;
   }
@@ -57,6 +60,15 @@ var CBSAVE = (function () {
   }
 
   /* ---------- 設定（音・速度・プール・配り方） ---------- */
+  /* ---------- RPGモード（硬貨と依頼の達成） ---------- */
+  function rpg() { return load().rpg; }
+  function rpgReward(questId, coin) {
+    var r = load().rpg;
+    r.coin += (coin || 0);
+    if (questId) r.clears[questId] = (r.clears[questId] || 0) + 1;
+    save(); return r;
+  }
+
   function getSettings() { return load().settings; }
   function setSettings(patch) {
     var s = load().settings;
@@ -187,6 +199,7 @@ var CBSAVE = (function () {
     available: function () { return !!store; },
     warned: function () { return warned; },
     getSettings: getSettings, setSettings: setSettings,
+    rpg: rpg, rpgReward: rpgReward,
     addGame: addGame, games: games, gameCount: gameCount,
     addReplay: addReplay, replays: replays, replayCode: replayCode,
     decks: decks, addDeck: addDeck, removeDeck: removeDeck,

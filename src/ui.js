@@ -757,6 +757,90 @@
   /* =========================================================
      タイトル
      ========================================================= */
+  /* =========================================================
+     RPGモード（試験版）── 依頼板とダンジョンへの動線
+     ========================================================= */
+  var RPGQUESTS = [
+    { id: 'q_beast', name: '喰らいの洞の主', dun: 'beast', rooms: 'few', coin: 30,
+      lead: '村の北の洞に、家畜と人を襲う主が居着いた。洞の最奥まで進み、討ち果たせ。' },
+    { id: 'q_mine', name: '黙した坑道の奥', dun: 'mine', rooms: 'some', coin: 50,
+      lead: '音の絶えた坑道の奥で、いまも何かが掘り続けている。正体を確かめ、討て。' },
+    { id: 'q_maze', name: '欲深き迷路の先客', dun: 'maze', rooms: 'some', coin: 60,
+      lead: '財宝目当ての一団が迷路に消えて久しい。奥に巣食う主を討ち、生きて戻れ。' }
+  ];
+  function showRPGQuests() {
+    var r = SAVE.rpg();
+    var m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = '<div class="box"><div class="rules">' +
+      '<h3 style="color:var(--gold)">🗺 RPGモード ── 依頼板（試験版）</h3>' +
+      '<p style="font-size:12.5px;opacity:.8">所持硬貨：<b>' + r.coin + '</b> 枚。' +
+        '依頼を選ぶとダンジョンに入ります。最奥の主を討てば達成、報酬の硬貨が貯まります' +
+        '（硬貨の使い道＝街の武器屋・道具屋は、次の段で入ります）。</p>' +
+      '<div class="opt-col">' +
+      RPGQUESTS.map(function (q) {
+        var c = r.clears[q.id] || 0;
+        return '<div class="opt poolopt" data-quest="' + q.id + '">' +
+          '<span class="pn">📜 ' + q.name + ' <b>報酬 硬貨' + q.coin + '枚</b>' +
+          (c ? ' <b style="color:var(--ok)">✓達成×' + c + '</b>' : '') + '</span>' +
+          '<span class="pd">' + q.lead + '</span></div>';
+      }).join('') +
+      '</div>' +
+      '<button class="btn ghost" id="rpgqx" style="width:100%;margin-top:10px">とじる</button>' +
+      '</div></div>';
+    document.body.appendChild(m);
+    m.onclick = function (e) { if (e.target === m) m.remove(); };
+    m.querySelector('#rpgqx').onclick = function () { m.remove(); };
+    [].forEach.call(m.querySelectorAll('[data-quest]'), function (b) {
+      b.onclick = function () {
+        var q = RPGQUESTS.filter(function (x) { return x.id === b.dataset.quest; })[0];
+        m.remove(); openRPGQuest(q);
+      };
+    });
+  }
+  function openRPGQuest(q) {
+    BGM.stop && BGM.stop();
+    var ov = document.createElement('div');
+    ov.id = 'rpgov';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:400;background:#000;display:flex;flex-direction:column';
+    var bar = document.createElement('div');
+    bar.style.cssText = 'display:flex;justify-content:flex-end;background:#070910;flex:0 0 auto';
+    var x = document.createElement('button');
+    x.textContent = '✕ 中断して街へ戻る';
+    x.className = 'btn small ghost';
+    x.style.cssText = 'margin:4px 6px';
+    x.onclick = function () {
+      if (confirm('依頼を中断して街へ戻りますか？（報酬はありません）')) closeRPG();
+    };
+    bar.appendChild(x);
+    var f = document.createElement('iframe');
+    f.style.cssText = 'flex:1;border:0;width:100%';
+    f.setAttribute('allow', 'fullscreen');
+    f.allowFullscreen = true;
+    f.name = JSON.stringify({ rpgq: 1, id: q.id, name: q.name, lead: q.lead, coin: q.coin, dun: q.dun, rooms: q.rooms });
+    ov.appendChild(bar);
+    ov.appendChild(f);
+    document.body.appendChild(ov);
+    f.srcdoc = window.RPG_PAGE;
+    function closeRPG() { ov.remove(); window.RPGDONE = null; syncBgm(); }
+    window.RPGDONE = function (res) {
+      closeRPG();
+      if (!(res && res.cleared)) { renderTitle(); return; }
+      var r2 = SAVE.rpgReward(res.id, res.coin);
+      var mm = document.createElement('div');
+      mm.className = 'modal';
+      mm.innerHTML = '<div class="box"><div class="rules" style="text-align:center">' +
+        '<h3 style="color:var(--gold)">依頼達成！</h3>' +
+        '<p>「' + q.name + '」を果たした。<br>報酬として硬貨 <b>' + res.coin + '</b> 枚を受け取った。</p>' +
+        (res.loot ? '<p style="font-size:12.5px;opacity:.8">（うち ' + res.loot * 10 + ' 枚は、道中で拾い集めたぶん）</p>' : '') +
+        '<p>所持硬貨：<b>' + r2.coin + '</b> 枚</p>' +
+        '<button class="btn primary" id="rok" style="width:100%">受け取る</button>' +
+        '</div></div>';
+      document.body.appendChild(mm);
+      mm.querySelector('#rok').onclick = function () { mm.remove(); renderTitle(); };
+    };
+  }
+
   function renderTitle() {
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
@@ -811,6 +895,8 @@
           '<button class="btn ghost" id="gallery" style="flex:1;white-space:nowrap">🗂 カード図鑑</button>' +
           '<button class="btn ghost" id="fs0" style="flex:0 0 52px" title="全画面">⛶</button>' +
         '</div>' +
+        '<button class="btn ghost" id="rpg0" style="width:100%;white-space:nowrap">🗺 RPGモード（試験版）' +
+          (SAVE.rpg().coin ? '<span class="rcnt">硬貨 ' + SAVE.rpg().coin + '</span>' : '') + '</button>' +
         '<div style="display:flex;gap:8px">' +
           '<button class="btn ghost" id="snd0" style="flex:1;white-space:nowrap">' +
             (S.sound ? '♪ 効果音 ON' : '♪ 効果音 OFF') + '</button>' +
@@ -848,6 +934,7 @@
     $('#snd0').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderTitle(); };
     $('#bgm0').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderTitle(); };
     $('#record').onclick = showRecord;
+    $('#rpg0').onclick = showRPGQuests;
   }
 
   function showRules() {

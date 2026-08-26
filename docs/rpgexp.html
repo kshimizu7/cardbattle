@@ -2767,6 +2767,11 @@ function enter(id){
         say('{探していたものは、この奥にある|ここが最奥だ|——ここまで来た}。', 'em');
         var bg = S.book.filter(function(b){ return b.goal && !b.used; })[0];
         if (bg){ bg.used = 1; say('── 帳面に写した話は、本当だったということだ', 'sys'); }
+        if (RPGQ && !S.qdone){
+          S.qdone = 1;
+          say('奥の間の主は、こちらを待っていた。誰も口をきかないまま、得物が抜かれ——長い戦いの末、それは動かなくなった。', 'em');
+          say('── 依頼達成：' + RPGQ.name + '（主との本式の戦闘は、次の段で入ります）', 'sys');
+        }
       }
     }
     describeRoom(n, first);
@@ -3012,6 +3017,12 @@ function render(){
     add((fp ? fp.w + '側の' : '') + FEATURES[fid].act, '', 'act', function(){ useFeature(n, fid); });
   });
 
+  if (RPGQ && S.qdone) add('街へ戻る', '報酬を受け取る', 'act', function(){
+    var coin = (RPGQ.coin || 0) + (S.loot || 0) * 10;
+    try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: true, coin: coin,
+      loot: S.loot || 0, kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
+  });
+
   /* 移動。方角＋行き先の様子 */
   exitsOf(n).forEach(function(e){
     var shut = e.via && e.via.gate && !S.open[e.via.gate];
@@ -3067,13 +3078,21 @@ function preEntry(){
   add('入る', '', 'act', function(){ enter(S.map.start); });
   add('装備を整える', 'Phase 2 で追加予定', '', function(){
     say('（装備は Phase 2 で。いまは身ひとつでもぐる）', 'sys'); });
-  add('引き返す', 'ダンジョン選択へ戻る', '', function(){
+  add('引き返す', RPGQ ? '依頼を諦めて街へ戻る' : 'ダンジョン選択へ戻る', '', function(){
+    if (RPGQ){ try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: false }); } catch (e) {} return; }
     document.getElementById('setup').style.display='flex'; });
   drawMap();
   narrBox().scrollTop = 0;
 }
 
 /* ================= 開始 ================= */
+/* クエストモード：本編アプリの iframe から window.name 経由で依頼を受け取る */
+var RPGQ = null;
+try {
+  var _wn = JSON.parse(window.name || 'null');
+  if (_wn && _wn.rpgq) RPGQ = _wn;
+} catch (e) {}
+
 var SETUP = { dun:'beast', rooms:'few',
   roomSize:'', corLen:'', corWidth:'', layout:'', shapes:'', rough:'', loops:'' };
 /* 生成の変数。'' は「その場所の流儀」に従う */
@@ -3118,6 +3137,19 @@ addEventListener('resize', relayout);
 
 document.addEventListener('DOMContentLoaded', function(){
   relayout();
+  if (RPGQ){
+    SETUP.dun = RPGQ.dun || SETUP.dun;
+    SETUP.rooms = RPGQ.rooms || SETUP.rooms;
+    var qcard = document.querySelector('#setup .card');
+    qcard.querySelector('h1').textContent = '依頼：' + RPGQ.name;
+    qcard.querySelector('.lead').textContent = RPGQ.lead + '（報酬：硬貨 ' + RPGQ.coin + ' 枚）';
+    [].forEach.call(qcard.querySelectorAll('h2'), function(h){ h.style.display = 'none'; });
+    [].forEach.call(qcard.querySelectorAll('.dsub'), function(d){ d.style.display = 'none'; });
+    ['dopts','ropts','vwrap'].forEach(function(id){
+      var el = document.getElementById(id); if (el) el.style.display = 'none';
+    });
+    document.getElementById('go').textContent = '依頼を受けて、出立する';
+  }
   var ds = document.getElementById('dopts'), rs = document.getElementById('ropts');
   Object.keys(DUNGEONS).forEach(function(k){
     var b=document.createElement('button'); b.className='opt'+(k===SETUP.dun?' on':'');

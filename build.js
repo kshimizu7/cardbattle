@@ -4,6 +4,12 @@ const R = f => fs.readFileSync(__dirname + '/src/' + f, 'utf8');
 /* ★ 版番号。中身を変えたらここを上げる。Driveには 版/ArcanaClash_v○○.html として残す */
 const VERSION = process.env.CBVER || '21';
 
+/* RPGモード：探索ページをまるごと文字列として埋め込み、iframe（srcdoc）で開く */
+require('child_process').execSync('node ' + __dirname + '/tools/rpgexp.js', { stdio: 'inherit' });
+const RPGJS = 'window.RPG_PAGE = '
+  + JSON.stringify(fs.readFileSync(__dirname + '/rpgexp.html', 'utf8')).replace(/<\//g, '<\\/')
+  + ';';
+
 const html = `<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -40,6 +46,9 @@ ${R('bgm.js')}
 </script>
 <script>
 ${R('art.js')}
+</script>
+<script>
+${RPGJS}
 </script>
 <script>
 ${R('ui.js')}
