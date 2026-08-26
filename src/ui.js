@@ -803,22 +803,11 @@
     var ov = document.createElement('div');
     ov.id = 'rpgov';
     ov.style.cssText = 'position:fixed;inset:0;z-index:400;background:#000;display:flex;flex-direction:column';
-    var bar = document.createElement('div');
-    bar.style.cssText = 'display:flex;justify-content:flex-end;background:#070910;flex:0 0 auto';
-    var x = document.createElement('button');
-    x.textContent = '✕ 中断して街へ戻る';
-    x.className = 'btn small ghost';
-    x.style.cssText = 'margin:4px 6px';
-    x.onclick = function () {
-      if (confirm('依頼を中断して街へ戻りますか？（報酬はありません）')) closeRPG();
-    };
-    bar.appendChild(x);
     var f = document.createElement('iframe');
     f.style.cssText = 'flex:1;border:0;width:100%';
     f.setAttribute('allow', 'fullscreen');
     f.allowFullscreen = true;
     f.name = JSON.stringify({ rpgq: 1, id: q.id, name: q.name, lead: q.lead, coin: q.coin, dun: q.dun, rooms: q.rooms });
-    ov.appendChild(bar);
     ov.appendChild(f);
     document.body.appendChild(ov);
     f.srcdoc = window.RPG_PAGE;

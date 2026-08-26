@@ -1,24 +1,23 @@
 <title>RPGモード 探索</title>
 
 <div class="wrap">
-  <div class="top">
-    <b id="dun">—</b>
-    <span class="spot" id="spot"></span>
-    <span class="sp"></span>
-    <span class="chip" id="pos">—</span>
-    <span class="chip" id="kil">討 0</span>
-    <span class="chip" id="hrt">傷 0</span>
-    <span class="chip" id="tor">松明 OFF</span>
-    <span class="chip" id="bok">帳面 0</span>
+  <div class="mapwrap" id="mapwrap">
+    <div id="mapsvg"></div>
+    <div class="mapname" id="mapname">—</div>
+    <button class="mapx" id="mapx" title="中断">✕</button>
+    <div class="mapctl2">
+      <button id="mz_in">＋</button>
+      <button id="mz_out">－</button>
+      <button id="mz_fit">全体</button>
+    </div>
   </div>
-  <div class="body">
-    <div class="mapwrap" id="mapwrap"></div>
+  <div class="col">
     <div class="side">
       <div class="narr" id="narr"></div>
       <div class="choices" id="choices"></div>
     </div>
+    <div class="party" id="party"></div>
   </div>
-  <div class="party" id="party"></div>
 </div>
 
 <div class="setup bookov" id="bookov"><div class="card">
@@ -55,7 +54,8 @@
 html,body{height:100%}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   font-size:14px;line-height:1.75;-webkit-text-size-adjust:100%;overflow:hidden}
-.wrap{display:flex;flex-direction:column;height:100svh;max-width:1100px;margin:0 auto}
+.wrap{display:flex;flex-direction:column;height:100svh}
+.col{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
 .top{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px;
   flex-wrap:nowrap;overflow:hidden;
   border-bottom:1px solid var(--line);background:var(--panel)}
@@ -69,10 +69,23 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   border-radius:999px;padding:2px 9px;white-space:nowrap;background:var(--panel2)}
 @media (max-width:392px){ .top .spot{display:none} .chip{padding:2px 7px;font-size:10.5px} }
 .chip.on{color:var(--gold);border-color:var(--gold)}
-.body{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
-.mapwrap{flex:0 0 auto;padding:8px 10px 0;display:flex;justify-content:center}
-.mapwrap svg{width:100%;max-width:min(100%,30svh);height:auto;display:block;
-  background:#e6dfca;border:2px solid #241f14;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,.5)}
+.mapwrap{flex:0 0 42svh;position:relative;overflow:hidden;background:#e6dfca;
+  border-bottom:2px solid #241f14;touch-action:none;user-select:none;-webkit-user-select:none}
+#mapsvg{position:absolute;inset:0}
+#mapsvg svg{position:absolute;display:block;will-change:left,top,width}
+.mapname{position:absolute;top:8px;left:8px;z-index:3;font-size:12px;color:#f6efd9;
+  background:rgba(22,17,9,.66);border-radius:999px;padding:4px 12px;max-width:72%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.mapx{position:absolute;top:6px;right:6px;z-index:3;width:34px;height:34px;border-radius:50%;
+  border:0;background:rgba(22,17,9,.66);color:#f6efd9;font-size:15px;cursor:pointer}
+.mapctl2{position:absolute;right:6px;bottom:8px;z-index:3;display:flex;flex-direction:column;gap:6px}
+.mapctl2 button{width:38px;height:38px;border-radius:10px;border:0;font:inherit;font-size:13px;
+  background:rgba(22,17,9,.66);color:#f6efd9;cursor:pointer}
+.statline{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--ink3);
+  padding:5px 4px 2px;flex-wrap:wrap}
+.statline .on{color:var(--gold)}
+.statline button{font:inherit;font-size:11px;color:var(--ink2);background:var(--panel2);
+  border:1px solid var(--line2);border-radius:999px;padding:2px 10px;cursor:pointer}
 .side{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 10px 0}
 .narr{flex:1 1 0;overflow-y:auto;min-height:7.5em;padding:10px 12px;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;
@@ -97,15 +110,17 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
 .btn.act{border-color:var(--gold);color:var(--gold)}
 .party{flex:0 0 auto;display:grid;grid-template-columns:repeat(6,1fr);gap:4px;padding:8px 10px}
 .pm{background:var(--panel);border:1px solid var(--line);border-radius:8px;
-  padding:5px 3px;text-align:center;min-width:0}
+  padding:7px 4px 8px;text-align:center;min-width:0}
 .pm .n{font-size:10.5px;color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pm .h{font-size:12px;color:var(--ok);font-variant-numeric:tabular-nums}
-.pm.back{opacity:.72}
+.pm .h{font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums;margin-top:1px}
+.pm .h b{font-weight:700}
+.pm .bar{height:5px;background:#1a2338;border-radius:3px;margin:5px 3px 0;overflow:hidden}
+.pm .bar i{display:block;height:100%;border-radius:3px}
+.pm.back{opacity:.78}
 .pm.back .n:before{content:"後 ";color:var(--ink3)}
-body.land .body{flex-direction:row;gap:8px}
-body.land .mapwrap{flex:0 0 42%;padding:8px 0 8px 10px;align-items:flex-start}
-body.land .mapwrap svg{max-width:100%;max-height:calc(100svh - 96px)}
-body.land .side{padding:8px 10px 0 0}
+body.land .wrap{flex-direction:row}
+body.land .mapwrap{flex:0 0 46%;height:100svh;border-bottom:0;border-right:2px solid #241f14}
+body.land .col{flex:1 1 auto}
 .bookov{display:none !important}
 .bookov.on{display:flex !important}
 .setup{position:fixed;inset:0;background:rgba(4,6,11,.94);display:flex;
@@ -126,14 +141,6 @@ body.land .side{padding:8px 10px 0 0}
 .vrow .vlab{flex:0 0 5.4em;font-size:11.5px;color:var(--ink3);padding-top:8px}
 .vrow .opts{flex:1}
 .vrow .opt{padding:5px 9px;font-size:11.5px}
-body.mapzoom .mapwrap{position:fixed;inset:0;z-index:8;background:rgba(4,6,11,.92);
-  display:block;overflow:auto;padding:20px;-webkit-overflow-scrolling:touch}
-body.mapzoom .mapwrap svg{margin:0 auto;display:block}
-.mapctl{position:fixed;top:12px;right:12px;display:flex;gap:8px;z-index:9}
-.mapctl button{font:inherit;font-size:18px;width:42px;height:42px;border-radius:10px;
-  border:1px solid var(--line2);background:var(--panel);color:var(--ink);cursor:pointer}
-.maphint{position:absolute;right:16px;bottom:6px;font-size:10px;color:#8a8264;pointer-events:none}
-.mapwrap{position:relative}
 </style>
 <script>/* 文章の組み合わせエンジン。
    {a|b|c} で言い換え（入れ子OK）、$name で状況に応じた語を差し込む。
@@ -2135,7 +2142,6 @@ function knownFull(n){ return S.been[n.id] || S.sensed[n.id]; }
 function drawMap(){
   var ns = S.map.nodes;
   var corw = CORW[S.map.profile.corWidth] || 16;
-  var zoomed = document.body.classList.contains('mapzoom');
   var pc = partyCell(), pcx = pc[0], pcy = pc[1];
   var R = lightRadius();
 
@@ -2151,25 +2157,14 @@ function drawMap(){
   eat(Math.floor(pcx - R), Math.floor(pcy - R));
   eat(Math.floor(pcx + R), Math.floor(pcy + R));
 
-  var bx0 = Math.floor(f.x0) - 1, by0 = Math.floor(f.y0) - 1;
-  var bw = Math.ceil(f.x1) - bx0 + 1, bh = Math.ceil(f.y1) - by0 + 1;
-  var side = Math.max(bw, bh);
-  var x0, y0;
-  if (!zoomed && side > VIEW){
-    var cn = S.map.byId[S.at];
-    var ccx = Math.floor(cn.gx), ccy = Math.floor(cn.gy);
-    side = VIEW;
-    x0 = Math.max(bx0, Math.min(ccx - (VIEW >> 1), bx0 + bw - VIEW));
-    y0 = Math.max(by0, Math.min(ccy - (VIEW >> 1), by0 + bh - VIEW));
-  } else {
-    x0 = bx0 - Math.floor((side - bw) / 2);
-    y0 = by0 - Math.floor((side - bh) / 2);
-  }
-  var W = Math.round(side * CELL);
+  var x0 = Math.floor(f.x0) - 1, y0 = Math.floor(f.y0) - 1;
+  var W = Math.round((Math.ceil(f.x1) - x0 + 1) * CELL);
+  var H = Math.round((Math.ceil(f.y1) - y0 + 1) * CELL);
   var px = function(x){ return (x - x0) * CELL; }, py = function(y){ return (y - y0) * CELL; };
   var LX = px(pcx), LY = py(pcy), LR = R * CELL;
+  S.mapW = W; S.mapH = H; S.px0 = LX; S.py0 = LY;
 
-  var s = '<svg viewBox="0 0 ' + W + ' ' + W + '" role="img" aria-label="ダンジョンの地図">';
+  var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="ダンジョンの地図">';
   s += '<defs>'
     + '<filter id="rgh" x="-20%" y="-20%" width="140%" height="140%">'
     + '<feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves="2" seed="'
@@ -2189,7 +2184,7 @@ function drawMap(){
     + '<stop offset="0" stop-color="#fff" stop-opacity="1"/>'
     + '<stop offset="0.72" stop-color="#fff" stop-opacity="1"/>'
     + '<stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>'
-    + '<mask id="lm"><rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#000"/>'
+    + '<mask id="lm"><rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#000"/>'
     + '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#lg)"/></mask>'
     + '<radialGradient id="dkg">'
     + '<stop offset="0" stop-color="#000"/>'
@@ -2200,7 +2195,7 @@ function drawMap(){
     + '<stop offset="0.75" stop-color="#ffd98a" stop-opacity="0.1"/>'
     + '<stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient>'
     + '</defs>';
-  s += '<rect x="0" y="0" width="' + W + '" height="' + W + '" fill="url(#dots)"/>';
+  s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="url(#dots)"/>';
 
   /* 図形をつくる。known = 記憶（踏破・探知）、spill = いまの光だけで見えている未踏 */
   var mkPrims = function(filter){
@@ -2565,7 +2560,7 @@ function drawMap(){
 
   /* 闇のとばり：円の外は、記録済みの場所も影に沈む（見えているのは円の中だけ）。
      魔法使いのトーチが灯っている間は、精霊が探った範囲がまるごと明るい（安心の光） */
-  var dkm = '<mask id="dk"><rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#fff"/>'
+  var dkm = '<mask id="dk"><rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#fff"/>'
     + '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#dkg)"/>';
   if (S.spellLeft > 0){
     mkPrims(function(n){ return S.sensed[n.id]; }).forEach(function(p2){
@@ -2574,7 +2569,7 @@ function drawMap(){
   }
   dkm += '</mask>';
   s += '<defs>' + dkm + '</defs>';
-  s += '<rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#241c10" opacity="0.52" mask="url(#dk)"/>';
+  s += '<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#241c10" opacity="0.52" mask="url(#dk)"/>';
 
   /* 松明のあたたかい輪（トーチの間は輪を出さない）と、パーティの赤点 */
   if (S.spellLeft <= 0) s += '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#warm)"/>';
@@ -2582,20 +2577,85 @@ function drawMap(){
     + '<circle cx="' + LX + '" cy="' + LY + '" r="7" fill="#b5372e" stroke="#f6f1e2" stroke-width="2"/>';
   s += '</svg>';
 
-  var wrap2 = document.getElementById('mapwrap');
-  wrap2.innerHTML = s + (zoomed
-    ? '<div class="mapctl"><button id="mz_in">＋</button><button id="mz_out">－</button><button id="mz_x">✕</button></div>'
-    : '<div class="maphint">タップで全体</div>');
-  if (zoomed){
-    var svg = wrap2.querySelector('svg');
-    var base = Math.min(innerWidth * 0.94, innerHeight * 0.88);
-    svg.style.width = Math.round(base * (S.z || 1)) + 'px';
-    svg.style.maxWidth = 'none'; svg.style.maxHeight = 'none';
-    var stop = function(fn){ return function(ev){ ev.stopPropagation(); fn(); }; };
-    wrap2.querySelector('#mz_in').onclick = stop(function(){ S.z = Math.min(4, (S.z || 1) * 1.4); drawMap(); });
-    wrap2.querySelector('#mz_out').onclick = stop(function(){ S.z = Math.max(1, (S.z || 1) / 1.4); drawMap(); });
-    wrap2.querySelector('#mz_x').onclick = stop(function(){ document.body.classList.remove('mapzoom'); S.z = 1; drawMap(); });
-  }
+  document.getElementById('mapsvg').innerHTML = s;
+  camApply();
+}
+
+/* ================= 地図カメラ =================
+   縮尺は勝手に変えない。中心は常に自分（赤丸）。
+   パン＝ドラッグ、ズーム＝＋−とピンチ、「全体」で全図。 */
+function camApply(){
+  if (!S) return;
+  var wrapEl = document.getElementById('mapwrap');
+  var svg = document.querySelector('#mapsvg svg');
+  if (!svg) return;
+  var ww = wrapEl.clientWidth, wh = wrapEl.clientHeight;
+  var z = S.cam.fit ? Math.min(ww / S.mapW, wh / S.mapH) * 0.94 : S.cam.z;
+  svg.style.width  = (S.mapW * z) + 'px';
+  svg.style.height = (S.mapH * z) + 'px';
+  var cx = S.cam.fit ? S.mapW / 2 : S.px0;
+  var cy = S.cam.fit ? S.mapH / 2 : S.py0;
+  svg.style.left = (ww / 2 - cx * z + S.cam.panx) + 'px';
+  svg.style.top  = (wh / 2 - cy * z + S.cam.pany) + 'px';
+}
+function camReset(){ if (S && S.cam){ S.cam.panx = 0; S.cam.pany = 0; S.cam.fit = false; } }
+function camInit(){
+  var el = document.getElementById('mapwrap');
+  var ptrs = {};
+  var pinch0 = 0, z0 = 1;
+  el.addEventListener('pointerdown', function(ev){
+    if (/^(mz_|mapx)/.test(ev.target.id || '')) return;
+    el.setPointerCapture(ev.pointerId);
+    ptrs[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+    var ks = Object.keys(ptrs);
+    if (ks.length === 2){
+      var a = ptrs[ks[0]], b2 = ptrs[ks[1]];
+      pinch0 = Math.hypot(a.x - b2.x, a.y - b2.y);
+      z0 = S && S.cam ? (S.cam.fit ? 0 : S.cam.z) : 1;
+    }
+  });
+  el.addEventListener('pointermove', function(ev){
+    if (!ptrs[ev.pointerId] || !S) return;
+    var ks = Object.keys(ptrs);
+    if (ks.length === 1){
+      S.cam.panx += ev.clientX - ptrs[ev.pointerId].x;
+      S.cam.pany += ev.clientY - ptrs[ev.pointerId].y;
+      ptrs[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+      camApply();
+    } else if (ks.length === 2){
+      ptrs[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
+      var a = ptrs[ks[0]], b2 = ptrs[ks[1]];
+      var d = Math.hypot(a.x - b2.x, a.y - b2.y);
+      if (pinch0 > 0){
+        if (S.cam.fit){ S.cam.fit = false; S.cam.z = 0.5; z0 = 0.5; }
+        S.cam.z = Math.max(0.4, Math.min(2.6, (z0 || 1) * d / pinch0));
+        camApply();
+      }
+    }
+  });
+  var up = function(ev){ delete ptrs[ev.pointerId]; pinch0 = 0; };
+  el.addEventListener('pointerup', up);
+  el.addEventListener('pointercancel', up);
+  el.addEventListener('wheel', function(ev){
+    if (!S) return;
+    ev.preventDefault();
+    if (S.cam.fit){ S.cam.fit = false; }
+    S.cam.z = Math.max(0.4, Math.min(2.6, S.cam.z * (ev.deltaY < 0 ? 1.12 : 0.9)));
+    camApply();
+  }, { passive: false });
+  document.getElementById('mz_in').onclick = function(){
+    if (!S) return; if (S.cam.fit) S.cam.fit = false;
+    S.cam.z = Math.min(2.6, S.cam.z * 1.3); camApply();
+  };
+  document.getElementById('mz_out').onclick = function(){
+    if (!S) return; if (S.cam.fit) S.cam.fit = false;
+    S.cam.z = Math.max(0.4, S.cam.z / 1.3); camApply();
+  };
+  document.getElementById('mz_fit').onclick = function(){
+    if (!S) return;
+    S.cam.fit = !S.cam.fit; S.cam.panx = 0; S.cam.pany = 0; camApply();
+  };
+  addEventListener('resize', function(){ camApply(); });
 }
 
 /* ================= 判定 ================= */
@@ -2724,6 +2784,7 @@ function describeRoom(n, first){
 function enter(id){
   var n = S.map.byId[id], first = !S.been[id];
   S.at = id; S.been[id] = 1; S.steps++;
+  camReset();
   if (S.spellLeft > 0){ S.spellLeft--; if (S.spellLeft === 0) say('トーチの光が、静かに消えた。', 'sys'); }
   S.pos = { ox: 0, oy: 0.24 };
   S.noise = (!S.enc && rnd() < 0.22) ? 1 : 0;
@@ -2988,22 +3049,16 @@ function render(){
   var n = S.map.byId[S.at], box = document.getElementById('choices');
   box.innerHTML = '';
 
-  document.getElementById('spot').textContent = labelOf(n);
-  document.getElementById('pos').textContent =
-    '踏破 ' + Object.keys(S.been).filter(function(k){return S.map.byId[k].kind==='room';}).length +
-    '/' + S.map.nodes.filter(function(x){return x.kind==='room';}).length + ' 室';
-  document.getElementById('kil').textContent = '討 ' + S.kills;
-  document.getElementById('hrt').textContent = '傷 ' + S.hurt;
-  var tc = document.getElementById('tor');
-  tc.textContent = S.torch ? '松明 ON' : '松明 OFF';
-  var bk = document.getElementById('bok');
-  bk.textContent = '帳面 ' + S.book.length;
-  bk.style.cursor = 'pointer';
-  bk.onclick = showBook;
+  document.getElementById('mapname').textContent =
+    DUNGEONS[S.dun].name + '　' + labelOf(n);
   document.getElementById('bookx').onclick = function(){ document.getElementById('bookov').classList.remove('on'); };
-  tc.className = 'chip' + (S.torch ? ' on' : '');
   document.getElementById('party').innerHTML = PARTY.map(function(p){
-    return '<div class="pm'+(p.row?' back':'')+'"><div class="n">'+p.n+'</div><div class="h">'+p.hp+'</div></div>';
+    var pct = Math.max(0, Math.round(p.hp / p.mx * 100));
+    var col = pct <= 30 ? 'var(--ng)' : pct <= 60 ? 'var(--warn)' : 'var(--ok)';
+    return '<div class="pm'+(p.row?' back':'')+'">'
+      + '<div class="n">'+p.n+'</div>'
+      + '<div class="h"><b>'+p.hp+'</b>/'+p.mx+'</div>'
+      + '<div class="bar"><i style="width:'+pct+'%;background:'+col+'"></i></div></div>';
   }).join('');
 
   var add = function(label, key, cls, fn){
@@ -3100,6 +3155,18 @@ function render(){
     reveal(); render(); });
   else if (S.spellLeft > 0) add('（精霊の光）', 'あと ' + S.spellLeft + ' 歩', '', function(){});
   if (S.noise) add('物音のする方をうかがう', '遭遇するかもしれない', '', function(){ S.noise = 0; encounter(); });
+
+  /* ステータス行（第2弾で行動シートへ移す予定の置き場） */
+  var st2 = document.createElement('div');
+  st2.className = 'statline';
+  var rooms2 = S.map.nodes.filter(function(x){ return x.kind === 'room'; }).length;
+  var been2 = Object.keys(S.been).filter(function(k){ return S.map.byId[k].kind === 'room'; }).length;
+  st2.innerHTML = '<span>踏破 ' + been2 + '/' + rooms2 + '</span>'
+    + '<span>討 ' + S.kills + '</span><span>傷 ' + S.hurt + '</span>'
+    + '<span class="' + (S.torch ? 'on' : '') + '">' + (S.torch ? '松明 ON' : '松明 OFF') + '</span>'
+    + '<button id="bok2">帳面 ' + S.book.length + '</button>';
+  box.appendChild(st2);
+  document.getElementById('bok2').onclick = showBook;
 }
 
 /* ================= 入口の前 ================= */
@@ -3165,12 +3232,13 @@ function begin(){
   verify(map);
   S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:{}, marks:{},
         did:{}, notes:{}, book:[], fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
-        kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0, z:1,
+        kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0,
+        cam:{ z:1, panx:0, pany:0, fit:false },
         ctx:ctxOf(SETUP.dun) };
   PARTY.forEach(function(p){ p.hp = p.mx; });
   document.getElementById('setup').style.display='none';
-  document.getElementById('dun').textContent = DUNGEONS[SETUP.dun].name;
-  document.getElementById('spot').textContent = '入口の前';
+  document.getElementById('mapname').textContent = DUNGEONS[SETUP.dun].name + ' ── 入口の前';
+
   S.seen[map.start] = 1;
   preEntry();
 }
@@ -3228,12 +3296,16 @@ document.addEventListener('DOMContentLoaded', function(){
     var v=document.getElementById('vwrap');
     v.style.display = v.style.display==='none' ? 'block' : 'none';
   };
-  /* 地図をタップで拡大 */
-  document.getElementById('mapwrap').addEventListener('click', function(ev){
-    if (ev.target && /^mz_/.test(ev.target.id || '')) return;
-    document.body.classList.toggle('mapzoom');
-    if (S) { S.z = 1; drawMap(); }
-  });
+  camInit();
+  document.getElementById('mapx').onclick = function(){
+    if (RPGQ){
+      if (confirm('依頼を中断して街へ戻りますか？（報酬・拾いものはありません）')){
+        try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: false }); } catch (e) {}
+      }
+    } else if (S){
+      if (confirm('ダンジョン選択へ戻りますか？')) document.getElementById('setup').style.display = 'flex';
+    }
+  };
   document.getElementById('go').onclick=begin;
 });
 
