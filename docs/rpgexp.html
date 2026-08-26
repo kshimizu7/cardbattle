@@ -399,6 +399,7 @@ const KEYS = {
 
   favor_bridge: {
     id: 'favor_bridge', name: '恩返しの橋', kind: 'favor',
+    gist: '困っているものを助ければ、道が返ってくる——そういう話らしい。',
     tags: ['nature', 'beast', 'wild'], look: 'gap',
     cond: { t: 'favor', key: 'beast' },
     hint:
@@ -431,6 +432,7 @@ const KEYS = {
 
   favor_guide: {
     id: 'favor_guide', name: '道を教える者', kind: 'favor',
+    gist: '借りを作った相手だけに、道を教える者がいるらしい。',
     tags: ['human', 'rival', 'made'], look: 'rubble',
     cond: { t: 'favor', key: 'human' },
     hint:
@@ -462,6 +464,7 @@ const KEYS = {
 
   favor_free: {
     id: 'favor_free', name: '放たれたもの', kind: 'favor',
+    gist: '囚われたものを放てば、報いがあるらしい。',
     tags: ['made', 'trap', 'relic', 'holy'], look: 'door',
     cond: { t: 'favor', key: 'caged' },
     hint:
@@ -495,6 +498,7 @@ const KEYS = {
 
   spare_door: {
     id: 'spare_door', name: '血を見なかった者', kind: 'spare',
+    gist: '血を流さずに来た者だけを、通す扉があるらしい。',
     tags: ['holy', 'ward', 'relic', 'dragon', 'made'], look: 'door',
     cond: { t: 'spare', scope: 'run' },
     hint:
@@ -529,6 +533,7 @@ const KEYS = {
 
   spare_ward: {
     id: 'spare_ward', name: '濡れていない手', kind: 'spare',
+    gist: '手を汚した者を、拒む護りがあるらしい。',
     tags: ['holy', 'ward', 'dragon'], look: 'ward',
     cond: { t: 'spare', scope: 'zone' },
     hint:
@@ -559,6 +564,7 @@ const KEYS = {
 
   hurtless: {
     id: 'hurtless', name: '傷なき者の道', kind: 'hurtless',
+    gist: '傷を負わずに辿り着いた者にだけ、開く道があるらしい。',
     tags: ['holy', 'ward', 'made', 'trap'], look: 'ward',
     cond: { t: 'hurtless' },
     hint:
@@ -590,6 +596,7 @@ const KEYS = {
 
   mark_seal: {
     id: 'mark_seal', name: '刻印の扉', kind: 'mark',
+    gist: '刻印に触れて回れば、扉が応えるらしい。',
     tags: ['made', 'holy', 'relic', 'ward'], look: 'door',
     cond: { t: 'mark', key: 'seal', n: 3 },
     hint:
@@ -621,6 +628,7 @@ const KEYS = {
 
   mark_lamp: {
     id: 'mark_lamp', name: '灯明を継ぐ', kind: 'mark',
+    gist: '灯を順に継いでいけば、封が解けるらしい。',
     tags: ['holy', 'relic', 'ward', 'human'], look: 'dark',
     cond: { t: 'mark', key: 'lamp', n: 4 },
     hint:
@@ -656,6 +664,7 @@ const KEYS = {
 
   slay_key: {
     id: 'slay_key', name: '呑まれた鍵', kind: 'slay',
+    gist: '鍵は、あるものの腹の中にあるらしい。',
     tags: ['*'], look: 'door',
     cond: { t: 'slay', who: 'holder' },
     hint:
@@ -683,6 +692,7 @@ const KEYS = {
 
   slay_pillar: {
     id: 'slay_pillar', name: '崩れて生まれる道', kind: 'slay',
+    gist: '支えを崩せば、道が生まれるらしい。',
     tags: ['nature', 'beast', 'wild', 'trap', 'made'], look: 'rubble',
     cond: { t: 'slay', who: 'guard' },
     hint:
@@ -712,6 +722,7 @@ const KEYS = {
 
   carry_key: {
     id: 'carry_key', name: '鍵の扉', kind: 'carry',
+    gist: '扉には対の鍵がある。この$placeのどこかに残されているらしい。',
     tags: ['*'], look: 'door',
     cond: { t: 'carry', item: 'key' },
     hint:
@@ -739,6 +750,7 @@ const KEYS = {
 
   carry_scale: {
     id: 'carry_scale', name: 'うろこをかざす', kind: 'carry',
+    gist: '鱗を証としてかざせば、通れるらしい。',
     tags: ['dragon', 'holy', 'ward', 'relic'], look: 'ward',
     cond: { t: 'carry', item: 'scale' },
     hint:
@@ -774,6 +786,7 @@ const KEYS = {
 
   carry_tablet: {
     id: 'carry_tablet', name: '石板をはめる', kind: 'carry',
+    gist: '欠けた窪みに石板を戻せば、開くらしい。',
     tags: ['made', 'relic', 'holy', 'trap'], look: 'door',
     cond: { t: 'carry', item: 'tablet' },
     hint:
@@ -806,6 +819,7 @@ const KEYS = {
 
   word_pass: {
     id: 'word_pass', name: '唱える言葉', kind: 'word',
+    gist: '扉の前で唱えるための言葉が、ここに書かれていた。',
     tags: ['human', 'made', 'holy', 'relic'], look: 'door',
     cond: { t: 'word', key: 'pass' },
     hint:
@@ -838,6 +852,7 @@ const KEYS = {
 
   lever_water: {
     id: 'lever_water', name: '水を抜く', kind: 'lever',
+    gist: 'どこかで水を抜けば、道が現れるらしい。',
     tags: ['made', 'trap', 'relic', 'human'], look: 'water',
     cond: { t: 'lever', key: 'sluice' },
     hint:
@@ -868,6 +883,7 @@ const KEYS = {
 
   lever_pulley: {
     id: 'lever_pulley', name: '離れた場所が動く', kind: 'lever',
+    gist: 'ここで動かせば、離れた場所で何かが変わるらしい。',
     tags: ['made', 'trap', 'relic'], look: 'door',
     cond: { t: 'lever', key: 'pulley' },
     hint:
@@ -902,6 +918,7 @@ const KEYS = {
 
   offer_food: {
     id: 'offer_food', name: '捧げもの', kind: 'offer',
+    gist: '何かを供えれば、道が開く——そういう話らしい。',
     tags: ['beast', 'wild', 'holy', 'nature', 'dragon'], look: 'beastly',
     cond: { t: 'offer', item: 'food' },
     hint:
@@ -939,6 +956,7 @@ const KEYS = {
 
   dark_path: {
     id: 'dark_path', name: '消したときに見えるもの', kind: 'light',
+    gist: '灯りを消したときにだけ、見えるものがあるらしい。',
     tags: ['holy', 'ward', 'relic', 'made'], look: 'dark',
     cond: { t: 'light', state: 'off' },
     hint:
@@ -971,6 +989,7 @@ const KEYS = {
 
   party_alone: {
     id: 'party_alone', name: '一人ずつ', kind: 'party',
+    gist: '一人ずつでなければ、通れない道があるらしい。',
     tags: ['made', 'trap', 'loot', 'rival', 'nature', 'wild'], look: 'gap',
     cond: { t: 'party', shape: 'single' },
     hint:
@@ -999,6 +1018,7 @@ const KEYS = {
 
   deal_rival: {
     id: 'deal_rival', name: '先客との取引', kind: 'deal',
+    gist: '先客とは、話がつけられるらしい。',
     tags: ['rival', 'human', 'loot', 'made'], look: 'door',
     cond: { t: 'deal', key: 'rival' },
     hint:
@@ -1085,11 +1105,15 @@ const SHAPES = {
 const FEATURES = {
   statue: {
     tags: ['made', 'holy', 'relic', 'dragon'], noun: '古い像',
-    desc: '{壁際に|部屋を囲むように|入って正面に}、{古い像|石像|人の形をした像}が'
-      + '{並んでいる|ひとつ立っている|傾いだまま残っている}。'
+    desc: '{壁際に|入って正面に|部屋の隅に}、{古い像|石像|人の形をした像}が'
+      + '{ひとつ立っている|傾いだまま残っている}。'
       + '{歓迎しているのか、何かを護っているのか——表情は削れて読めない|'
       + '目のあった場所に、窪みだけが残っている|'
       + '足元だけ、妙にすり減っている}。',
+    descForm: '$fcount体の{石像|像}が、$frows列に{整然と|等間隔に|寸分たがわず}並んでいる。'
+      + '{どれも同じ姿勢で、同じ方向を向いている|'
+      + '顔はすべて削れているのに、視線だけは感じる|'
+      + '列の間を通る以外に、道はないように思える}。',
     act: '像を調べる',
     out: [
       { w: 55, t: '{台座の裏|像の手のひら|足元の窪み}に、{文字が刻まれていた|'
@@ -1115,10 +1139,17 @@ const FEATURES = {
   },
   pool: {
     tags: ['nature', 'wild', 'beast'], noun: '黒い水たまり',
-    desc: '{床の窪みに|部屋の半分を占めて|天井からの滴りを受けて}、'
+    desc: '{床の広い窪みに|天井からの滴りを受けて}、'
       + '{黒い水たまり|浅い池|動かない水面}がある。'
       + '{$lightを弾いて、鏡のようだ|底に、何か白いものが見える|'
       + '水音だけが、この部屋の音のすべてだ}。',
+    descMag: {
+      1: '{床の小さな窪みに|岩のへこみに}、{手鏡ほどの水面|小さな水たまり}がある。'
+        + '{$lightを弾いて、そこだけ明るい|覗いても、揺れひとつしない}。',
+      3: '部屋の半分を占めて、{浅い池|黒い水面}が広がっている。'
+        + '{$lightを弾いて、床が鏡になったようだ|どこまでが床か、縁が分かりにくい|'
+        + '水音ひとつしない。それが、かえって落ち着かない}。'
+    },
     act: '水面を覗く',
     out: [
       { w: 45, t: '{冷たい水で顔を洗うと、頭が冴えた|一口含むと、驚くほど甘かった}。'
@@ -1135,6 +1166,13 @@ const FEATURES = {
       + '骨の山がある|大小の骨が折り重なっている}。'
       + '{噛み砕かれたものが多い|人のものかどうかは、見ないことにした|'
       + '新しいものも、混じっている}。',
+    descMag: {
+      1: '{部屋の隅に|通り道の脇に}、骨が{ひと山だけ|少しだけ}積もっている。'
+        + '{噛み砕かれたものが多い|新しいものも、混じっている}。',
+      3: '$fw側の壁面を埋め尽くして、骨が{積み上がっている|折り重なっている}。'
+        + '{大小の区別なく、数えきれない|下の層は、砕けて砂になりかけている|'
+        + '人のものかどうかは、見ないことにした}。'
+    },
     act: '骨の山をあらためる',
     out: [
       { w: 40, t: '骨に混じって、{装備の残り|革帯の金具|折れていない短刀}があった。'
@@ -1202,6 +1240,14 @@ const FEATURES = {
     desc: '{壁の低いところに|水の伝う筋に沿って|天井の割れ目に}、'
       + '{青白く光る苔|かすかに明るい地衣}が{生えている|群れている}。'
       + '{$lightを伏せると、そこだけ浮かび上がる|光は弱いが、確かに光っている}。',
+    descMag: {
+      1: '{壁の割れ目に|石の隙間に}、{青白く光る苔|かすかに明るい地衣}が'
+        + '{ひと群れだけ|わずかに}生えている。'
+        + '{光は弱いが、確かに光っている|$lightを伏せると、そこだけ残る}。',
+      3: '{壁も床も|部屋の内側いちめん}、青白く光る苔に{びっしりと|余すところなく}覆われている。'
+        + '{$lightが要らないほどだ|踏むたび、足元がほのかに明るむ|'
+        + '声を出すのがはばかられる明るさだ}。'
+    },
     act: '苔を採る',
     out: [
       { w: 60, t: '{ひと掴み採って、布に包んだ|松明の柄に巻きつけると、手元がほんのり明るい}。'
@@ -1753,6 +1799,34 @@ function generate(opts) {
     }
   });
 
+  /* ── 特徴の規模と隊列（シードと部屋IDから決める。生成の乱数列は乱さない） ── */
+  const fhash = (rid, fid) => {
+    let h = (seed >>> 0) ^ 2166136261;
+    const s2 = rid + ':' + fid;
+    for (let i = 0; i < s2.length; i++) h = Math.imul(h ^ s2.charCodeAt(i), 16777619);
+    h ^= h >>> 15; h = Math.imul(h, 2246822519); h ^= h >>> 13;
+    return (h >>> 0) / 4294967296;
+  };
+  nodes.forEach(r => {
+    r.fmag = {}; r.fform = {};
+    const area = r.w * r.h;
+    (r.features || []).forEach(fid => {
+      const hv = fhash(r.id, fid);
+      if (fid === 'pool' || fid === 'moss' || fid === 'bones') {
+        let mag = hv < 0.4 ? 1 : hv < 0.72 ? 2 : 3;
+        if (area < 6 && mag > 2) mag = 2;   /* ごく狭い部屋に「半分を占める」は置かない */
+        if (area < 6) mag = 1;
+        r.fmag[fid] = mag;
+      } else if (fid === 'statue' && area >= 6 && hv > 0.4) {
+        const forms = [[2, 2], [2, 3], [3, 3], [2, 4]];
+        const f2 = forms[Math.floor(fhash(r.id, 'statue#f') * forms.length)];
+        const rows = Math.min(f2[0], Math.max(1, r.h - 1));
+        const cols = Math.min(f2[1], Math.max(2, r.w - 1));
+        if (rows * cols >= 3) r.fform[fid] = { rows, cols };   /* 3体未満は1体扱い */
+      }
+    });
+  });
+
   return {
     seed, dungeon: dun.id, profile: P,
     rooms: nodes.length, zones: share.length,
@@ -1832,6 +1906,12 @@ function ctxOf(dun){
     return (a[Math.floor(rnd()*a.length)]||PARTY[0]).n;
   };
   return c;
+}
+function KNUM(v){
+  var K = '〇一二三四五六七八九';
+  if (v <= 9) return K[v];
+  if (v === 10) return '十';
+  return v < 20 ? '十' + K[v - 10] : String(v);
 }
 function tidy(s){
   return s.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1')
@@ -2220,6 +2300,148 @@ function drawMap(){
     });
   });
 
+  /* 部屋の特徴：地図職人の注記として、踏んだ部屋にだけ描く（インクの線画） */
+  var frnd = function(rid, fid){
+    var h = ((S.map.seed >>> 0) ^ 2166136261) >>> 0;
+    var s3 = rid + '|' + fid;
+    for (var i = 0; i < s3.length; i++) h = Math.imul(h ^ s3.charCodeAt(i), 16777619);
+    h = (h >>> 0) || 1;
+    return function(){ h ^= h << 13; h ^= h >>> 17; h ^= h << 5; h >>>= 0; if (!h) h = 1; return h / 4294967296; };
+  };
+  var fglyph = function(n, fid){
+    var fp = n.fpos && n.fpos[fid];
+    var mag = (n.fmag && n.fmag[fid]) || 2;
+    var form = n.fform && n.fform[fid];
+    var cx = px(n.gx + (fp ? fp.dx : 0) * n.w), cy = py(n.gy + (fp ? fp.dy : 0) * n.h);
+    var r2 = frnd(n.id, fid);
+    var side = fp ? fp.w : '北';
+    var hw = (side === '北' || side === '南');   /* 壁沿いのものの向き */
+    var x0e = px(n.gx) - n.w * CELL / 2, y0e = py(n.gy) - n.h * CELL / 2;
+    var g = '', i2, a2, t2;
+    if (fid === 'statue'){
+      var one = function(x, y, sc){
+        return '<rect x="' + (x - 4 * sc).toFixed(1) + '" y="' + (y - 4 * sc).toFixed(1)
+          + '" width="' + (8 * sc) + '" height="' + (8 * sc) + '" rx="1"/>'
+          + '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (2.1 * sc) + '" fill="' + INK + '" stroke="none"/>';
+      };
+      if (form){
+        var gw = n.w * CELL * 0.6, gh = n.h * CELL * 0.6;
+        for (var rI = 0; rI < form.rows; rI++)
+          for (var cI = 0; cI < form.cols; cI++)
+            g += one(px(n.gx) - gw / 2 + (form.cols === 1 ? gw / 2 : gw * cI / (form.cols - 1)),
+                     py(n.gy) - gh / 2 + (form.rows === 1 ? gh / 2 : gh * rI / (form.rows - 1)), 0.78);
+      } else g += one(cx, cy, 1);
+    } else if (fid === 'pool'){
+      var prx, pry, pcx = cx, pcy = cy;
+      if (mag === 3){
+        prx = n.w * CELL * 0.4; pry = n.h * CELL * 0.3;
+        pcx = px(n.gx) + (fp ? fp.dx : 0) * n.w * CELL * 0.35;
+        pcy = py(n.gy) + (fp ? fp.dy : 0) * n.h * CELL * 0.35;
+      } else if (mag === 2){ prx = CELL * 0.55; pry = CELL * 0.42; }
+      else { prx = CELL * 0.28; pry = CELL * 0.22; }
+      var pts = [];
+      for (a2 = 0; a2 < 11; a2++){
+        var th = a2 / 11 * Math.PI * 2, rj = 0.82 + r2() * 0.3;
+        pts.push((pcx + Math.cos(th) * prx * rj).toFixed(1) + ' ' + (pcy + Math.sin(th) * pry * rj).toFixed(1));
+      }
+      g += '<path d="M' + pts.join('L') + 'Z" fill="' + INK + '" fill-opacity="0.09"/>'
+        + '<path d="M' + (pcx - prx * 0.35).toFixed(1) + ' ' + pcy.toFixed(1) + ' q ' + (prx * 0.2).toFixed(1) + ' 3 ' + (prx * 0.45).toFixed(1) + ' 0" fill="none"/>'
+        + '<path d="M' + (pcx - prx * 0.1).toFixed(1) + ' ' + (pcy + pry * 0.35).toFixed(1) + ' q ' + (prx * 0.18).toFixed(1) + ' 3 ' + (prx * 0.4).toFixed(1) + ' 0" fill="none"/>';
+    } else if (fid === 'moss'){
+      var dots = mag === 3 ? 46 : mag === 2 ? 14 : 7;
+      for (i2 = 0; i2 < dots; i2++){
+        var mx2, my2;
+        if (mag === 3){
+          if (r2() < 0.7){
+            var edge = Math.floor(r2() * 4), along = r2(), ins = 4 + r2() * 9;
+            if (edge === 0){ mx2 = x0e + along * n.w * CELL; my2 = y0e + ins; }
+            else if (edge === 1){ mx2 = x0e + along * n.w * CELL; my2 = y0e + n.h * CELL - ins; }
+            else if (edge === 2){ mx2 = x0e + ins; my2 = y0e + along * n.h * CELL; }
+            else { mx2 = x0e + n.w * CELL - ins; my2 = y0e + along * n.h * CELL; }
+          } else { mx2 = px(n.gx) + (r2() - 0.5) * n.w * CELL * 0.8; my2 = py(n.gy) + (r2() - 0.5) * n.h * CELL * 0.8; }
+        } else {
+          var rad = mag === 2 ? 15 : 9;
+          mx2 = cx + (r2() - 0.5) * 2 * rad; my2 = cy + (r2() - 0.5) * 2 * rad;
+        }
+        g += '<circle cx="' + mx2.toFixed(1) + '" cy="' + my2.toFixed(1) + '" r="' + (0.8 + r2() * 0.7).toFixed(1) + '" fill="' + INK + '" fill-opacity="0.5" stroke="none"/>';
+      }
+    } else if (fid === 'bones'){
+      var bn = mag === 3 ? 22 : mag === 2 ? 9 : 5;
+      for (i2 = 0; i2 < bn; i2++){
+        var bx, by;
+        if (mag === 3){
+          var alo = 0.06 + r2() * 0.88, dep = 5 + r2() * CELL * 0.55;
+          if (side === '北'){ bx = x0e + alo * n.w * CELL; by = y0e + dep; }
+          else if (side === '南'){ bx = x0e + alo * n.w * CELL; by = y0e + n.h * CELL - dep; }
+          else if (side === '西'){ bx = x0e + dep; by = y0e + alo * n.h * CELL; }
+          else { bx = x0e + n.w * CELL - dep; by = y0e + alo * n.h * CELL; }
+        } else { var br = mag === 2 ? 13 : 8; bx = cx + (r2() - 0.5) * 2 * br; by = cy + (r2() - 0.5) * 2 * br; }
+        var an = r2() * Math.PI, ln = 3.5 + r2() * 4;
+        g += '<line x1="' + (bx - Math.cos(an) * ln).toFixed(1) + '" y1="' + (by - Math.sin(an) * ln).toFixed(1)
+          + '" x2="' + (bx + Math.cos(an) * ln).toFixed(1) + '" y2="' + (by + Math.sin(an) * ln).toFixed(1) + '"/>';
+        if (r2() < 0.3) g += '<circle cx="' + bx.toFixed(1) + '" cy="' + by.toFixed(1) + '" r="1.6"/>';
+      }
+    } else if (fid === 'hearth'){
+      g += '<circle cx="' + cx + '" cy="' + cy + '" r="6.5" stroke-dasharray="3 2.4"/>'
+        + '<line x1="' + (cx - 3) + '" y1="' + (cy + 1.5) + '" x2="' + (cx + 3) + '" y2="' + (cy - 1.5) + '"/>'
+        + '<line x1="' + (cx - 3) + '" y1="' + (cy - 1.5) + '" x2="' + (cx + 3) + '" y2="' + (cy + 1.5) + '"/>';
+    } else if (fid === 'well'){
+      g += '<circle cx="' + cx + '" cy="' + cy + '" r="6.5"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="3.2" fill="' + INK + '" fill-opacity="0.35" stroke="none"/>';
+    } else if (fid === 'altar'){
+      g += '<rect x="' + (cx - 6) + '" y="' + (cy - 4) + '" width="12" height="8" rx="1"/>'
+        + '<line x1="' + (cx - 8.5) + '" y1="' + (cy + 6.5) + '" x2="' + (cx + 8.5) + '" y2="' + (cy + 6.5) + '"/>';
+    } else if (fid === 'camp'){
+      for (i2 = 0; i2 < 6; i2++){
+        var thc = i2 / 6 * Math.PI * 2 + r2() * 0.5;
+        g += '<circle cx="' + (cx + Math.cos(thc) * 6).toFixed(1) + '" cy="' + (cy + Math.sin(thc) * 6).toFixed(1) + '" r="1.3" fill="' + INK + '" stroke="none"/>';
+      }
+      g += '<line x1="' + (cx - 3) + '" y1="' + (cy + 2) + '" x2="' + (cx + 3) + '" y2="' + (cy - 2) + '"/>'
+        + '<line x1="' + (cx - 3) + '" y1="' + (cy - 2) + '" x2="' + (cx + 3) + '" y2="' + (cy + 2) + '"/>';
+    } else if (fid === 'mural'){
+      for (i2 = 0; i2 < 5; i2++){
+        var off = (i2 - 2) * 4.2, hh = 4 + r2() * 3.5;
+        g += hw
+          ? '<line x1="' + (cx + off).toFixed(1) + '" y1="' + (cy - hh / 2).toFixed(1) + '" x2="' + (cx + off).toFixed(1) + '" y2="' + (cy + hh / 2).toFixed(1) + '"/>'
+          : '<line x1="' + (cx - hh / 2).toFixed(1) + '" y1="' + (cy + off).toFixed(1) + '" x2="' + (cx + hh / 2).toFixed(1) + '" y2="' + (cy + off).toFixed(1) + '"/>';
+      }
+    } else if (fid === 'gap'){
+      var zz = 'M';
+      for (i2 = 0; i2 < 6; i2++){
+        var zt = (i2 - 2.5) * 4.5, zj = (r2() - 0.5) * 6;
+        zz += (hw ? (cx + zt).toFixed(1) + ' ' + (cy + zj).toFixed(1)
+                  : (cx + zj).toFixed(1) + ' ' + (cy + zt).toFixed(1)) + (i2 < 5 ? 'L' : '');
+      }
+      g += '<path d="' + zz + '" fill="none"/>';
+    } else if (fid === 'shelf'){
+      if (hw){
+        g += '<line x1="' + (cx - 8) + '" y1="' + (cy - 2.4) + '" x2="' + (cx + 8) + '" y2="' + (cy - 2.4) + '"/>'
+          + '<line x1="' + (cx - 8) + '" y1="' + (cy + 2.4) + '" x2="' + (cx + 8) + '" y2="' + (cy + 2.4) + '"/>';
+        for (i2 = -1; i2 <= 1; i2++) g += '<line x1="' + (cx + i2 * 6) + '" y1="' + (cy - 2.4) + '" x2="' + (cx + i2 * 6) + '" y2="' + (cy + 2.4) + '"/>';
+      } else {
+        g += '<line x1="' + (cx - 2.4) + '" y1="' + (cy - 8) + '" x2="' + (cx - 2.4) + '" y2="' + (cy + 8) + '"/>'
+          + '<line x1="' + (cx + 2.4) + '" y1="' + (cy - 8) + '" x2="' + (cx + 2.4) + '" y2="' + (cy + 8) + '"/>';
+        for (i2 = -1; i2 <= 1; i2++) g += '<line x1="' + (cx - 2.4) + '" y1="' + (cy + i2 * 6) + '" x2="' + (cx + 2.4) + '" y2="' + (cy + i2 * 6) + '"/>';
+      }
+    } else if (fid === 'chains'){
+      for (i2 = 0; i2 < 4; i2++){
+        var lo = (i2 - 1.5) * 5.4, sag = Math.abs(i2 - 1.5) < 1 ? 2.2 : 0.6;
+        g += '<ellipse cx="' + (cx + lo).toFixed(1) + '" cy="' + (cy + sag).toFixed(1) + '" rx="2.6" ry="1.7"/>';
+      }
+    }
+    return g;
+  };
+  ns.forEach(function(n){
+    if (n.kind !== 'room' || !S.been[n.id] || !(n.features || []).length) return;
+    var cidf = 'fg' + n.id;
+    s += '<clipPath id="' + cidf + '">';
+    prims1(n).forEach(function(p2){ s += geom(p2, 0) + '/>'; });
+    s += '</clipPath><g clip-path="url(#' + cidf + ')" stroke="' + INK
+      + '" fill="none" stroke-width="1.5" stroke-linecap="round" opacity="0.62">';
+    n.features.forEach(function(fid){ s += fglyph(n, fid); });
+    s += '</g>';
+  });
+
   /* 関門の閂（前に立って知ったものだけ）と、部屋の名前 */
   ns.forEach(function(n){
     if (n.kind === 'corridor'){
@@ -2326,7 +2548,19 @@ function describeRoom(n, first){
   /* ② 部屋の中の特殊な状況 */
   (n.features||[]).forEach(function(fid){
     if (S.fx[n.id+':'+fid]) return;
-    if (first) say(FEATURES[fid].desc);
+    if (first){
+      var F2 = FEATURES[fid], tD = F2.desc;
+      var mg = n.fmag && n.fmag[fid];
+      if (mg && F2.descMag && F2.descMag[mg]) tD = F2.descMag[mg];
+      var fm = n.fform && n.fform[fid];
+      if (fm && F2.descForm) tD = F2.descForm;
+      var fpD = n.fpos && n.fpos[fid];
+      say(tD, null, Object.assign({}, S.ctx, {
+        fw: fpD ? fpD.w : '奥',
+        fcount: KNUM(fm ? fm.rows * fm.cols : 1),
+        frows: KNUM(fm ? fm.rows : 1)
+      }));
+    }
     else if (rnd() < 0.35){
       var fp2 = n.fpos && n.fpos[fid];
       say((fp2 ? fp2.w + '側の' : '') + FEATURES[fid].noun +
@@ -2494,8 +2728,9 @@ function seedActs(n){
 /* 記されたものを読む。読んだ結果として、言葉や真名を得る */
 function readHint(n){
   var k2 = KEYS[n.ev.key];
+  say('{近寄って、灯りを寄せる|膝をついて、指先で埃を払う|$who が身をかがめ、文字をたどる}。——読める。');
   say(k2.hint);
-  say('── 覚え書きを写した（' + k2.name + '）', 'sys');
+  say('── 覚え書きを写した。' + (k2.gist || ''), 'sys');
   S.notes[n.ev.key] = 1; S.evDone[n.id] = 1;
   if (k2.cond.t === 'word'){
     S.did['word:'+n.ev.gate] = 1;

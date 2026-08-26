@@ -136,6 +136,12 @@ function ctxOf(dun){
   };
   return c;
 }
+function KNUM(v){
+  var K = '〇一二三四五六七八九';
+  if (v <= 9) return K[v];
+  if (v === 10) return '十';
+  return v < 20 ? '十' + K[v - 10] : String(v);
+}
 function tidy(s){
   return s.replace(/([^\x00-\x7F]) +/g, '$1').replace(/ +([^\x00-\x7F])/g, '$1')
           .replace(/。+/g, '。').replace(/、。/g, '。');
@@ -523,6 +529,148 @@ function drawMap(){
     });
   });
 
+  /* 部屋の特徴：地図職人の注記として、踏んだ部屋にだけ描く（インクの線画） */
+  var frnd = function(rid, fid){
+    var h = ((S.map.seed >>> 0) ^ 2166136261) >>> 0;
+    var s3 = rid + '|' + fid;
+    for (var i = 0; i < s3.length; i++) h = Math.imul(h ^ s3.charCodeAt(i), 16777619);
+    h = (h >>> 0) || 1;
+    return function(){ h ^= h << 13; h ^= h >>> 17; h ^= h << 5; h >>>= 0; if (!h) h = 1; return h / 4294967296; };
+  };
+  var fglyph = function(n, fid){
+    var fp = n.fpos && n.fpos[fid];
+    var mag = (n.fmag && n.fmag[fid]) || 2;
+    var form = n.fform && n.fform[fid];
+    var cx = px(n.gx + (fp ? fp.dx : 0) * n.w), cy = py(n.gy + (fp ? fp.dy : 0) * n.h);
+    var r2 = frnd(n.id, fid);
+    var side = fp ? fp.w : '北';
+    var hw = (side === '北' || side === '南');   /* 壁沿いのものの向き */
+    var x0e = px(n.gx) - n.w * CELL / 2, y0e = py(n.gy) - n.h * CELL / 2;
+    var g = '', i2, a2, t2;
+    if (fid === 'statue'){
+      var one = function(x, y, sc){
+        return '<rect x="' + (x - 4 * sc).toFixed(1) + '" y="' + (y - 4 * sc).toFixed(1)
+          + '" width="' + (8 * sc) + '" height="' + (8 * sc) + '" rx="1"/>'
+          + '<circle cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (2.1 * sc) + '" fill="' + INK + '" stroke="none"/>';
+      };
+      if (form){
+        var gw = n.w * CELL * 0.6, gh = n.h * CELL * 0.6;
+        for (var rI = 0; rI < form.rows; rI++)
+          for (var cI = 0; cI < form.cols; cI++)
+            g += one(px(n.gx) - gw / 2 + (form.cols === 1 ? gw / 2 : gw * cI / (form.cols - 1)),
+                     py(n.gy) - gh / 2 + (form.rows === 1 ? gh / 2 : gh * rI / (form.rows - 1)), 0.78);
+      } else g += one(cx, cy, 1);
+    } else if (fid === 'pool'){
+      var prx, pry, pcx = cx, pcy = cy;
+      if (mag === 3){
+        prx = n.w * CELL * 0.4; pry = n.h * CELL * 0.3;
+        pcx = px(n.gx) + (fp ? fp.dx : 0) * n.w * CELL * 0.35;
+        pcy = py(n.gy) + (fp ? fp.dy : 0) * n.h * CELL * 0.35;
+      } else if (mag === 2){ prx = CELL * 0.55; pry = CELL * 0.42; }
+      else { prx = CELL * 0.28; pry = CELL * 0.22; }
+      var pts = [];
+      for (a2 = 0; a2 < 11; a2++){
+        var th = a2 / 11 * Math.PI * 2, rj = 0.82 + r2() * 0.3;
+        pts.push((pcx + Math.cos(th) * prx * rj).toFixed(1) + ' ' + (pcy + Math.sin(th) * pry * rj).toFixed(1));
+      }
+      g += '<path d="M' + pts.join('L') + 'Z" fill="' + INK + '" fill-opacity="0.09"/>'
+        + '<path d="M' + (pcx - prx * 0.35).toFixed(1) + ' ' + pcy.toFixed(1) + ' q ' + (prx * 0.2).toFixed(1) + ' 3 ' + (prx * 0.45).toFixed(1) + ' 0" fill="none"/>'
+        + '<path d="M' + (pcx - prx * 0.1).toFixed(1) + ' ' + (pcy + pry * 0.35).toFixed(1) + ' q ' + (prx * 0.18).toFixed(1) + ' 3 ' + (prx * 0.4).toFixed(1) + ' 0" fill="none"/>';
+    } else if (fid === 'moss'){
+      var dots = mag === 3 ? 46 : mag === 2 ? 14 : 7;
+      for (i2 = 0; i2 < dots; i2++){
+        var mx2, my2;
+        if (mag === 3){
+          if (r2() < 0.7){
+            var edge = Math.floor(r2() * 4), along = r2(), ins = 4 + r2() * 9;
+            if (edge === 0){ mx2 = x0e + along * n.w * CELL; my2 = y0e + ins; }
+            else if (edge === 1){ mx2 = x0e + along * n.w * CELL; my2 = y0e + n.h * CELL - ins; }
+            else if (edge === 2){ mx2 = x0e + ins; my2 = y0e + along * n.h * CELL; }
+            else { mx2 = x0e + n.w * CELL - ins; my2 = y0e + along * n.h * CELL; }
+          } else { mx2 = px(n.gx) + (r2() - 0.5) * n.w * CELL * 0.8; my2 = py(n.gy) + (r2() - 0.5) * n.h * CELL * 0.8; }
+        } else {
+          var rad = mag === 2 ? 15 : 9;
+          mx2 = cx + (r2() - 0.5) * 2 * rad; my2 = cy + (r2() - 0.5) * 2 * rad;
+        }
+        g += '<circle cx="' + mx2.toFixed(1) + '" cy="' + my2.toFixed(1) + '" r="' + (0.8 + r2() * 0.7).toFixed(1) + '" fill="' + INK + '" fill-opacity="0.5" stroke="none"/>';
+      }
+    } else if (fid === 'bones'){
+      var bn = mag === 3 ? 22 : mag === 2 ? 9 : 5;
+      for (i2 = 0; i2 < bn; i2++){
+        var bx, by;
+        if (mag === 3){
+          var alo = 0.06 + r2() * 0.88, dep = 5 + r2() * CELL * 0.55;
+          if (side === '北'){ bx = x0e + alo * n.w * CELL; by = y0e + dep; }
+          else if (side === '南'){ bx = x0e + alo * n.w * CELL; by = y0e + n.h * CELL - dep; }
+          else if (side === '西'){ bx = x0e + dep; by = y0e + alo * n.h * CELL; }
+          else { bx = x0e + n.w * CELL - dep; by = y0e + alo * n.h * CELL; }
+        } else { var br = mag === 2 ? 13 : 8; bx = cx + (r2() - 0.5) * 2 * br; by = cy + (r2() - 0.5) * 2 * br; }
+        var an = r2() * Math.PI, ln = 3.5 + r2() * 4;
+        g += '<line x1="' + (bx - Math.cos(an) * ln).toFixed(1) + '" y1="' + (by - Math.sin(an) * ln).toFixed(1)
+          + '" x2="' + (bx + Math.cos(an) * ln).toFixed(1) + '" y2="' + (by + Math.sin(an) * ln).toFixed(1) + '"/>';
+        if (r2() < 0.3) g += '<circle cx="' + bx.toFixed(1) + '" cy="' + by.toFixed(1) + '" r="1.6"/>';
+      }
+    } else if (fid === 'hearth'){
+      g += '<circle cx="' + cx + '" cy="' + cy + '" r="6.5" stroke-dasharray="3 2.4"/>'
+        + '<line x1="' + (cx - 3) + '" y1="' + (cy + 1.5) + '" x2="' + (cx + 3) + '" y2="' + (cy - 1.5) + '"/>'
+        + '<line x1="' + (cx - 3) + '" y1="' + (cy - 1.5) + '" x2="' + (cx + 3) + '" y2="' + (cy + 1.5) + '"/>';
+    } else if (fid === 'well'){
+      g += '<circle cx="' + cx + '" cy="' + cy + '" r="6.5"/>'
+        + '<circle cx="' + cx + '" cy="' + cy + '" r="3.2" fill="' + INK + '" fill-opacity="0.35" stroke="none"/>';
+    } else if (fid === 'altar'){
+      g += '<rect x="' + (cx - 6) + '" y="' + (cy - 4) + '" width="12" height="8" rx="1"/>'
+        + '<line x1="' + (cx - 8.5) + '" y1="' + (cy + 6.5) + '" x2="' + (cx + 8.5) + '" y2="' + (cy + 6.5) + '"/>';
+    } else if (fid === 'camp'){
+      for (i2 = 0; i2 < 6; i2++){
+        var thc = i2 / 6 * Math.PI * 2 + r2() * 0.5;
+        g += '<circle cx="' + (cx + Math.cos(thc) * 6).toFixed(1) + '" cy="' + (cy + Math.sin(thc) * 6).toFixed(1) + '" r="1.3" fill="' + INK + '" stroke="none"/>';
+      }
+      g += '<line x1="' + (cx - 3) + '" y1="' + (cy + 2) + '" x2="' + (cx + 3) + '" y2="' + (cy - 2) + '"/>'
+        + '<line x1="' + (cx - 3) + '" y1="' + (cy - 2) + '" x2="' + (cx + 3) + '" y2="' + (cy + 2) + '"/>';
+    } else if (fid === 'mural'){
+      for (i2 = 0; i2 < 5; i2++){
+        var off = (i2 - 2) * 4.2, hh = 4 + r2() * 3.5;
+        g += hw
+          ? '<line x1="' + (cx + off).toFixed(1) + '" y1="' + (cy - hh / 2).toFixed(1) + '" x2="' + (cx + off).toFixed(1) + '" y2="' + (cy + hh / 2).toFixed(1) + '"/>'
+          : '<line x1="' + (cx - hh / 2).toFixed(1) + '" y1="' + (cy + off).toFixed(1) + '" x2="' + (cx + hh / 2).toFixed(1) + '" y2="' + (cy + off).toFixed(1) + '"/>';
+      }
+    } else if (fid === 'gap'){
+      var zz = 'M';
+      for (i2 = 0; i2 < 6; i2++){
+        var zt = (i2 - 2.5) * 4.5, zj = (r2() - 0.5) * 6;
+        zz += (hw ? (cx + zt).toFixed(1) + ' ' + (cy + zj).toFixed(1)
+                  : (cx + zj).toFixed(1) + ' ' + (cy + zt).toFixed(1)) + (i2 < 5 ? 'L' : '');
+      }
+      g += '<path d="' + zz + '" fill="none"/>';
+    } else if (fid === 'shelf'){
+      if (hw){
+        g += '<line x1="' + (cx - 8) + '" y1="' + (cy - 2.4) + '" x2="' + (cx + 8) + '" y2="' + (cy - 2.4) + '"/>'
+          + '<line x1="' + (cx - 8) + '" y1="' + (cy + 2.4) + '" x2="' + (cx + 8) + '" y2="' + (cy + 2.4) + '"/>';
+        for (i2 = -1; i2 <= 1; i2++) g += '<line x1="' + (cx + i2 * 6) + '" y1="' + (cy - 2.4) + '" x2="' + (cx + i2 * 6) + '" y2="' + (cy + 2.4) + '"/>';
+      } else {
+        g += '<line x1="' + (cx - 2.4) + '" y1="' + (cy - 8) + '" x2="' + (cx - 2.4) + '" y2="' + (cy + 8) + '"/>'
+          + '<line x1="' + (cx + 2.4) + '" y1="' + (cy - 8) + '" x2="' + (cx + 2.4) + '" y2="' + (cy + 8) + '"/>';
+        for (i2 = -1; i2 <= 1; i2++) g += '<line x1="' + (cx - 2.4) + '" y1="' + (cy + i2 * 6) + '" x2="' + (cx + 2.4) + '" y2="' + (cy + i2 * 6) + '"/>';
+      }
+    } else if (fid === 'chains'){
+      for (i2 = 0; i2 < 4; i2++){
+        var lo = (i2 - 1.5) * 5.4, sag = Math.abs(i2 - 1.5) < 1 ? 2.2 : 0.6;
+        g += '<ellipse cx="' + (cx + lo).toFixed(1) + '" cy="' + (cy + sag).toFixed(1) + '" rx="2.6" ry="1.7"/>';
+      }
+    }
+    return g;
+  };
+  ns.forEach(function(n){
+    if (n.kind !== 'room' || !S.been[n.id] || !(n.features || []).length) return;
+    var cidf = 'fg' + n.id;
+    s += '<clipPath id="' + cidf + '">';
+    prims1(n).forEach(function(p2){ s += geom(p2, 0) + '/>'; });
+    s += '</clipPath><g clip-path="url(#' + cidf + ')" stroke="' + INK
+      + '" fill="none" stroke-width="1.5" stroke-linecap="round" opacity="0.62">';
+    n.features.forEach(function(fid){ s += fglyph(n, fid); });
+    s += '</g>';
+  });
+
   /* 関門の閂（前に立って知ったものだけ）と、部屋の名前 */
   ns.forEach(function(n){
     if (n.kind === 'corridor'){
@@ -629,7 +777,19 @@ function describeRoom(n, first){
   /* ② 部屋の中の特殊な状況 */
   (n.features||[]).forEach(function(fid){
     if (S.fx[n.id+':'+fid]) return;
-    if (first) say(FEATURES[fid].desc);
+    if (first){
+      var F2 = FEATURES[fid], tD = F2.desc;
+      var mg = n.fmag && n.fmag[fid];
+      if (mg && F2.descMag && F2.descMag[mg]) tD = F2.descMag[mg];
+      var fm = n.fform && n.fform[fid];
+      if (fm && F2.descForm) tD = F2.descForm;
+      var fpD = n.fpos && n.fpos[fid];
+      say(tD, null, Object.assign({}, S.ctx, {
+        fw: fpD ? fpD.w : '奥',
+        fcount: KNUM(fm ? fm.rows * fm.cols : 1),
+        frows: KNUM(fm ? fm.rows : 1)
+      }));
+    }
     else if (rnd() < 0.35){
       var fp2 = n.fpos && n.fpos[fid];
       say((fp2 ? fp2.w + '側の' : '') + FEATURES[fid].noun +
@@ -797,8 +957,9 @@ function seedActs(n){
 /* 記されたものを読む。読んだ結果として、言葉や真名を得る */
 function readHint(n){
   var k2 = KEYS[n.ev.key];
+  say('{近寄って、灯りを寄せる|膝をついて、指先で埃を払う|$who が身をかがめ、文字をたどる}。——読める。');
   say(k2.hint);
-  say('── 覚え書きを写した（' + k2.name + '）', 'sys');
+  say('── 覚え書きを写した。' + (k2.gist || ''), 'sys');
   S.notes[n.ev.key] = 1; S.evDone[n.id] = 1;
   if (k2.cond.t === 'word'){
     S.did['word:'+n.ev.gate] = 1;

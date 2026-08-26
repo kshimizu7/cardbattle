@@ -34,6 +34,7 @@ const KEYS = {
 
   favor_bridge: {
     id: 'favor_bridge', name: '恩返しの橋', kind: 'favor',
+    gist: '困っているものを助ければ、道が返ってくる——そういう話らしい。',
     tags: ['nature', 'beast', 'wild'], look: 'gap',
     cond: { t: 'favor', key: 'beast' },
     hint:
@@ -66,6 +67,7 @@ const KEYS = {
 
   favor_guide: {
     id: 'favor_guide', name: '道を教える者', kind: 'favor',
+    gist: '借りを作った相手だけに、道を教える者がいるらしい。',
     tags: ['human', 'rival', 'made'], look: 'rubble',
     cond: { t: 'favor', key: 'human' },
     hint:
@@ -97,6 +99,7 @@ const KEYS = {
 
   favor_free: {
     id: 'favor_free', name: '放たれたもの', kind: 'favor',
+    gist: '囚われたものを放てば、報いがあるらしい。',
     tags: ['made', 'trap', 'relic', 'holy'], look: 'door',
     cond: { t: 'favor', key: 'caged' },
     hint:
@@ -130,6 +133,7 @@ const KEYS = {
 
   spare_door: {
     id: 'spare_door', name: '血を見なかった者', kind: 'spare',
+    gist: '血を流さずに来た者だけを、通す扉があるらしい。',
     tags: ['holy', 'ward', 'relic', 'dragon', 'made'], look: 'door',
     cond: { t: 'spare', scope: 'run' },
     hint:
@@ -164,6 +168,7 @@ const KEYS = {
 
   spare_ward: {
     id: 'spare_ward', name: '濡れていない手', kind: 'spare',
+    gist: '手を汚した者を、拒む護りがあるらしい。',
     tags: ['holy', 'ward', 'dragon'], look: 'ward',
     cond: { t: 'spare', scope: 'zone' },
     hint:
@@ -194,6 +199,7 @@ const KEYS = {
 
   hurtless: {
     id: 'hurtless', name: '傷なき者の道', kind: 'hurtless',
+    gist: '傷を負わずに辿り着いた者にだけ、開く道があるらしい。',
     tags: ['holy', 'ward', 'made', 'trap'], look: 'ward',
     cond: { t: 'hurtless' },
     hint:
@@ -225,6 +231,7 @@ const KEYS = {
 
   mark_seal: {
     id: 'mark_seal', name: '刻印の扉', kind: 'mark',
+    gist: '刻印に触れて回れば、扉が応えるらしい。',
     tags: ['made', 'holy', 'relic', 'ward'], look: 'door',
     cond: { t: 'mark', key: 'seal', n: 3 },
     hint:
@@ -256,6 +263,7 @@ const KEYS = {
 
   mark_lamp: {
     id: 'mark_lamp', name: '灯明を継ぐ', kind: 'mark',
+    gist: '灯を順に継いでいけば、封が解けるらしい。',
     tags: ['holy', 'relic', 'ward', 'human'], look: 'dark',
     cond: { t: 'mark', key: 'lamp', n: 4 },
     hint:
@@ -291,6 +299,7 @@ const KEYS = {
 
   slay_key: {
     id: 'slay_key', name: '呑まれた鍵', kind: 'slay',
+    gist: '鍵は、あるものの腹の中にあるらしい。',
     tags: ['*'], look: 'door',
     cond: { t: 'slay', who: 'holder' },
     hint:
@@ -318,6 +327,7 @@ const KEYS = {
 
   slay_pillar: {
     id: 'slay_pillar', name: '崩れて生まれる道', kind: 'slay',
+    gist: '支えを崩せば、道が生まれるらしい。',
     tags: ['nature', 'beast', 'wild', 'trap', 'made'], look: 'rubble',
     cond: { t: 'slay', who: 'guard' },
     hint:
@@ -347,6 +357,7 @@ const KEYS = {
 
   carry_key: {
     id: 'carry_key', name: '鍵の扉', kind: 'carry',
+    gist: '扉には対の鍵がある。この$placeのどこかに残されているらしい。',
     tags: ['*'], look: 'door',
     cond: { t: 'carry', item: 'key' },
     hint:
@@ -374,6 +385,7 @@ const KEYS = {
 
   carry_scale: {
     id: 'carry_scale', name: 'うろこをかざす', kind: 'carry',
+    gist: '鱗を証としてかざせば、通れるらしい。',
     tags: ['dragon', 'holy', 'ward', 'relic'], look: 'ward',
     cond: { t: 'carry', item: 'scale' },
     hint:
@@ -409,6 +421,7 @@ const KEYS = {
 
   carry_tablet: {
     id: 'carry_tablet', name: '石板をはめる', kind: 'carry',
+    gist: '欠けた窪みに石板を戻せば、開くらしい。',
     tags: ['made', 'relic', 'holy', 'trap'], look: 'door',
     cond: { t: 'carry', item: 'tablet' },
     hint:
@@ -441,6 +454,7 @@ const KEYS = {
 
   word_pass: {
     id: 'word_pass', name: '唱える言葉', kind: 'word',
+    gist: '扉の前で唱えるための言葉が、ここに書かれていた。',
     tags: ['human', 'made', 'holy', 'relic'], look: 'door',
     cond: { t: 'word', key: 'pass' },
     hint:
@@ -473,6 +487,7 @@ const KEYS = {
 
   lever_water: {
     id: 'lever_water', name: '水を抜く', kind: 'lever',
+    gist: 'どこかで水を抜けば、道が現れるらしい。',
     tags: ['made', 'trap', 'relic', 'human'], look: 'water',
     cond: { t: 'lever', key: 'sluice' },
     hint:
@@ -503,6 +518,7 @@ const KEYS = {
 
   lever_pulley: {
     id: 'lever_pulley', name: '離れた場所が動く', kind: 'lever',
+    gist: 'ここで動かせば、離れた場所で何かが変わるらしい。',
     tags: ['made', 'trap', 'relic'], look: 'door',
     cond: { t: 'lever', key: 'pulley' },
     hint:
@@ -537,6 +553,7 @@ const KEYS = {
 
   offer_food: {
     id: 'offer_food', name: '捧げもの', kind: 'offer',
+    gist: '何かを供えれば、道が開く——そういう話らしい。',
     tags: ['beast', 'wild', 'holy', 'nature', 'dragon'], look: 'beastly',
     cond: { t: 'offer', item: 'food' },
     hint:
@@ -574,6 +591,7 @@ const KEYS = {
 
   dark_path: {
     id: 'dark_path', name: '消したときに見えるもの', kind: 'light',
+    gist: '灯りを消したときにだけ、見えるものがあるらしい。',
     tags: ['holy', 'ward', 'relic', 'made'], look: 'dark',
     cond: { t: 'light', state: 'off' },
     hint:
@@ -606,6 +624,7 @@ const KEYS = {
 
   party_alone: {
     id: 'party_alone', name: '一人ずつ', kind: 'party',
+    gist: '一人ずつでなければ、通れない道があるらしい。',
     tags: ['made', 'trap', 'loot', 'rival', 'nature', 'wild'], look: 'gap',
     cond: { t: 'party', shape: 'single' },
     hint:
@@ -634,6 +653,7 @@ const KEYS = {
 
   deal_rival: {
     id: 'deal_rival', name: '先客との取引', kind: 'deal',
+    gist: '先客とは、話がつけられるらしい。',
     tags: ['rival', 'human', 'loot', 'made'], look: 'door',
     cond: { t: 'deal', key: 'rival' },
     hint:

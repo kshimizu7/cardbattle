@@ -476,6 +476,34 @@ function generate(opts) {
     }
   });
 
+  /* ── 特徴の規模と隊列（シードと部屋IDから決める。生成の乱数列は乱さない） ── */
+  const fhash = (rid, fid) => {
+    let h = (seed >>> 0) ^ 2166136261;
+    const s2 = rid + ':' + fid;
+    for (let i = 0; i < s2.length; i++) h = Math.imul(h ^ s2.charCodeAt(i), 16777619);
+    h ^= h >>> 15; h = Math.imul(h, 2246822519); h ^= h >>> 13;
+    return (h >>> 0) / 4294967296;
+  };
+  nodes.forEach(r => {
+    r.fmag = {}; r.fform = {};
+    const area = r.w * r.h;
+    (r.features || []).forEach(fid => {
+      const hv = fhash(r.id, fid);
+      if (fid === 'pool' || fid === 'moss' || fid === 'bones') {
+        let mag = hv < 0.4 ? 1 : hv < 0.72 ? 2 : 3;
+        if (area < 6 && mag > 2) mag = 2;   /* ごく狭い部屋に「半分を占める」は置かない */
+        if (area < 6) mag = 1;
+        r.fmag[fid] = mag;
+      } else if (fid === 'statue' && area >= 6 && hv > 0.4) {
+        const forms = [[2, 2], [2, 3], [3, 3], [2, 4]];
+        const f2 = forms[Math.floor(fhash(r.id, 'statue#f') * forms.length)];
+        const rows = Math.min(f2[0], Math.max(1, r.h - 1));
+        const cols = Math.min(f2[1], Math.max(2, r.w - 1));
+        if (rows * cols >= 3) r.fform[fid] = { rows, cols };   /* 3体未満は1体扱い */
+      }
+    });
+  });
+
   return {
     seed, dungeon: dun.id, profile: P,
     rooms: nodes.length, zones: share.length,
