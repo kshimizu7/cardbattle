@@ -34,6 +34,7 @@ const KEYS = {
 
   favor_bridge: {
     id: 'favor_bridge', name: '恩返しの橋', kind: 'favor',
+    actLabel: '動けずにいる獣に、手を貸す',
     gist: '困っているものを助ければ、道が返ってくる——そういう話らしい。',
     tags: ['nature', 'beast', 'wild'], look: 'gap',
     cond: { t: 'favor', key: 'beast' },
@@ -67,6 +68,7 @@ const KEYS = {
 
   favor_guide: {
     id: 'favor_guide', name: '道を教える者', kind: 'favor',
+    actLabel: '座り込んだ相手に、手を貸す',
     gist: '借りを作った相手だけに、道を教える者がいるらしい。',
     tags: ['human', 'rival', 'made'], look: 'rubble',
     cond: { t: 'favor', key: 'human' },
@@ -99,6 +101,7 @@ const KEYS = {
 
   favor_free: {
     id: 'favor_free', name: '放たれたもの', kind: 'favor',
+    actLabel: 'かんぬきを外して、放してやる',
     gist: '囚われたものを放てば、報いがあるらしい。',
     tags: ['made', 'trap', 'relic', 'holy'], look: 'door',
     cond: { t: 'favor', key: 'caged' },
@@ -231,6 +234,7 @@ const KEYS = {
 
   mark_seal: {
     id: 'mark_seal', name: '刻印の扉', kind: 'mark',
+    actLabel: '残った印に、触れる',
     gist: '刻印に触れて回れば、扉が応えるらしい。',
     tags: ['made', 'holy', 'relic', 'ward'], look: 'door',
     cond: { t: 'mark', key: 'seal', n: 3 },
@@ -263,6 +267,7 @@ const KEYS = {
 
   mark_lamp: {
     id: 'mark_lamp', name: '灯明を継ぐ', kind: 'mark',
+    actLabel: '灯明に、火を継ぐ',
     gist: '灯を順に継いでいけば、封が解けるらしい。',
     tags: ['holy', 'relic', 'ward', 'human'], look: 'dark',
     cond: { t: 'mark', key: 'lamp', n: 4 },
@@ -487,6 +492,7 @@ const KEYS = {
 
   lever_water: {
     id: 'lever_water', name: '水を抜く', kind: 'lever',
+    actLabel: '錆びた仕掛けを、動かす',
     gist: 'どこかで水を抜けば、道が現れるらしい。',
     tags: ['made', 'trap', 'relic', 'human'], look: 'water',
     cond: { t: 'lever', key: 'sluice' },
@@ -518,6 +524,7 @@ const KEYS = {
 
   lever_pulley: {
     id: 'lever_pulley', name: '離れた場所が動く', kind: 'lever',
+    actLabel: '据えられた把手を、動かす',
     gist: 'ここで動かせば、離れた場所で何かが変わるらしい。',
     tags: ['made', 'trap', 'relic'], look: 'door',
     cond: { t: 'lever', key: 'pulley' },

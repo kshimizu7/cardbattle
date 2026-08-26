@@ -1044,7 +1044,7 @@ function seedActs(n){
   /* 真名の開示は、行動の結果を語り終えてから */
   var done = function(){ S.evDone[n.id]=1; revealName(n); };
   if (meets(gid)) return [];
-  if (c.t === 'favor') out.push({ l:'手を貸す', k:'借りを作る', f:function(){
+  if (c.t === 'favor') out.push({ l: k2.actLabel || '手を貸す', k:'借りを作る', f:function(){
     S.did['favor:'+gid]=1;
     say('{$who が、黙って手を貸した|時間は食った。それだけのことだ|'+
       '$hurt が、自分の水を分けた}。{相手は、何も言わなかった|礼らしい礼は、無かった}。','em');
@@ -1056,12 +1056,12 @@ function seedActs(n){
     say('{$who が、それを荷に収めた|重いが、置いていく気にはならない|'+
       '使い道は、そのうち分かる}。','em');
     done(); } });
-  if (c.t === 'mark') out.push({ l:'触れる', k:'印 '+((S.marks[c.key]||0)+1)+'/'+c.n, f:function(){
+  if (c.t === 'mark') out.push({ l: k2.actLabel || '触れる', k:'印 '+((S.marks[c.key]||0)+1)+'/'+c.n, f:function(){
     S.marks[c.key]=(S.marks[c.key]||0)+1;
     say('{指先が温かい|$soundが、遠くで一度鳴った|$traceが、$lightを弾いた}。','em');
     say('── 印 '+S.marks[c.key]+'/'+c.n,'sys');
     if (S.marks[c.key] >= c.n) done(); else revealName(n); } });
-  if (c.t === 'lever') out.push({ l:'動かす', k:'どこかが変わる', f:function(){
+  if (c.t === 'lever') out.push({ l: k2.actLabel || '動かす', k:'どこかが変わる', f:function(){
     S.did['lever:'+gid]=1;
     say('{軋みながら、それは動いた|$placeの奥で、重いものが動く音がした|'+
       '$soundとは違う音が、長く尾を引いた}。','em');
@@ -1167,7 +1167,7 @@ function render(){
   (n.features||[]).forEach(function(fid){
     if (S.fx[n.id+':'+fid]) return;
     var fp = n.fpos && n.fpos[fid];
-    add((fp ? fp.w + '側の' : '') + FEATURES[fid].act, '調べる', 'act', function(){ useFeature(n, fid); });
+    add((fp ? fp.w + '側の' : '') + FEATURES[fid].act, '', 'act', function(){ useFeature(n, fid); });
   });
 
   /* 移動。方角＋行き先の様子 */
