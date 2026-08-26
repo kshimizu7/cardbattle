@@ -11,12 +11,7 @@
   <div class="mapwrap" id="mapwrap">
     <div id="mapsvg"></div>
     <div class="mapname" id="mapname">—</div>
-    <button class="mapx" id="mapx" title="中断">✕</button>
-    <div class="mapctl2">
-      <button id="mz_in">＋</button>
-      <button id="mz_out">－</button>
-      <button id="mz_fit">全体</button>
-    </div>
+    <button class="mapx" id="mapx">✕ 冒険を中断</button>
   </div>
   <div class="col">
     <div class="side">
@@ -91,11 +86,9 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
 .mapname{position:absolute;top:8px;left:8px;z-index:3;font-size:12px;color:#f6efd9;
   background:rgba(22,17,9,.66);border-radius:999px;padding:4px 12px;max-width:72%;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
-.mapx{position:absolute;top:6px;right:6px;z-index:3;width:34px;height:34px;border-radius:50%;
-  border:0;background:rgba(22,17,9,.66);color:#f6efd9;font-size:15px;cursor:pointer}
-.mapctl2{position:absolute;right:6px;bottom:8px;z-index:3;display:flex;flex-direction:column;gap:6px}
-.mapctl2 button{width:38px;height:38px;border-radius:10px;border:0;font:inherit;font-size:13px;
-  background:rgba(22,17,9,.66);color:#f6efd9;cursor:pointer}
+.mapx{position:absolute;top:8px;right:8px;z-index:3;height:32px;border-radius:999px;
+  border:0;background:rgba(22,17,9,.66);color:#f6efd9;font-size:12px;cursor:pointer;
+  padding:0 13px;white-space:nowrap}
 .pad{position:absolute;right:12px;bottom:12px;z-index:5;display:grid;
   grid-template-columns:repeat(3,52px);grid-template-rows:repeat(3,52px);gap:5px;
   opacity:1;transition:opacity .25s}
@@ -128,7 +121,8 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
 .statline .on{color:var(--gold)}
 .statline button{font:inherit;font-size:11px;color:var(--ink2);background:var(--panel2);
   border:1px solid var(--line2);border-radius:999px;padding:2px 10px;cursor:pointer}
-.side{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 10px 0}
+.side{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 10px 0;
+  position:relative}
 .narr{flex:1 1 0;overflow-y:auto;min-height:7.5em;padding:10px 12px 110px;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;
   -webkit-overflow-scrolling:touch}
@@ -2685,18 +2679,6 @@ function camInit(){
     S.cam.z = Math.max(0.4, Math.min(2.6, S.cam.z * (ev.deltaY < 0 ? 1.12 : 0.9)));
     camApply();
   }, { passive: false });
-  document.getElementById('mz_in').onclick = function(){
-    if (!S) return; if (S.cam.fit) S.cam.fit = false;
-    S.cam.z = Math.min(2.6, S.cam.z * 1.3); camApply();
-  };
-  document.getElementById('mz_out').onclick = function(){
-    if (!S) return; if (S.cam.fit) S.cam.fit = false;
-    S.cam.z = Math.max(0.4, S.cam.z / 1.3); camApply();
-  };
-  document.getElementById('mz_fit').onclick = function(){
-    if (!S) return;
-    S.cam.fit = !S.cam.fit; S.cam.panx = 0; S.cam.pany = 0; camApply();
-  };
   addEventListener('resize', function(){ camApply(); });
 }
 
@@ -3365,6 +3347,10 @@ document.addEventListener('DOMContentLoaded', function(){
     v.style.display = v.style.display==='none' ? 'block' : 'none';
   };
   camInit();
+  /* 全画面が解けても、次のタップで静かに取り直す（対応していない端末では何もしない） */
+  document.addEventListener('click', function(){
+    if (S && !document.fullscreenElement) goFullscreen();
+  }, true);
   var narrEl = document.getElementById('narr'), padEl = document.getElementById('pad');
   var padT = null;
   var padHide = function(){
