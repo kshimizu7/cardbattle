@@ -831,7 +831,10 @@ function describeRoom(n, first){
       else if (rnd() < 0.4)
         say('記されたものは、まだ読んでいない。');
     } else if (n.ev.t === 'seed' && first){
-      seedText = k2.seed;                   /* ③のあと、選択肢の直前で語る */
+      if (k2.npcs){
+        if (n.evNpc == null) n.evNpc = Math.floor(rnd() * k2.npcs.length);
+        seedText = k2.npcs[n.evNpc].look;   /* 人物の風貌と様子。話すかどうかは選択肢で */
+      } else seedText = k2.seed;            /* ③のあと、選択肢の直前で語る */
     } else if (n.ev.t === 'foe' && first){
       pendingFoe = true;                    /* ④で最後に語る */
     }
@@ -982,30 +985,37 @@ function useFeature(n, fid){
 function seedActs(n){
   if (!n.ev || n.ev.t !== 'seed' || S.evDone[n.id]) return [];
   var gid = n.ev.gate, c = S.map.gates[gid].cond, out = [];
+  var k2 = KEYS[n.ev.key];
+  /* 真名の開示は、行動の結果を語り終えてから */
   var done = function(){ S.evDone[n.id]=1; revealName(n); };
   if (meets(gid)) return [];
   if (c.t === 'favor') out.push({ l:'手を貸す', k:'借りを作る', f:function(){
-    S.did['favor:'+gid]=1; done();
+    S.did['favor:'+gid]=1;
     say('{$who が、黙って手を貸した|時間は食った。それだけのことだ|'+
-      '$hurt が、自分の水を分けた}。{相手は、何も言わなかった|礼らしい礼は、無かった}。','em'); } });
+      '$hurt が、自分の水を分けた}。{相手は、何も言わなかった|礼らしい礼は、無かった}。','em');
+    done(); } });
   var NOUN = { key:'鍵', scale:'鱗', tablet:'石板', food:'食料' };
   var nn = NOUN[c.item];
   if (c.t === 'carry' || c.t === 'offer') out.push({ l: nn ? nn + 'を、持っていく' : '持っていく', k:'荷が一つ増える', f:function(){
-    S.bag[c.item]=1; done();
+    S.bag[c.item]=1;
     say('{$who が、それを荷に収めた|重いが、置いていく気にはならない|'+
-      '使い道は、そのうち分かる}。','em'); } });
+      '使い道は、そのうち分かる}。','em');
+    done(); } });
   if (c.t === 'mark') out.push({ l:'触れる', k:'印 '+((S.marks[c.key]||0)+1)+'/'+c.n, f:function(){
     S.marks[c.key]=(S.marks[c.key]||0)+1;
     say('{指先が温かい|$soundが、遠くで一度鳴った|$traceが、$lightを弾いた}。','em');
     say('── 印 '+S.marks[c.key]+'/'+c.n,'sys');
     if (S.marks[c.key] >= c.n) done(); else revealName(n); } });
   if (c.t === 'lever') out.push({ l:'動かす', k:'どこかが変わる', f:function(){
-    S.did['lever:'+gid]=1; done();
+    S.did['lever:'+gid]=1;
     say('{軋みながら、それは動いた|$placeの奥で、重いものが動く音がした|'+
-      '$soundとは違う音が、長く尾を引いた}。','em'); } });
-  if (c.t === 'deal') out.push({ l:'話をつける', k:'刃を抜かない', f:function(){
-    S.did['deal:'+gid]=1; done();
-    say('{話は、思ったより早くついた|互いに、損のない形に落ち着いた}。','em'); } });
+      '$soundとは違う音が、長く尾を引いた}。','em');
+    done(); } });
+  if (c.t === 'deal') out.push({ l:'話しかける', k:'刃を抜かない', f:function(){
+    S.did['deal:'+gid]=1;
+    var npc = k2.npcs && n.evNpc != null ? k2.npcs[n.evNpc] : null;
+    say(npc ? npc.talk : '{話は、思ったより早くついた|互いに、損のない形に落ち着いた}。','em');
+    done(); } });
   return out;
 }
 
