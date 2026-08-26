@@ -16,6 +16,7 @@
     <span class="chip" id="kil">討 0</span>
     <span class="chip" id="hrt">傷 0</span>
     <span class="chip" id="tor">松明 OFF</span>
+    <span class="chip" id="bok">帳面 0</span>
   </div>
   <div class="body">
     <div class="mapwrap" id="mapwrap"></div>
@@ -26,6 +27,12 @@
   </div>
   <div class="party" id="party"></div>
 </div>
+
+<div class="setup bookov" id="bookov"><div class="card">
+  <h1>帳面</h1>
+  <div id="bookbody"></div>
+  <p style="margin:14px 0 0"><button class="opt" id="bookx">とじる</button></p>
+</div></div>
 
 <div class="setup" id="setup"><div class="card">
   <h1>RPGモード ── 探索（Phase 1）</h1>
@@ -106,6 +113,8 @@ body.land .body{flex-direction:row;gap:8px}
 body.land .mapwrap{flex:0 0 42%;padding:8px 0 8px 10px;align-items:flex-start}
 body.land .mapwrap svg{max-width:100%;max-height:calc(100svh - 96px)}
 body.land .side{padding:8px 10px 0 0}
+.bookov{display:none !important}
+.bookov.on{display:flex !important}
 .setup{position:fixed;inset:0;background:rgba(4,6,11,.94);display:flex;
   align-items:center;justify-content:center;padding:18px;z-index:9}
 .card{width:100%;max-width:460px;max-height:88svh;overflow-y:auto;background:var(--panel);
@@ -1943,7 +1952,7 @@ function verify(map) {
 var PARTY = [
   { n:'聖騎士', hp:14, mx:14, row:0 }, { n:'狂戦士', hp:12, mx:12, row:0 },
   { n:'槍兵',   hp:11, mx:11, row:0 }, { n:'高僧',   hp:9,  mx:9,  row:1 },
-  { n:'魔術師', hp:8,  mx:8,  row:1 }, { n:'狩人',   hp:10, mx:10, row:1 }
+  { n:'魔法使い', hp:8,  mx:8,  row:1 }, { n:'弓兵',   hp:10, mx:10, row:1 }
 ];
 var S = null;
 
@@ -2027,7 +2036,7 @@ function exitState(e){
 /* ================= 灯り =================
    光はマス単位で届く。届いたマスだけが地図に描かれ、
    その先は闇に呑まれて途切れる（＝部屋の輪郭が先に分かってしまわない）。
-   灯りなし: 2マス ／ 松明: 5マス ／ 魔術師のトーチ: 9マス（6歩つづく） */
+   灯りなし: 2マス ／ 松明: 5マス ／ 魔法使いのトーチ: 9マス（6歩つづく） */
 /* ================= 灯り =================
    A案：部屋に入る＝一行が松明を掲げてひと巡りする。輪郭は地図に記録される。
    「いま見えている光」は、立ち位置を中心にした本物の円（縁はやわらかく）。
@@ -2081,7 +2090,7 @@ function reveal(){
     });
   }
 
-  /* ── 魔術師のトーチ：光の精霊が2部屋先まで飛び、輪郭だけを探ってくる ── */
+  /* ── 魔法使いのトーチ：光の精霊が2部屋先まで飛び、輪郭だけを探ってくる ── */
   if (S.spellLeft > 0){
     var nq = [[cur.id, 0]], nvis = {}; nvis[cur.id] = 1;
     while (nq.length){
@@ -2539,7 +2548,7 @@ function drawMap(){
   });
 
   /* 闇のとばり：円の外は、記録済みの場所も影に沈む（見えているのは円の中だけ）。
-     魔術師のトーチが灯っている間は、精霊が探った範囲がまるごと明るい（安心の光） */
+     魔法使いのトーチが灯っている間は、精霊が探った範囲がまるごと明るい（安心の光） */
   var dkm = '<mask id="dk"><rect x="0" y="0" width="' + W + '" height="' + W + '" fill="#fff"/>'
     + '<circle cx="' + LX + '" cy="' + LY + '" r="' + LR + '" fill="url(#dkg)"/>';
   if (S.spellLeft > 0){
@@ -2709,6 +2718,10 @@ function enter(id){
     if (n.gate){
       anchor = caption('関門の前');
       var gid = n.gate, key = KEYS[S.map.gates[gid].key];
+      if (!S.open[gid]){
+        var bn = S.book.filter(function(b){ return b.gate === gid && !b.used; })[0];
+        if (bn){ bn.used = 1; say('── 帳面の書きつけは、ここのことだ', 'sys'); }
+      }
       if (S.open[gid]) say(PASS + key.again);
       else if (meets(gid)){
         S.open[gid] = 1; say(key.open, 'em');
@@ -2734,7 +2747,11 @@ function enter(id){
   } else {
     if (first){
       anchor = caption(labelOf(n));
-      if (n.goal) say('{探していたものは、この奥にある|ここが最奥だ|——ここまで来た}。', 'em');
+      if (n.goal){
+        say('{探していたものは、この奥にある|ここが最奥だ|——ここまで来た}。', 'em');
+        var bg = S.book.filter(function(b){ return b.goal && !b.used; })[0];
+        if (bg){ bg.used = 1; say('── 帳面に写した話は、本当だったということだ', 'sys'); }
+      }
     }
     describeRoom(n, first);
   }
@@ -2745,6 +2762,42 @@ function enter(id){
       + '……何かが動く気配が、壁越しに伝わってきた}。{遠くない|方角の見当は、つく}。');
   render();
   if (anchor) narrBox().scrollTop = Math.max(0, anchor.offsetTop - 8);
+}
+
+/* ================= 帳面 =================
+   書き留めたことは、必ずどこかで回収される。 */
+function makeNote(){
+  var gids = Object.keys(S.map.gates).filter(function(g){ return !S.open[g]; });
+  var noted = {}; S.book.forEach(function(b){ if (b.gate) noted[b.gate] = 1; });
+  var fresh = gids.filter(function(g){ return !noted[g]; });
+  if (fresh.length){
+    var gid = fresh[Math.floor(rnd() * fresh.length)];
+    var k2 = KEYS[S.map.gates[gid].key];
+    return { t: tidy(VARI.expand(k2.gist || '……読み取れたのは、断片だけだ。', S.ctx, rnd)), gate: gid };
+  }
+  var LORE = [
+    '奥にいる$lordは、ひとつところから動かない——そう読める',
+    'この$placeの最も深いところに、探しものはあるらしい',
+    '「引き返した者だけが、生きて語った」と結ばれている',
+    '書き手は、$lordを見たまま戻らなかったようだ'
+  ];
+  return { t: tidy(VARI.expand(LORE[Math.floor(rnd() * LORE.length)], S.ctx, rnd)) + '。', goal: 1 };
+}
+function showBook(){
+  var ov = document.getElementById('bookov');
+  var bd = document.getElementById('bookbody');
+  bd.innerHTML = '';
+  if (!S.book.length){
+    var p0 = document.createElement('p'); p0.className = 'lead';
+    p0.textContent = 'まだ何も書き留めていない。壁画や書きつけを調べると、ここに残る。';
+    bd.appendChild(p0);
+  }
+  S.book.forEach(function(b){
+    var p2 = document.createElement('p');
+    p2.textContent = '・「' + b.t.replace(/。$/, '') + '」' + (b.used ? '　──回収済み' : '');
+    bd.appendChild(p2);
+  });
+  ov.classList.add('on');
 }
 
 /* ================= 特徴を調べる ================= */
@@ -2790,7 +2843,11 @@ function useFeature(n, fid){
       S.loot = (S.loot || 0) + 1;
       say('── ' + pre + '古い硬貨がひと握り。荷の底に収めた（戦利品 ' + S.loot + '）', 'sys');
     };
-    if (e.get === 'note') say('── 分かったことを、帳面に書き留めた', 'sys');
+    if (e.get === 'note'){
+      var nb = makeNote();
+      S.book.push(nb);
+      say('── 帳面に書き留めた：「' + nb.t.replace(/。$/, '') + '」', 'sys');
+    }
     else if (e.get === 'food'){ S.bag.food = 1; say('── 保存の効く食料を、荷に加えた', 'sys'); }
     else if (e.get === 'salve') giveSalve('中身は');
     else if (e.get === 'coin') giveCoin('');
@@ -2848,6 +2905,7 @@ function readHint(n){
   say('{近寄って、灯りを寄せる|膝をついて、指先で埃を払う|$who が身をかがめ、文字をたどる}。——読める。');
   say(k2.hint);
   say('── 覚え書きを写した。' + (k2.gist || ''), 'sys');
+  S.book.push({ t: tidy(VARI.expand(k2.gist || '', S.ctx, rnd)), gate: n.ev.gate });
   S.notes[n.ev.key] = 1; S.evDone[n.id] = 1;
   if (k2.cond.t === 'word'){
     S.did['word:'+n.ev.gate] = 1;
@@ -2879,6 +2937,11 @@ function render(){
   document.getElementById('hrt').textContent = '傷 ' + S.hurt;
   var tc = document.getElementById('tor');
   tc.textContent = S.torch ? '松明 ON' : '松明 OFF';
+  var bk = document.getElementById('bok');
+  bk.textContent = '帳面 ' + S.book.length;
+  bk.style.cursor = 'pointer';
+  bk.onclick = showBook;
+  document.getElementById('bookx').onclick = function(){ document.getElementById('bookov').classList.remove('on'); };
   tc.className = 'chip' + (S.torch ? ' on' : '');
   document.getElementById('party').innerHTML = PARTY.map(function(p){
     return '<div class="pm'+(p.row?' back':'')+'"><div class="n">'+p.n+'</div><div class="h">'+p.hp+'</div></div>';
@@ -2958,9 +3021,9 @@ function render(){
     S.torch = !S.torch;
     say(S.torch ? '{松明に火を移した|$lightが、闇を押し戻す}。' : '{火を伏せた|$lightは、足元だけになった}。','sys');
     reveal(); render(); });
-  if (!S.spellUsed) add('魔術師のトーチ', '一度だけ・光の精霊が2部屋先まで形を探る（6歩つづく）', '', function(){
+  if (!S.spellUsed) add('魔法使いのトーチ', '一度だけ・光の精霊が2部屋先まで形を探る（6歩つづく）', '', function(){
     S.spellLeft = 6; S.spellUsed = 1;
-    say('{魔術師が短く唱えると、青白い小さな光が指先から離れた|'+
+    say('{魔法使いが短く唱えると、青白い小さな光が指先から離れた|'+
         '詠唱の終わりに、ちいさな光がふわりと浮いた}。'+
         '{光は先へ飛び、壁をなぞって、部屋の形だけを知らせてくる|'+
         '灯りではない。だが、あれが触れた場所の輪郭が、頭に浮かぶ}。','em');
@@ -3023,7 +3086,7 @@ function begin(){
   var map = generate(g);
   verify(map);
   S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:{}, marks:{},
-        did:{}, notes:{}, fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
+        did:{}, notes:{}, book:[], fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
         kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0, z:1,
         ctx:ctxOf(SETUP.dun) };
   PARTY.forEach(function(p){ p.hp = p.mx; });
