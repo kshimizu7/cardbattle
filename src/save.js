@@ -36,6 +36,8 @@ var CBSAVE = (function () {
     if (!d.rpg || typeof d.rpg !== 'object') d.rpg = {};
     if (typeof d.rpg.coin !== 'number') d.rpg.coin = 0;
     if (!d.rpg.clears || typeof d.rpg.clears !== 'object') d.rpg.clears = {};
+    if (!d.rpg.bag || typeof d.rpg.bag !== 'object') d.rpg.bag = {};
+    if (!d.rpg.chests || typeof d.rpg.chests !== 'object') d.rpg.chests = {};
     d.v = 1;
     return d;
   }
@@ -62,10 +64,14 @@ var CBSAVE = (function () {
   /* ---------- 設定（音・速度・プール・配り方） ---------- */
   /* ---------- RPGモード（硬貨と依頼の達成） ---------- */
   function rpg() { return load().rpg; }
-  function rpgReward(questId, coin) {
+  function rpgReward(questId, coin, res) {
     var r = load().rpg;
     r.coin += (coin || 0);
     if (questId) r.clears[questId] = (r.clears[questId] || 0) + 1;
+    if (res) {
+      if (res.bag) r.bag = res.bag;                       /* 道具は街へ持ち帰る */
+      if (res.chests) Object.keys(res.chests).forEach(function (k) { r.chests[k] = 1; });
+    }
     save(); return r;
   }
 

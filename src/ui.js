@@ -760,6 +760,11 @@
   /* =========================================================
      RPGモード（試験版）── 依頼板とダンジョンへの動線
      ========================================================= */
+  function questSeed(id) {                    /* 依頼ごとに地形は同じ */
+    var h = 2166136261;
+    for (var i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return (h >>> 0) % 2147483647;
+  }
   var RPGQUESTS = [
     { id: 'q_beast', name: '喰らいの洞の主', dun: 'beast', rooms: 'few', coin: 30,
       lead: '村の北の洞に、家畜と人を襲う主が居着いた。洞の最奥まで進み、討ち果たせ。' },
@@ -774,16 +779,20 @@
     m.className = 'modal';
     m.innerHTML = '<div class="box"><div class="rules">' +
       '<h3 style="color:var(--gold)">🗺 RPGモード ── 依頼板（試験版）</h3>' +
-      '<p style="font-size:12.5px;opacity:.8">所持硬貨：<b>' + r.coin + '</b> 枚。' +
+      '<p style="font-size:12.5px;opacity:.8">所持硬貨：<b>' + r.coin + '</b> 枚' +
+        ((r.bag && r.bag.salve) ? '／傷薬 <b>' + r.bag.salve + '</b> つ（持って行けます）' : '') + '。' +
         '依頼を選ぶとダンジョンに入ります。最奥の主を討てば達成、報酬の硬貨が貯まります' +
         '（硬貨の使い道＝街の武器屋・道具屋は、次の段で入ります）。</p>' +
       '<div class="opt-col">' +
       RPGQUESTS.map(function (q) {
         var c = r.clears[q.id] || 0;
+        var pay = c ? Math.max(5, Math.round(q.coin / 3)) : q.coin;
         return '<div class="opt poolopt" data-quest="' + q.id + '">' +
-          '<span class="pn">📜 ' + q.name + ' <b>報酬 硬貨' + q.coin + '枚</b>' +
+          '<span class="pn">📜 ' + q.name + ' <b>報酬 硬貨' + pay + '枚</b>' +
           (c ? ' <b style="color:var(--ok)">✓達成×' + c + '</b>' : '') + '</span>' +
-          '<span class="pd">' + q.lead + '</span></div>';
+          '<span class="pd">' + q.lead +
+          (c ? '<br><span style="opacity:.75">※一度果たした依頼。報酬は目減りするが、地形は同じ。敵と関門は戻っている</span>' : '') +
+          '</span></div>';
       }).join('') +
       '</div>' +
       '<button class="btn ghost" id="rpgqx" style="width:100%;margin-top:10px">とじる</button>' +
@@ -816,7 +825,12 @@
     f.setAttribute('scrolling', 'no');
     f.setAttribute('allow', 'fullscreen');
     f.allowFullscreen = true;
-    f.name = JSON.stringify({ rpgq: 1, id: q.id, name: q.name, lead: q.lead, coin: q.coin, dun: q.dun, rooms: q.rooms });
+    var rr = SAVE.rpg();
+    var again = (rr.clears[q.id] || 0) > 0;
+    var payout = again ? Math.max(5, Math.round(q.coin / 3)) : q.coin;
+    f.name = JSON.stringify({ rpgq: 1, id: q.id, name: q.name, lead: q.lead,
+      coin: payout, dun: q.dun, rooms: q.rooms, seed: questSeed(q.id),
+      bag: rr.bag || {}, chests: rr.chests || {} });
     ov.appendChild(f);
     document.body.appendChild(ov);
     f.srcdoc = window.RPG_PAGE;
@@ -825,8 +839,8 @@
       closeRPG();
       if (!res) { renderTitle(); return; }
       if (!res.cleared) {
-        if (res.coin) {
-          var r3 = SAVE.rpgReward(null, res.coin);
+        if (res.coin || (res.bag && res.bag.salve)) {
+          var r3 = SAVE.rpgReward(null, res.coin, res);
           var m3 = document.createElement('div');
           m3.className = 'modal';
           m3.innerHTML = '<div class="box"><div class="rules" style="text-align:center">' +
@@ -839,13 +853,15 @@
         } else renderTitle();
         return;
       }
-      var r2 = SAVE.rpgReward(res.id, res.coin);
+      var r2 = SAVE.rpgReward(res.id, res.coin, res);
       var mm = document.createElement('div');
       mm.className = 'modal';
       mm.innerHTML = '<div class="box"><div class="rules" style="text-align:center">' +
         '<h3 style="color:var(--gold)">依頼達成！</h3>' +
         '<p>「' + q.name + '」を果たした。<br>報酬として硬貨 <b>' + res.coin + '</b> 枚を受け取った。</p>' +
-        (res.loot ? '<p style="font-size:12.5px;opacity:.8">（うち ' + res.loot * 10 + ' 枚は、道中で拾い集めたぶん）</p>' : '') +
+        (res.loot ? '<p style="font-size:12.5px;opacity:.8">（うち ' + res.loot * 10 + ' 枚は、道中で拾い集めたぶん' +
+          (res.sold ? '。銘の合わなくなった品 ' + res.sold + ' つを ' + res.sold * 3 + ' 枚で引き取ってもらった' : '') + '）</p>' : '') +
+        (res.bag && res.bag.salve ? '<p style="font-size:12.5px;opacity:.8">傷薬 ' + res.bag.salve + ' つを持ち帰った。次の探索へ持って行ける</p>' : '') +
         '<p>所持硬貨：<b>' + r2.coin + '</b> 枚</p>' +
         '<button class="btn primary" id="rok" style="width:100%">受け取る</button>' +
         '</div></div>';

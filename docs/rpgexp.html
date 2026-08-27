@@ -2761,14 +2761,19 @@ function camInit(){
 }
 
 /* ================= 判定 ================= */
+var MARKS = ['三つ叉の紋','蛇の紋','雫の紋','双つ星の紋','鎌の紋','環の紋','裂けた輪の紋','枯れ枝の紋'];
+function markOf(gid){
+  var i = Object.keys(S.map.gates).indexOf(gid);
+  return MARKS[(i < 0 ? 0 : i) % MARKS.length];
+}
 function meets(gid){
   var c = S.map.gates[gid].cond;
   switch (c.t){
-    case 'carry':    return !!S.bag[c.item];
+    case 'carry':    return !!S.bag[c.item + ':' + gid];
     case 'mark':     return (S.marks[c.key]||0) >= c.n;
     case 'slay':     return !!S.did['slay:'+gid];
     case 'favor':    return !!S.did['favor:'+gid];
-    case 'offer':    return !!S.bag[c.item];
+    case 'offer':    return !!S.bag[c.item + ':' + gid];
     case 'lever':    return !!S.did['lever:'+gid];
     case 'word':     return !!S.did['word:'+gid];
     case 'deal':     return !!S.did['deal:'+gid];
@@ -2908,7 +2913,10 @@ function enter(id){
         reveal();
       } else {
         say(key.blocked);
-        say('── ' + NEED[S.map.gates[gid].cond.t], 'bad');
+        var ct = S.map.gates[gid].cond.t;
+        if (ct === 'carry' || ct === 'offer')
+          say('── 錠には ' + markOf(gid) + ' が彫られている。合う品が要る', 'bad');
+        else say('── ' + NEED[ct], 'bad');
       }
     } else {
       if (first) anchor = caption('通路');
@@ -2980,9 +2988,11 @@ function exitDungeon(){
       : '外の光は、まぶしかった。今回は、ここまでだ。', 'em');
   }, 1500);
   setTimeout(function(){
+    var leftovers = dungeonItems().length;
     try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: !!S.qdone,
-      coin: (S.qdone ? (RPGQ.coin || 0) : 0) + (S.loot || 0) * 10,
-      loot: S.loot || 0, kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
+      coin: (S.qdone ? (RPGQ.coin || 0) : 0) + (S.loot || 0) * 10 + leftovers * 3,
+      loot: S.loot || 0, sold: leftovers, bag: { salve: S.bag.salve || 0 },
+      chests: S.chests, kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
   }, 3400);
 }
 
@@ -3005,6 +3015,18 @@ function makeNote(){
   ];
   return { t: tidy(VARI.expand(LORE[Math.floor(rnd() * LORE.length)], S.ctx, rnd)) + '。', goal: 1 };
 }
+/* その迷宮の品（鍵・鱗・石板・供物）。外へ出ると失う。使い終えた分は数えない */
+function dungeonItems(){
+  var out = [];
+  Object.keys(S.bag).forEach(function(k){
+    var i = k.indexOf(':');
+    if (i < 0) return;                       /* 道具（salve など）は別 */
+    var gid = k.slice(i + 1);
+    if (S.open[gid]) return;                 /* もう開いた扉の鍵は用済み */
+    out.push({ kind: k.slice(0, i), gid: gid, mark: S.bag[k] });
+  });
+  return out;
+}
 function showExitAsk(){
   var ov = document.getElementById('askov');
   var bd = document.getElementById('askbody');
@@ -3018,7 +3040,10 @@ function showExitAsk(){
   rows.push(['討った数', String(S.kills), '']);
   rows.push(['傷', String(S.hurt), '']);
   rows.push(['拾った硬貨', S.loot ? (S.loot + ' 束（' + (S.loot * 10) + ' 枚）') : 'なし', '']);
-  if (S.bag.salve) rows.push(['傷薬', S.bag.salve + ' つ', '']);
+  if (S.bag.salve) rows.push(['傷薬（持ち帰る）', S.bag.salve + ' つ', 'ok']);
+  var lost = dungeonItems();
+  if (lost.length) rows.push(['置いていく品', lost.length + ' つ——銘の合う扉は、この先にない（売れば ' +
+    (lost.length * 3) + ' 枚）', 'ng']);
   bd.innerHTML = '<p class="lead">南の口から、外の光が差している。ここから出られる。</p>'
     + rows.map(function(r){
         return '<p class="askrow"><span>' + r[0] + '</span><b class="' + r[2] + '">' + r[1] + '</b></p>';
@@ -3148,9 +3173,12 @@ function seedActs(n){
   var NOUN = { key:'鍵', scale:'鱗', tablet:'石板', food:'食料' };
   var nn = NOUN[c.item];
   if (c.t === 'carry' || c.t === 'offer') out.push({ l: nn ? nn + 'を、持っていく' : '持っていく', k:'荷が一つ増える', f:function(){
-    S.bag[c.item]=1;
+    var mk = markOf(gid);
+    S.bag[c.item + ':' + gid] = mk;
     say('{$who が、それを荷に収めた|重いが、置いていく気にはならない|'+
       '使い道は、そのうち分かる}。','em');
+    say('── ' + (nn || '品') + 'には、' + mk + 'が入っている。合う扉が、この' +
+      tidy(VARI.expand('$place', S.ctx, rnd)) + 'のどこかにある', 'sys');
     done(); } });
   if (c.t === 'mark') out.push({ l: k2.actLabel || '触れる', k:'印 '+((S.marks[c.key]||0)+1)+'/'+c.n, f:function(){
     S.marks[c.key]=(S.marks[c.key]||0)+1;
@@ -3300,13 +3328,16 @@ function render(){
         + hurtOne.n + ' の傷が塞がった。', 'em');
       say('── 傷薬 のこり ' + S.bag.salve, 'sys');
       render(); });
-  var ITEMS = [['key','鍵'],['scale','鱗'],['tablet','石板'],['food','保存食']];
-  ITEMS.forEach(function(it){
-    if (S.bag[it[0]]) addSkill(it[1], '関門で使う', '', function(){
-      say('── ' + it[1] + 'は、要る場所で自然と出番が来る', 'sys'); render(); });
+  var INAME = { key:'錆びた鍵', scale:'厚い鱗', tablet:'石板', food:'保存の効く食料' };
+  var dItems = dungeonItems();
+  dItems.forEach(function(it){
+    addSkill(INAME[it.kind] || '品', '銘：' + it.mark + '／この' +
+      tidy(VARI.expand('$place', S.ctx, rnd)) + 'を出ると失う', '', function(){
+      say('── ' + (INAME[it.kind] || '品') + 'は、' + it.mark + 'の扉の前で自然と出番が来る', 'sys');
+      render(); });
   });
   if (S.loot) addSkill('拾った硬貨　×' + S.loot, '持ち帰れば ' + (S.loot * 10) + ' 枚', '', function(){});
-  if (!S.bag.salve && !S.loot && !ITEMS.some(function(it){ return S.bag[it[0]]; }))
+  if (!S.bag.salve && !S.loot && !dItems.length)
     addSkill('（荷は、軽いままだ）', '', '', function(){});
 
   }
@@ -3448,10 +3479,14 @@ function begin(){
   });
   if (SETUP.shapes === 'mix') g.shapes = ['square','irregular','round'];
   else if (SETUP.shapes) g.shapes = [SETUP.shapes];
+  if (RPGQ && RPGQ.seed != null) g.seed = RPGQ.seed;   /* 依頼ごとに地形は同じ */
   var map = generate(g);
   verify(map);
-  S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:{}, marks:{},
+  var carry = {};
+  if (RPGQ && RPGQ.bag && RPGQ.bag.salve) carry.salve = RPGQ.bag.salve;   /* 街から持ち込んだ道具 */
+  S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:carry, marks:{},
         did:{}, notes:{}, book:[], fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
+        chests:(RPGQ && RPGQ.chests) || {},
         kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0,
         cam:{ z:1, panx:0, pany:0, fit:false },
         ui:{ sheet:0, forced:false, lock:0, acts:[], skills:[] }, pre:0,
