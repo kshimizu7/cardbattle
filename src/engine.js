@@ -528,10 +528,24 @@ var CB = (function () {
     return back;
   }
 
-  /** 溜めておいた前進の演出を流す。技の締め・ラウンド処理の締めで必ず呼ぶ */
+  /** 溜めておいた前進の演出を流す。技の締め・ラウンド処理の締めで必ず呼ぶ。
+      溜めているあいだに、繰り上がるはずだった後衛まで倒れていることがある
+      （前衛と後衛をまとめて薙ぐ技など）。倒れた者は前へ出ない——
+      盤面も元のマスへ戻し、撃破の表示だけで終わらせる */
   function flushMoves(st) {
     if (!st._mvq || !st._mvq.length) return;
     st._mvq.forEach(function (ev) {
+      var u = null, arr = allUnits(st);
+      for (var i = 0; i < arr.length; i++) if (arr[i].uid === ev.uid) { u = arr[i]; break; }
+      if (!u) return;
+      if (!u.alive) {
+        if (u.row === ev.row && u.col === ev.col) {
+          var corpse = occupantAt(st, u.side, ev.fromRow, ev.fromCol);
+          u.row = ev.fromRow;
+          if (corpse && corpse !== u) corpse.row = ev.row;
+        }
+        return;
+      }
       push(st, ev);
       logMsg(st, ev.name + ' が前線へ進み出た！');
     });

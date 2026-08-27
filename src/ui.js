@@ -27,12 +27,17 @@
   // 最初のタップでオーディオを解錠（iOS対策）
   /* ブラウザは最初のタップまで音を鳴らせない。1回目の操作で両方を起こす。 */
   /* 起動して最初の操作で全画面へ。ブラウザは操作の中でしか全画面を許さないので、
-     ここが「起動時」にできる最も早い機会。1回だけ試み、断られたら⛶ボタンに任せる */
-  var FS_TRIED = false;
+     ここが「起動時」にできる最も早い機会。端末によっては断られる（Edge など）ので、
+     数回までは操作のたびに試み、それでも入れなければ起動画面右上の⛶に任せる。
+     利用者が自分で全画面をやめたときは、もう追いかけない */
+  var FS_TRIES = 0, FS_OPTOUT = false;
+  function fsNow() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
   document.addEventListener('pointerdown', function () {
     if (S.sound) SFX.unlock();
     if (S.bgm) syncBgm();
-    if (!FS_TRIED) { FS_TRIED = true; tryFullscreen(); }
+    if (!FS_OPTOUT && !fsNow() && FS_TRIES < 4) { FS_TRIES++; tryFullscreen(); }
   }, { passive: true });
   document.addEventListener('click', function (ev) {
     if (!S.sound) return;
@@ -967,6 +972,7 @@
       '<div id="screen-home"' + (art ? ' style="--homebg:url(' + art + ')"' : '') + '>' +
         '<div class="home-bg"></div><div class="home-pic"></div>' +
         '<div class="home-scrim"></div>' +
+        '<button class="home-fs" id="h_fs2" title="全画面表示">⛶</button>' +
         '<div class="home-menu">' +
           '<button class="hbtn" id="h_arena"><i>◆</i><b>闘 技 場</b>' +
             '<span>カードを組み、腕を競う</span></button>' +
@@ -978,7 +984,6 @@
           '<div class="home-foot">' +
             '<button class="hmini" id="h_snd">' + (S.sound ? '♪ 効果音' : '♪ 効果音 切') + '</button>' +
             '<button class="hmini" id="h_bgm">' + (S.bgm ? '🎵 BGM' : '🎵 BGM 切') + '</button>' +
-            '<button class="hmini" id="h_fs">⛶</button>' +
           '</div>' +
           (VERSION ? '<div class="verlab">VortexIII ── ver ' + VERSION + '</div>' : '') +
         '</div>' +
@@ -988,7 +993,7 @@
     $('#h_lore').onclick = showLore;
     $('#h_snd').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderHome(); };
     $('#h_bgm').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderHome(); };
-    $('#h_fs').onclick = toggleFullscreen;
+    $('#h_fs2').onclick = toggleFullscreen;
   }
 
   /* 叙事詩 ── いま分かっている世界のこと */
@@ -1015,20 +1020,23 @@
   function showLore() {
     var m = document.createElement('div');
     m.className = 'modal';
-    m.innerHTML = '<div class="box"><div class="rules">' +
-      '<h3 style="color:var(--gold)">叙事詩</h3>' +
-      '<p style="font-size:12px;opacity:.7">冒険を進めるほど、ここに書き足されていく。</p>' +
+    /* 見出しと ✕ は上に留め置く。長い文章を最後まで送らないと閉じられない、を避ける */
+    m.innerHTML = '<div class="box lorebox">' +
+      '<div class="lorehead"><h3>叙事詩</h3><button class="lorex" id="lorex">✕</button></div>' +
+      '<div class="lorebody"><div class="rules">' +
+      '<p style="font-size:12px;opacity:.7;margin:0 0 4px">冒険を進めるほど、ここに書き足されていく。</p>' +
       LORE.map(function (x) {
         return '<h4 style="color:var(--gold);margin:16px 0 6px">' + x.h + '</h4>' +
           x.t.split('\n\n').map(function (p2) {
             return '<p style="font-size:13px;line-height:1.75;margin:0 0 8px">' + p2 + '</p>';
           }).join('');
       }).join('') +
-      '<button class="btn ghost" id="lorex" style="width:100%;margin-top:14px">とじる</button>' +
-      '</div></div>';
+      '<button class="btn ghost" id="lorex2" style="width:100%;margin-top:14px">とじる</button>' +
+      '</div></div></div>';
     document.body.appendChild(m);
     m.onclick = function (e) { if (e.target === m) m.remove(); };
     m.querySelector('#lorex').onclick = function () { m.remove(); };
+    m.querySelector('#lorex2').onclick = function () { m.remove(); };
   }
 
   function renderTitle() {
@@ -2207,8 +2215,10 @@
     try {
       var d = document, el = d.documentElement;
       if (d.fullscreenElement || d.webkitFullscreenElement) {
+        FS_OPTOUT = true;                 /* 自分でやめたなら、もう追いかけない */
         (d.exitFullscreen || d.webkitExitFullscreen).call(d);
       } else {
+        FS_OPTOUT = false;
         var req = el.requestFullscreen || el.webkitRequestFullscreen;
         if (req) req.call(el);
         else toast('この端末では全画面にできません。ホーム画面に追加すると隠せます');
