@@ -961,20 +961,22 @@
     var r = SAVE.rpg();
     app.innerHTML =
       '<div id="screen-home"' + (art ? ' style="--homebg:url(' + art + ')"' : '') + '>' +
-        '<div class="home-art"' + (art ? ' style="background-image:url(' + art + ')"' : '') + '>' +
-          '<div class="home-fade"></div>' +
-        '</div>' +
+        '<div class="home-bg"></div><div class="home-pic"></div>' +
+        '<div class="home-scrim"></div>' +
         '<div class="home-menu">' +
-          '<button class="hbtn" id="h_arena"><b>闘技場</b><span>カードを組み、腕を競う</span></button>' +
-          '<button class="hbtn" id="h_rpg"><b>世界の探索</b><span>交界域から、依頼を受けて潜る' +
-            (r.coin ? '　<i>硬貨 ' + r.coin + '</i>' : '') + '</span></button>' +
-          '<button class="hbtn" id="h_lore"><b>叙事詩</b><span>いま分かっている、この世界のこと</span></button>' +
+          '<button class="hbtn" id="h_arena"><i>◆</i><b>闘 技 場</b>' +
+            '<span>カードを組み、腕を競う</span></button>' +
+          '<button class="hbtn" id="h_rpg"><i>◆</i><b>世界の探索</b>' +
+            '<span>交界域から、依頼を受けて潜る' +
+            (r.coin ? '　<em>硬貨 ' + r.coin + '</em>' : '') + '</span></button>' +
+          '<button class="hbtn" id="h_lore"><i>◆</i><b>叙 事 詩</b>' +
+            '<span>いま分かっている、この世界のこと</span></button>' +
           '<div class="home-foot">' +
-            '<button class="btn ghost" id="h_snd">' + (S.sound ? '♪ 効果音 ON' : '♪ 効果音 OFF') + '</button>' +
-            '<button class="btn ghost" id="h_bgm">' + (S.bgm ? '🎵 BGM ON' : '🎵 BGM OFF') + '</button>' +
-            '<button class="btn ghost" id="h_fs">⛶</button>' +
+            '<button class="hmini" id="h_snd">' + (S.sound ? '♪ 効果音' : '♪ 効果音 切') + '</button>' +
+            '<button class="hmini" id="h_bgm">' + (S.bgm ? '🎵 BGM' : '🎵 BGM 切') + '</button>' +
+            '<button class="hmini" id="h_fs">⛶</button>' +
           '</div>' +
-          (VERSION ? '<div class="verlab">ver ' + VERSION + '</div>' : '') +
+          (VERSION ? '<div class="verlab">VortexIII ── ver ' + VERSION + '</div>' : '') +
         '</div>' +
       '</div>';
     $('#h_arena').onclick = function () { renderTitle(); };
