@@ -22,6 +22,7 @@
   </div>
   <div class="mapwrap" id="mapwrap">
     <div id="mapsvg"></div>
+    <div class="entryart" id="entryart"><div class="ea_btns" id="ea_btns"></div></div>
     <button class="mapbig mapui" id="mz_full" title="地図を大きく">⛶</button>
     <div class="pad" id="pad">
       <svg viewBox="20 20 154 154" aria-label="操作盤">
@@ -112,6 +113,20 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   border-top:2px solid #241f14;touch-action:none;user-select:none;-webkit-user-select:none}
 #mapsvg{position:absolute;inset:0}
 #mapsvg svg{position:absolute;display:block;will-change:left,top,width}
+/* 入口の前：地図の代わりに、その場所の情景を出す */
+.entryart{position:absolute;inset:0;z-index:7;display:none;background:#0b0a08 center/cover no-repeat}
+.entryart.on{display:block}
+.entryart:before{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(8,6,4,.15) 0%,rgba(8,6,4,0) 34%,rgba(8,6,4,.72) 82%,rgba(8,6,4,.92) 100%)}
+.ea_btns{position:absolute;left:0;right:0;bottom:0;display:flex;gap:8px;align-items:stretch;
+  padding:10px 12px calc(10px + env(safe-area-inset-bottom,0px))}
+.ea_btns button{font:inherit;border-radius:11px;cursor:pointer;padding:11px 8px;
+  background:rgba(18,14,8,.78);color:#e6dcc4;border:1px solid #6b5a30;font-size:13px;
+  backdrop-filter:blur(3px);flex:1 1 0}
+.ea_btns button.main{flex:1.9 1 0;font-size:17px;font-weight:700;color:#1a1305;letter-spacing:.16em;
+  background:linear-gradient(180deg,#f0d489,#c69a3c);border-color:#f4e2a8;
+  box-shadow:0 4px 16px rgba(0,0,0,.5)}
+.ea_btns button:active{transform:translateY(1px)}
 .mapbig{position:absolute;top:6px;right:6px;z-index:5;width:34px;height:34px;border-radius:9px;
   border:1px solid rgba(201,162,74,.4);background:rgba(22,17,9,.6);color:#f6efd9;
   font-size:15px;cursor:pointer;padding:0}
@@ -3019,7 +3034,7 @@ function startBattle(kind, after){
     /* 生き残りのHPを持ち帰る */
     res.survivors.forEach(function(sv, i){ if (PARTY[i]) PARTY[i].hp = sv.alive ? sv.hp : 0; });
     if (!res.won || !anyAlive()){ wipeOut(); return; }
-    battleSpoils(kind);
+    /* 拾いものは、戦闘結果の画面で受け取り済み（そこで荷に入っている） */
     after(res);
   };
   var ok = false;
@@ -3030,6 +3045,7 @@ function startBattle(kind, after){
     var hurt = PARTY.filter(function(p){ return p.hp > 0; });
     if (hurt.length) hurt[Math.floor(rnd() * hurt.length)].hp -= 2;
     say('{短い戦いだった|数を頼みに押し切った|$who が、先に動いた}。', 'em');
+    battleSpoils(kind);
     after({ won: true, survivors: [] });
   }
 }
@@ -3045,25 +3061,41 @@ function gainItem(kind, n){
   else if (got) S.bag[kind] = cur + got;
   return { got: got, over: over };
 }
-function battleSpoils(kind){
+var DROPNAME = { salve: '傷薬', coin: '古い硬貨のひと握り', oil: '使いさしの油' };
+function rollDrops(kind){
   var drops = [];
   if (kind === 'boss'){
     drops.push(['salve', 2], ['coin', 2]);
     if (rnd() < 0.45) drops.push(['oil', 1]);
   } else {
-    if (rnd() >= 0.45) return;                    /* 何も遺さないこともある */
+    if (rnd() >= 0.45) return [];                 /* 何も遺さないこともある */
     var r = rnd();
     drops.push(r < 0.5 ? ['salve', 1] : r < 0.82 ? ['coin', 1] : ['oil', 1]);
   }
-  var NAME = { salve: '傷薬', coin: '古い硬貨のひと握り', oil: '使いさしの油' };
+  return drops;
+}
+/* 拾いものを荷に入れ、何が手に入ったかの一覧を返す */
+function takeDrops(kind){
+  return rollDrops(kind).map(function(d){
+    var res = gainItem(d[0], d[1]);
+    return { key: d[0], name: DROPNAME[d[0]], n: res.got, over: res.over,
+             have: d[0] === 'coin' ? (S.loot || 0) : (S.bag[d[0]] || 0) };
+  });
+}
+/* 本編から呼ばれる。戦闘結果の画面に「手に入れたもの」として並べてもらう */
+window.RPGSPOILS = function(kind){
+  try { return takeDrops(kind); } catch (e){ return []; }
+};
+/* 単体デモ（本編の外）では、これまでどおり文章で伝える */
+function battleSpoils(kind){
+  var list = takeDrops(kind);
+  if (!list.length) return;
   say('{——骸のそばに、布に包まれたものが落ちていた|'
     + '倒れたものの傍らに、持ち物が散っている|'
     + '$who が、こぼれ落ちたものを拾い上げた}。', 'em');
-  drops.forEach(function(d){
-    var res = gainItem(d[0], d[1]);
-    if (!res.got){ say('── ' + NAME[d[0]] + 'は、もう荷に入らない', 'sys'); return; }
-    var have = d[0] === 'coin' ? S.loot : S.bag[d[0]];
-    say('── ' + NAME[d[0]] + (res.got > 1 ? ' ×' + res.got : '') + ' を手に入れた（' + have + '）', 'sys');
+  list.forEach(function(d){
+    if (!d.n){ say('── ' + d.name + 'は、もう荷に入らない', 'sys'); return; }
+    say('── ' + d.name + (d.n > 1 ? ' ×' + d.n : '') + ' を手に入れた（' + d.have + '）', 'sys');
   });
 }
 
@@ -3525,24 +3557,34 @@ function render(){
   pk.onclick = skillOK ? function(){ S.ui.sheet = (S.ui.sheet === 'skill') ? 0 : 'skill'; syncSheet(); } : null;
   document.getElementById('sheetx').onclick = function(){ S.ui.sheet = 0; syncSheet(); };
 
-  /* 入口の前：最下段の一列（真ん中に大きく「入る」） */
+  /* 入口の前：地図の代わりに情景画を出し、その上に「入る」を重ねる。
+     絵が手に入らないとき（単体デモ）は、これまでどおり最下段の一列で出す */
+  var art = S.pre ? entryArt() : '';
+  var ea = document.getElementById('entryart');
   var eb = document.getElementById('entrybar');
-  eb.classList.toggle('on', !!S.pre);
+  var goIn = function(){ S.pre = 0; enter(S.map.start); };
+  var goBack = function(){
+    if (RPGQ){ try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: false }); } catch (e) {} return; }
+    document.getElementById('setup').style.display='flex'; };
+  ea.classList.toggle('on', !!(S.pre && art));
+  eb.classList.toggle('on', !!(S.pre && !art));
   if (S.pre){
-    eb.innerHTML = '';
+    var host = art ? document.getElementById('ea_btns') : eb;
+    if (art) ea.style.backgroundImage = 'url(' + art + ')';
+    host.innerHTML = '';
     var mk2 = function(label, cls, fn){
       var b = document.createElement('button');
       if (cls) b.className = cls;
-      b.textContent = label; b.onclick = fn; eb.appendChild(b);
+      b.textContent = label; b.onclick = fn; host.appendChild(b);
     };
+    mk2(RPGQ ? '戻る' : '選び直す', '', goBack);
+    mk2('入 る', 'main', goIn);
     mk2('装備を整える', '', function(){
       say('（装備は Phase 2 で。いまは身ひとつでもぐる）', 'sys'); });
-    mk2('入 る', 'main', function(){ S.pre = 0; enter(S.map.start); });
-    mk2(RPGQ ? '戻る' : '選び直す', '', function(){
-      if (RPGQ){ try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: false }); } catch (e) {} return; }
-      document.getElementById('setup').style.display='flex'; });
   }
   document.getElementById('pad').style.display = S.pre ? 'none' : '';
+  var mzf = document.getElementById('mz_full');
+  if (mzf) mzf.style.display = (S.pre && art) ? 'none' : '';
 
   S.ui.forced = forced;
   syncSheet();
@@ -3569,6 +3611,16 @@ function syncSheet(){
 }
 
 /* ================= 入口の前 ================= */
+/* 情景画は本編アプリが持っている。単体デモでは手に入らない */
+var ARTCACHE = {};
+function entryArt(){
+  var k = S.dun;
+  if (ARTCACHE[k] !== undefined) return ARTCACHE[k];
+  var url = '';
+  try { if (parent !== window && parent.RPGART) url = parent.RPGART(k) || ''; } catch (e) {}
+  ARTCACHE[k] = url;
+  return url;
+}
 function preEntry(){
   document.getElementById('narr').innerHTML='';
   var d = DUNGEONS[S.dun];

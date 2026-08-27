@@ -1901,6 +1901,23 @@ body.shake{animation:shk2 .56s}
 .hbtn b{font-size:17px;letter-spacing:.08em;color:var(--gold,#f2c65c);font-weight:700}
 .hbtn span{font-size:11.5px;color:#94a4c4;letter-spacing:.02em}
 .hbtn span i{font-style:normal;color:var(--gold,#f2c65c)}
+/* RPGの戦闘結果：生き残りと、手に入れたもの */
+.rpgsur{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.rpgsur .rs{display:flex;justify-content:space-between;align-items:baseline;gap:8px;
+  background:rgba(16,22,38,.9);border:1px solid #24314c;border-radius:9px;
+  padding:8px 11px;font-size:13px;color:#c3cee6}
+.rpgsur .rs b{font-size:14px;font-variant-numeric:tabular-nums}
+.rpgloot{border:1px solid var(--gold,#f2c65c);border-radius:11px;padding:10px 12px;
+  background:linear-gradient(180deg,rgba(46,36,14,.55),rgba(16,20,32,.7))}
+.rpgloot .ll{font-size:11.5px;letter-spacing:.14em;color:var(--gold,#f2c65c);
+  margin-bottom:7px;text-align:center}
+.rpgloot .li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  font-size:14px;color:#eadfc4;padding:3px 0}
+.rpgloot .li + .li{border-top:1px dashed rgba(242,198,92,.22)}
+.rpgloot .li em{font-style:normal;color:var(--gold,#f2c65c);font-weight:700}
+.rpgloot .li b{font-size:11.5px;font-weight:400;color:#9aa7c2}
+.rpgloot .li.full b{color:var(--warn,#e0a33a)}
+.rpgloot .li.none{justify-content:center;color:#8b97b2;font-size:12.5px}
 .home-menu .hbtn:first-of-type{margin-top:auto}
 .home-foot{display:flex;gap:8px;margin-top:auto;padding-top:14px}
 .home-foot .btn{flex:1;white-space:nowrap;font-size:12px;padding:8px}

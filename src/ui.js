@@ -829,6 +829,7 @@
     var ov = document.getElementById('rpgov');
     if (ov) ov.style.display = 'none';
     S.rpgBattle = cfg;
+    S.rpgSpoils = null;
     S.mode = 'cpu';
     S.diff = cfg.diff || 'normal';
     E.setPool('full'); E.setDealMode('full');
@@ -838,7 +839,7 @@
   };
   function endRPGBattle() {
     var cfg = S.rpgBattle, st = S.st;
-    S.rpgBattle = null;
+    S.rpgBattle = null; S.rpgSpoils = null;
     var survivors = st.players[0].units.map(function (u) {
       return { id: u.defId, hp: u.alive ? u.hp : 0, alive: !!u.alive };
     });
@@ -852,6 +853,12 @@
         f.contentWindow.RPGBATTLE_DONE({ won: !!won, survivors: survivors, tag: cfg.tag });
     } catch (e) {}
   }
+
+  /* 入口の情景画を、探索画面に渡す */
+  window.RPGART = function (key) {
+    var A = window.VOT_ART || {};
+    return A[key] || '';
+  };
 
   window.RPGSTATS = function (ids) {
     var out = {};
@@ -3446,10 +3453,34 @@
   }
 
   /* RPGモードの戦闘結果。集計は簡潔に、探索へ戻る導線ひとつ */
+  /* 戦いのあとの拾いもの。探索側で荷に入れ、その一覧をここで受け取る */
+  function rpgSpoils(won) {
+    if (S.rpgSpoils) return S.rpgSpoils;
+    S.rpgSpoils = [];
+    if (!won) return S.rpgSpoils;
+    try {
+      var ov = document.getElementById('rpgov');
+      var f = ov && ov.querySelector('iframe');
+      if (f && f.contentWindow && f.contentWindow.RPGSPOILS)
+        S.rpgSpoils = f.contentWindow.RPGSPOILS(S.rpgBattle && S.rpgBattle.tag) || [];
+    } catch (e) {}
+    return S.rpgSpoils;
+  }
   function showRPGResult() {
     var st = S.st, r = st.result;
     var won = r.winner === 0;
     var alive = st.players[0].units.filter(function (u) { return u.alive; });
+    var loot = rpgSpoils(won);
+    var lootHtml = !won ? '' :
+      '<div class="rpgloot"><div class="ll">手に入れたもの</div>' +
+        (loot.length
+          ? loot.map(function (d) {
+              return '<div class="li' + (d.n ? '' : ' full') + '">' +
+                '<span>' + d.name + (d.n > 1 ? ' <em>×' + d.n + '</em>' : '') + '</span>' +
+                '<b>' + (d.n ? '荷に ' + d.have : 'もう荷に入らない') + '</b></div>';
+            }).join('')
+          : '<div class="li none">何も遺さなかった</div>') +
+      '</div>';
     S.gen = (S.gen || 0) + 1;
     S.screen = 'result'; syncBgm();
     app.classList.remove('land', 'lp-bottom', 'lp-side');
@@ -3465,7 +3496,7 @@
           var c = !u.alive ? 'var(--p2)' : pct <= 30 ? 'var(--bad)' : pct <= 60 ? 'var(--warn)' : 'var(--ok)';
           return '<div class="rs"><span>' + u.def.name + '</span><b style="color:' + c + '">' +
             (u.alive ? u.hp + '/' + u.maxHp : '戦闘不能') + '</b></div>';
-        }).join('') + '</div>' +
+        }).join('') + '</div>' + lootHtml +
         '<button class="btn primary" id="rpgback" style="width:100%;padding:14px;font-size:15px">' +
           (won ? '探索に戻る' : '街へ運ばれる') + '</button>' +
       '</div>';
