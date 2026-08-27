@@ -216,14 +216,25 @@ body.land .party{grid-column:2;grid-row:2}
 
 const APP = String.raw`
 /* ================= 状態 ================= */
+/* 一行。街の「隊列」で組んだ顔ぶれがそのまま入る（渡されなければ、この既定の6人） */
 var PARTY = [
-  { n:'聖騎士',   id:'paladin',    hp:26, mx:26, base:26, row:0, eq:{} },
-  { n:'狂戦士',   id:'berserker',  hp:26, mx:26, base:26, row:0, eq:{} },
-  { n:'槍兵',     id:'spearman',   hp:21, mx:21, base:21, row:0, eq:{} },
-  { n:'高僧',     id:'highpriest', hp:26, mx:26, base:26, row:1, eq:{} },
-  { n:'魔法使い', id:'mage',       hp:11, mx:11, base:11, row:1, eq:{} },
-  { n:'弓兵',     id:'archer',     hp:11, mx:11, base:11, row:1, eq:{} }
+  { n:'聖騎士',   id:'paladin',    hp:26, mx:26, base:26, row:0, col:0, eq:{} },
+  { n:'狂戦士',   id:'berserker',  hp:26, mx:26, base:26, row:0, col:1, eq:{} },
+  { n:'槍兵',     id:'spearman',   hp:21, mx:21, base:21, row:0, col:2, eq:{} },
+  { n:'高僧',     id:'highpriest', hp:26, mx:26, base:26, row:1, col:0, eq:{} },
+  { n:'魔法使い', id:'mage',       hp:11, mx:11, base:11, row:1, col:1, eq:{} },
+  { n:'弓兵',     id:'archer',     hp:11, mx:11, base:11, row:1, col:2, eq:{} }
 ];
+/* 街から渡された隊列で、一行を組み直す。名前と素の体力は本編のカードから */
+function buildParty(team){
+  if (!team || !team.length) return;
+  var mk = team.slice().sort(function(a,b){ return (a.row - b.row) || (a.col - b.col); })
+    .map(function(t){
+      return { n:t.id, id:t.id, hp:12, mx:12, base:12, row:t.row|0, col:t.col|0, eq:{} };
+    });
+  PARTY.length = 0;
+  mk.forEach(function(p){ PARTY.push(p); });
+}
 /* 本編のカードと同じ体力にそろえる（親アプリがあれば、そこから受け取る） */
 function syncPartyStats(){
   try {
@@ -1177,7 +1188,8 @@ function foeTeam(kind){
 }
 function partyTeam(){
   return PARTY.map(function(p, i){
-    return { id: p.id, row: p.row, col: SLOTS6[i][1], hp: p.hp, gear: gearBonus(p) };
+    return { id: p.id, row: p.row, col: (p.col != null ? p.col : SLOTS6[i][1]),
+             hp: p.hp, gear: gearBonus(p) };
   });
 }
 /* 戦えるかどうか。全員倒れていたら、そこで終わり */
@@ -2069,6 +2081,7 @@ function begin(){
         cam:{ z:1, panx:0, pany:0, fit:false },
         ui:{ sheet:0, forced:false, lock:0, acts:[], skills:[], gearAt:null }, pre:0,
         ctx:ctxOf(SETUP.dun) };
+  buildParty(RPGQ && RPGQ.team);
   syncPartyStats();
   restoreGear();
   var carryHp = (RPGQ && RPGQ.party) || null;

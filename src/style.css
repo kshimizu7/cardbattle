@@ -1938,6 +1938,65 @@ body.shake{animation:shk2 .56s}
 .townrow .tr-t b.ok{color:var(--ok)} .townrow .tr-t b.warn{color:var(--warn)} .townrow .tr-t b.bad{color:#ff8f8f}
 .townnote{font-size:12px;color:#9aa7c2;line-height:1.8;margin:10px 0 8px}
 .townnote b{color:var(--gold)}
+/* ── 宿（休む・装い・隊列） ── */
+.innscr{display:flex;flex-direction:column;min-height:100svh;background:var(--ground)}
+.inn-top{position:sticky;top:0;z-index:4;display:flex;align-items:center;gap:10px;padding:11px 14px;
+  background:linear-gradient(180deg,rgba(30,24,10,.55),rgba(12,16,26,.92));
+  border-bottom:1px solid var(--line2);backdrop-filter:blur(6px)}
+.inn-top h2{margin:0;font-size:16px;color:var(--gold);letter-spacing:.16em}
+.inn-top .sp{flex:1}
+.inn-top .coin{font-size:13px;color:#e8dcbb}
+.inn-top .coin b{color:var(--gold);font-size:15px}
+.inn-top button{width:34px;height:34px;border-radius:9px;background:#141b2b;
+  border:1px solid var(--line2);color:#c8d0e0;font-size:14px;cursor:pointer}
+.innscr .tabs{display:flex;padding:0 12px;background:rgba(12,16,26,.96);
+  border-bottom:1px solid var(--line);position:sticky;top:56px;z-index:3}
+.innscr .tabs button{flex:1;background:none;border:0;border-bottom:2px solid transparent;
+  color:var(--dim);font:inherit;font-size:13.5px;padding:10px 4px;letter-spacing:.1em;cursor:pointer}
+.innscr .tabs button.on{color:var(--gold);border-bottom-color:var(--gold);font-weight:700}
+.innscr .pane{padding:14px 14px calc(20px + var(--safe-b))}
+.mem{display:grid;grid-template-columns:auto 1fr auto;gap:3px 10px;align-items:center;width:100%;
+  text-align:left;font:inherit;cursor:pointer;
+  padding:9px 12px;margin:0 0 7px;border-radius:10px;background:#111a2b;border:1px solid #24314c}
+.mem .av{width:34px;height:34px;border-radius:8px;background:linear-gradient(160deg,#243252,#141d31);
+  border:1px solid #33415f;display:flex;align-items:center;justify-content:center;font-size:15px}
+.mem .nm{font-size:14px;font-weight:700;color:#e9e0c8}
+.mem .bo{font-size:11.5px;color:var(--gold);white-space:nowrap}
+.mem .sub{grid-column:2/4;font-size:11.5px;color:#95a2bd;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot{display:grid;grid-template-columns:56px 1fr auto;gap:8px;align-items:center;width:100%;
+  text-align:left;font:inherit;padding:8px 12px;margin:0 0 6px;border-radius:9px;
+  background:#0f1626;border:1px solid #222e48;color:var(--ink)}
+button.slot{cursor:pointer}
+.slot .k{font-size:11px;color:#7f8caa}
+.slot .v{font-size:13px;color:#e6ddc4}
+.slot .v.empty{color:#5f6d8c}
+.slot .d{font-size:11.5px;color:var(--ok);text-align:right}
+.slot .d.minus{color:var(--warn)}
+.slot .x{font-size:11px;color:#94a4c4;border:1px solid #2b3752;border-radius:7px;
+  padding:3px 8px;background:#141b2b;cursor:pointer}
+.slot.lock{border-color:#4a2b32;background:#180f14}
+.slot.lock .v{color:#ff9a9a}
+.form{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0}
+.cell{aspect-ratio:1/.86;border-radius:11px;background:#111a2b;border:1px solid #2b3752;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  position:relative;font:inherit;cursor:pointer;color:var(--ink)}
+.cell.sel{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.cell.empty{background:repeating-linear-gradient(135deg,#0d1424,#0d1424 6px,#111a2b 6px,#111a2b 12px);color:#5f6d8c}
+.cell .cn{font-size:13px;font-weight:700;color:#e9e0c8}
+.cell.empty .cn{color:#5f6d8c}
+.cell .cc{font-size:10.5px;color:#8b98b6}
+.cell .cst{position:absolute;top:5px;right:7px;font-size:10.5px;color:var(--gold)}
+.rowlab{font-size:11px;color:#7f8caa;letter-spacing:.14em;margin:8px 0 2px}
+.bench{display:flex;flex-wrap:wrap;gap:7px;margin:6px 0 4px}
+.bx{font-size:12px;padding:7px 10px;border-radius:9px;background:#0f1626;
+  border:1px solid #222e48;color:#c9d2e6;font:inherit;cursor:pointer}
+.bx b{color:var(--gold);font-size:11px;margin-left:5px}
+.bx.on{border-color:var(--gold);color:#f4dda2;background:#1a1a12}
+.costbar{display:flex;justify-content:space-between;align-items:baseline;font-size:12px;
+  color:#9aa7c2;margin:10px 0 2px}
+.costbar b{color:var(--gold);font-size:15px}
+.costbar b.over{color:var(--bad,#ff8f8f)}
+.warnline{font-size:11.5px;color:var(--warn);margin:6px 0 0;line-height:1.7}
 /* 叙事詩：見出しと✕を上に留め、本文だけを送る */
 .lorebox{display:flex;flex-direction:column;overflow:hidden;padding:0;max-height:86svh}
 .lorehead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;

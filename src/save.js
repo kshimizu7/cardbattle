@@ -44,6 +44,19 @@ var CBSAVE = (function () {
     if (!d.rpg.party || typeof d.rpg.party !== 'object') d.rpg.party = {};   /* 街へ持ち帰った傷 */
     if (typeof d.rpg.day !== 'number') d.rpg.day = 1;                        /* 街の品揃えが変わる節目 */
     if (!d.rpg.stock || typeof d.rpg.stock !== 'object') d.rpg.stock = { day: 0, items: [] };
+    /* 仲間の名簿。雇うか、冒険の出来事で増える。一度仲間になれば、ずっと名簿に残る */
+    if (!d.rpg.allies || typeof d.rpg.allies !== 'object') d.rpg.allies = {};
+    ['paladin', 'berserker', 'spearman', 'highpriest', 'mage', 'archer'].forEach(function (id) {
+      if (!d.rpg.allies[id]) d.rpg.allies[id] = { how: 'start' };
+    });
+    /* いまの隊列。名簿の中から4〜6人 */
+    if (!Array.isArray(d.rpg.team) || !d.rpg.team.length) d.rpg.team = [
+      { id: 'paladin', row: 0, col: 0 }, { id: 'berserker', row: 0, col: 1 },
+      { id: 'spearman', row: 0, col: 2 }, { id: 'highpriest', row: 1, col: 0 },
+      { id: 'mage', row: 1, col: 1 }, { id: 'archer', row: 1, col: 2 }
+    ];
+    /* 宿に流れ着いた者。もぐって戻るたびに入れ替わる */
+    if (!d.rpg.hire || typeof d.rpg.hire !== 'object') d.rpg.hire = { day: 0, ids: [] };
     d.v = 1;
     return d;
   }

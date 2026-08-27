@@ -797,8 +797,17 @@
     { id: 'q_maze', name: '欲深き迷路の先客', dun: 'maze', rooms: 'some', coin: 60,
       lead: '財宝目当ての一団が迷路に消えて久しい。奥に巣食う主を討ち、生きて戻れ。' }
   ];
+  /* 隊列が整っているか。重すぎる／少なすぎる隊列では出立できない */
+  function teamTrouble() {
+    var t = SAVE.rpg().team || [];
+    if (t.length < 4) return '一行が ' + t.length + ' 人しかいない。4人からもぐれる';
+    var c = teamCost(t);
+    if (c > TEAM_CAP) return '編成が重すぎる（' + c + ' / ' + TEAM_CAP + '）。誰かを外すか、軽い者と入れ替える';
+    return null;
+  }
   function showRPGQuests() {
     var r = SAVE.rpg();
+    var bad = teamTrouble();
     var m = document.createElement('div');
     m.className = 'modal';
     m.innerHTML = '<div class="box"><div class="rules">' +
@@ -808,6 +817,9 @@
           [r.bag.salve ? '傷薬 <b>' + r.bag.salve + '</b> つ' : '', r.bag.oil ? '油 <b>' + r.bag.oil + '</b> つ' : '']
             .filter(Boolean).join('・') + '（持って行けます）' : '') + '。' +
         '依頼を選ぶと、その場所へ出立します。最奥の主を討ち、生きて戻れば達成。</p>' +
+      (bad ? '<p style="font-size:12.5px;color:var(--warn);border:1px solid var(--warn);' +
+             'border-radius:9px;padding:8px 10px;margin:0 0 10px">' +
+             '出立できません ── ' + bad + '<br><b>宿の「隊列」で組み直してください</b></p>' : '') +
       '<div class="opt-col">' +
       RPGQUESTS.map(function (q) {
         var c = r.clears[q.id] || 0;
@@ -826,11 +838,20 @@
     m.onclick = function (e) { if (e.target === m) { m.remove(); renderTown(); } };
     m.querySelector('#rpgqx').onclick = function () { m.remove(); renderTown(); };
     [].forEach.call(m.querySelectorAll('[data-quest]'), function (b) {
+      if (bad) { b.style.opacity = '.5'; return; }
       b.onclick = function () {
         var q = RPGQUESTS.filter(function (x) { return x.id === b.dataset.quest; })[0];
         m.remove(); openRPGQuest(q);
       };
     });
+    if (bad) {
+      var go = document.createElement('button');
+      go.className = 'btn primary';
+      go.style.cssText = 'width:100%;margin-top:8px';
+      go.textContent = '宿で隊列を組み直す';
+      go.onclick = function () { m.remove(); INN_TAB = 'team'; INN_AT = null; INN_SLOT = null; renderInn(); };
+      m.querySelector('.rules').appendChild(go);
+    }
   }
   /* ── RPGモードの戦闘：探索画面から呼ばれ、終わったら結果を返す ── */
   window.RPGBATTLE = function (cfg) {
@@ -902,7 +923,7 @@
     f.name = JSON.stringify({ rpgq: 1, id: q.id, name: q.name, lead: q.lead,
       coin: payout, dun: q.dun, rooms: q.rooms, seed: questSeed(q.id),
       bag: rr.bag || {}, chests: rr.chests || {}, gear: rr.gear || { eq:{}, bag:[] },
-      party: rr.party || {} });
+      party: rr.party || {}, team: rr.team || [] });
     ov.appendChild(f);
     document.body.appendChild(ov);
     f.srcdoc = window.RPG_PAGE;
@@ -1096,8 +1117,308 @@
     $('#t_shop').onclick = showShop;
     $('#t_ident').onclick = showIdent;
     $('#t_temple').onclick = showTemple;
-    $('#t_inn').onclick = showInn;
+    $('#t_inn').onclick = function () { INN_TAB = 'rest'; INN_AT = null; INN_SLOT = null; renderInn(); };
     $('#t_home').onclick = renderHome;
+  }
+
+  /* ── 宿 ── 休む・装いを整える・隊列を組む ── */
+  var TEAM_CAP = 24;            /* 編成の重さ（いまの一行と同じ） */
+  var HIRE_RATE = 15;           /* 雇い賃＝コスト × これ */
+  var INN_TAB = 'rest', INN_AT = null, INN_SLOT = null;
+
+  function allyIds() {
+    var a = SAVE.rpg().allies || {};
+    return Object.keys(a).filter(function (id) { return !!E.BY_ID[id]; });
+  }
+  function teamCost(team) {
+    return team.reduce(function (a, t) { return a + (E.BY_ID[t.id] ? E.BY_ID[t.id].cost : 0); }, 0);
+  }
+  /* 宿に流れ着いた者。名簿にない顔ぶれから、日替わりで */
+  function hireList() {
+    var r = SAVE.rpg();
+    if (r.hire && r.hire.day === r.day && r.hire.ids) return r.hire.ids.filter(function (id) { return !r.allies[id]; });
+    var pool = E.ROSTER.map(function (c) { return c.id; }).filter(function (id) { return !r.allies[id]; });
+    var ids = [];
+    for (var i = 0; i < 2 && pool.length; i++) ids.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+    SAVE.rpgSet({ hire: { day: r.day, ids: ids } });
+    return ids;
+  }
+  function hirePrice(id) { return E.BY_ID[id].cost * HIRE_RATE; }
+
+  function renderInn() {
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
+    S.gen = (S.gen || 0) + 1;
+    S.screen = 'title'; syncBgm();
+    app.innerHTML =
+      '<div class="innscr">' +
+        '<div class="inn-top"><h2>宿</h2><span class="sp"></span>' +
+          '<span class="coin">🪙 <b id="inncoin">' + SAVE.rpg().coin + '</b> 枚</span>' +
+          '<button id="innx">✕</button></div>' +
+        '<div class="tabs">' +
+          '<button data-tab="rest">休 む</button>' +
+          '<button data-tab="gear">装 い</button>' +
+          '<button data-tab="team">隊 列</button>' +
+        '</div>' +
+        '<div class="pane" id="innpane"></div>' +
+      '</div>';
+    $('#innx').onclick = renderTown;
+    [].forEach.call(app.querySelectorAll('.tabs button'), function (b) {
+      b.onclick = function () { INN_TAB = b.dataset.tab; INN_AT = null; INN_SLOT = null; innPane(); };
+    });
+    innPane();
+  }
+  function innPane() {
+    [].forEach.call(app.querySelectorAll('.tabs button'), function (b) {
+      b.className = b.dataset.tab === INN_TAB ? 'on' : '';
+    });
+    var box = $('#innpane');
+    box.innerHTML = '';
+    var c = $('#inncoin'); if (c) c.textContent = SAVE.rpg().coin;
+    if (INN_TAB === 'rest') innRest(box);
+    else if (INN_TAB === 'gear') innGear(box);
+    else innTeam(box);
+  }
+
+  /* 休む */
+  function innRest(box) {
+    var party = townParty();
+    var hurt = party.filter(function (m) { return m.hp < m.mx; });
+    townNote(box, hurt.length ? '「傷を負ったまま潜るのは、感心しねえな」'
+                              : '「みな、いい顔をしてる。もう休む必要はねえよ」');
+    party.forEach(function (m) {
+      var pct = m.hp / m.mx;
+      var cl = pct >= 0.99 ? 'ok' : pct <= 0.34 ? 'bad' : 'warn';
+      townRow(box, m.name, '<b class="' + cl + '">' + m.hp + '</b> / ' + m.mx, null, false, null);
+    });
+    if (!hurt.length) return;
+    townNote(box, '<b>泊まる</b>');
+    INN.forEach(function (s) {
+      townRow(box, s.n, s.t, s.p, townCoin() >= s.p, function () {
+        if (!townPay(s.p)) return;
+        var pt = {};
+        townParty().forEach(function (m) { pt[m.id] = Math.min(m.mx, m.hp + Math.ceil(m.mx * s.r)); });
+        SAVE.rpgSet({ party: pt });
+        townToast(s.n + 'で、ひと晩を過ごした');
+        innPane();
+      });
+    });
+  }
+
+  /* 装い */
+  function innGear(box) {
+    var r = SAVE.rpg();
+    var team = r.team;
+    if (INN_AT == null) {
+      var loose = (r.gear.bag || []).length;
+      townNote(box, '誰の装いを整えますか。' + (loose ? '<b>手つかずの品 ' + loose + '</b>' : '荷は空です'));
+      team.forEach(function (t, i) {
+        var m = townMember(t.id);
+        var worn = ['weapon', 'armor', 't1', 't2'].map(function (sl) {
+          return m.eq[sl] ? gearName(m.eq[sl]) : '—';
+        }).join('・');
+        var b = [];
+        if (m.bonus.atk) b.push('攻 ' + (m.bonus.atk > 0 ? '+' : '') + m.bonus.atk);
+        if (m.bonus.hp) b.push('HP ' + (m.bonus.hp > 0 ? '+' : '') + m.bonus.hp);
+        if (m.bonus.spd) b.push('速 ' + (m.bonus.spd > 0 ? '+' : '') + m.bonus.spd);
+        var el = document.createElement('button');
+        el.className = 'mem';
+        el.innerHTML = '<span class="av">' + (t.row ? '🏹' : '⚔') + '</span>' +
+          '<span class="nm">' + m.name + '</span>' +
+          '<span class="bo">' + (b.join('／') || '身ひとつ') + '</span>' +
+          '<span class="sub">' + worn + '</span>';
+        el.onclick = function () { INN_AT = i; innPane(); };
+        box.appendChild(el);
+      });
+      if (loose) {
+        var give = document.createElement('button');
+        give.className = 'btn primary';
+        give.style.cssText = 'width:100%;margin-top:8px;padding:11px';
+        give.textContent = '手つかずの品を配る';
+        give.onclick = function () { autoEquip(); innPane(); };
+        box.appendChild(give);
+        townNote(box, '正体の知れている品だけを、いちばん得をする相手に配ります。');
+      }
+      return;
+    }
+    var t = team[INN_AT], m = townMember(t.id);
+    var back = document.createElement('button');
+    back.className = 'btn ghost'; back.style.cssText = 'width:100%;margin-bottom:8px';
+    back.textContent = '← 一行へ';
+    back.onclick = function () { INN_AT = null; innPane(); };
+    box.appendChild(back);
+    townNote(box, '<b>' + m.name + '</b>　いま ' + m.hp + ' / ' + m.mx);
+    ['weapon', 'armor', 't1', 't2'].forEach(function (sl) {
+      var it = m.eq[sl];
+      var row = document.createElement('div');
+      var locked = it && it.idd && it.curse;
+      row.className = 'slot' + (locked ? ' lock' : '');
+      row.innerHTML = '<span class="k">' + SLOTNAME[sl] + '</span>' +
+        '<span class="v' + (it ? '' : ' empty') + '">' + (it ? gearName(it) : '—— 空いている') + '</span>' +
+        (it ? '<button class="x">' + (locked ? '呪' : '外す') + '</button>' : '<span></span>');
+      box.appendChild(row);
+      if (it && !locked) row.querySelector('.x').onclick = function () {
+        var rr = SAVE.rpg();
+        var e = rr.gear.eq[t.id] || {};
+        rr.gear.bag.push(e[sl]); delete e[sl];
+        rr.gear.eq[t.id] = e;
+        SAVE.rpgSet({ gear: rr.gear });
+        innPane();
+      };
+      if (locked) {
+        var w = document.createElement('div');
+        w.className = 'slot lock';
+        w.innerHTML = '<span class="k"></span><span class="v" style="font-size:11.5px">' +
+          CURSES[it.curse].t + '　神殿で ' + UNCURSE_FEE + ' 枚</span><span></span>';
+        box.appendChild(w);
+      }
+    });
+    var bag = (r.gear.bag || []);
+    var fits = bag.map(function (it, i) { return { it: it, i: i }; }).filter(function (x) {
+      return x.it.k === 'trinket' ? (!m.eq.t1 || !m.eq.t2) : !m.eq[x.it.k];
+    });
+    townNote(box, fits.length ? '<b>持たせる</b>　差分は、いまの装いとの比べ' : '<b>持たせる</b>　いま渡せる品はない');
+    fits.forEach(function (x) {
+      var sl = x.it.k === 'trinket' ? (m.eq.t1 ? 't2' : 't1') : x.it.k;
+      var d = x.it.idd ? gearStats(x.it) : null;
+      var note = d ? [d.atk ? '攻撃 ' + (d.atk > 0 ? '+' : '') + d.atk : '',
+                      d.hp ? 'HP ' + (d.hp > 0 ? '+' : '') + d.hp : '',
+                      d.spd ? '素早さ ' + (d.spd > 0 ? '+' : '') + d.spd : '',
+                      x.it.curse ? '呪：' + CURSES[x.it.curse].t : ''].filter(Boolean).join('／')
+                   : '正体は分からない';
+      var row = document.createElement('button');
+      row.className = 'slot';
+      row.innerHTML = '<span class="k">' + SLOTNAME[sl] + '</span><span class="v">' + gearName(x.it) + '</span>' +
+        '<span class="d' + (d && (d.atk < 0 || d.hp < 0 || d.spd < 0 || x.it.curse) ? ' minus' : '') + '">' + note + '</span>';
+      row.onclick = function () {
+        var rr = SAVE.rpg();
+        var e = rr.gear.eq[t.id] || {};
+        var item = rr.gear.bag.splice(x.i, 1)[0];
+        item.idd = 1;                       /* 身につければ、正体は知れる */
+        e[sl] = item; rr.gear.eq[t.id] = e;
+        SAVE.rpgSet({ gear: rr.gear });
+        if (item.curse) townToast(gearName(item) + ' ── 呪われていた');
+        innPane();
+      };
+      box.appendChild(row);
+    });
+  }
+  /* 手つかずの品を、いちばん得をする相手に配る（正体の知れたものだけ） */
+  function autoEquip() {
+    var r = SAVE.rpg(), team = r.team;
+    var bag = (r.gear.bag || []).slice();
+    var rest = [];
+    bag.sort(function (a, b) { return gearValue(b) - gearValue(a); });
+    bag.forEach(function (it) {
+      if (!it.idd || it.curse) { rest.push(it); return; }
+      var best = null;
+      team.forEach(function (t) {
+        var e = r.gear.eq[t.id] || {};
+        var sl = it.k === 'trinket' ? (!e.t1 ? 't1' : (!e.t2 ? 't2' : null)) : (!e[it.k] ? it.k : null);
+        if (!sl) return;
+        var d = E.BY_ID[t.id];
+        var s = gearStats(it);
+        /* 前衛には攻撃と守り、後衛には素早さと守りが効く */
+        var score = s.atk * (t.row ? 1.0 : 1.6) + s.hp * (t.row ? 0.8 : 0.5) + s.spd * 1.1;
+        if (!best || score > best.score) best = { id: t.id, sl: sl, score: score };
+      });
+      if (!best) { rest.push(it); return; }
+      var e2 = r.gear.eq[best.id] || {};
+      e2[best.sl] = it; r.gear.eq[best.id] = e2;
+    });
+    r.gear.bag = rest;
+    SAVE.rpgSet({ gear: r.gear });
+    townToast('手つかずの品を配った');
+  }
+
+  /* 隊列 */
+  function innTeam(box) {
+    var r = SAVE.rpg();
+    var team = r.team.slice();
+    var cost = teamCost(team);
+    townNote(box, '枠を選んでから、下の面々を押すと入れ替わります。同じ人をもう一度押すと外れます。');
+    [0, 1].forEach(function (row) {
+      var lab = document.createElement('div');
+      lab.className = 'rowlab'; lab.textContent = row ? '後 衛' : '前 衛';
+      box.appendChild(lab);
+      var grid = document.createElement('div');
+      grid.className = 'form';
+      [0, 1, 2].forEach(function (col) {
+        var t = team.filter(function (x) { return x.row === row && x.col === col; })[0];
+        var cell = document.createElement('button');
+        var sel = INN_SLOT && INN_SLOT.row === row && INN_SLOT.col === col;
+        cell.className = 'cell' + (t ? '' : ' empty') + (sel ? ' sel' : '');
+        if (t) {
+          var d = E.BY_ID[t.id], m = townMember(t.id);
+          cell.innerHTML = '<span class="cst">' + d.cost + '</span>' +
+            '<span class="cn">' + d.name + '</span>' +
+            '<span class="cc">' + m.hp + '/' + m.mx + '</span>';
+        } else cell.innerHTML = '<span class="cn">——</span><span class="cc">空き</span>';
+        cell.onclick = function () {
+          INN_SLOT = (sel ? null : { row: row, col: col });
+          innPane();
+        };
+        grid.appendChild(cell);
+      });
+      box.appendChild(grid);
+    });
+    var bar = document.createElement('div');
+    bar.className = 'costbar';
+    bar.innerHTML = '<span>編成の重さ</span><span><b class="' + (cost > TEAM_CAP ? 'over' : '') + '">' +
+      cost + '</b> / ' + TEAM_CAP + '</span>';
+    box.appendChild(bar);
+    var msg = [];
+    if (cost > TEAM_CAP) msg.push('重すぎます。誰かを外すか、軽い者と入れ替えてください');
+    if (team.length < 4) msg.push('4人からもぐれます');
+    [0, 1, 2].forEach(function (col) {
+      var f = team.some(function (x) { return x.row === 0 && x.col === col; });
+      var b = team.some(function (x) { return x.row === 1 && x.col === col; });
+      if (b && !f) msg.push('前衛のいない列の後衛は、戦いの場で前に出ます');
+    });
+    if (msg.length) {
+      var w = document.createElement('p');
+      w.className = 'warnline'; w.innerHTML = '※ ' + msg.join('／');
+      box.appendChild(w);
+    }
+    /* 名簿 */
+    townNote(box, '<b>仲間</b>　' + (INN_SLOT ? '押すと、選んだ枠に入ります' : 'まず上の枠を選んでください'));
+    var bench = document.createElement('div');
+    bench.className = 'bench';
+    allyIds().forEach(function (id) {
+      var inTeam = team.some(function (x) { return x.id === id; });
+      var d = E.BY_ID[id];
+      var b = document.createElement('button');
+      b.className = 'bx' + (inTeam ? ' on' : '');
+      b.innerHTML = d.name + '<b>' + d.cost + '</b>';
+      b.onclick = function () {
+        if (!INN_SLOT) { townToast('先に、上の枠を選んでください'); return; }
+        var rr = SAVE.rpg(), tm = rr.team.slice();
+        tm = tm.filter(function (x) { return !(x.row === INN_SLOT.row && x.col === INN_SLOT.col); });
+        var was = tm.filter(function (x) { return x.id === id; })[0];
+        if (was) tm = tm.filter(function (x) { return x.id !== id; });   /* 二重には並べない */
+        if (!inTeam || was) tm.push({ id: id, row: INN_SLOT.row, col: INN_SLOT.col });
+        SAVE.rpgSet({ team: tm });
+        INN_SLOT = null;
+        innPane();
+      };
+      bench.appendChild(b);
+    });
+    box.appendChild(bench);
+    /* 雇う */
+    var hire = hireList();
+    townNote(box, '<b>宿に流れ着いた者</b>　' + (hire.length ? '雇えば、ずっと仲間になります' : 'いまは誰もいない'));
+    hire.forEach(function (id) {
+      var d = E.BY_ID[id], p = hirePrice(id);
+      townRow(box, d.name + '　<em>重さ ' + d.cost + '</em>',
+        d.flavor || (E.RANGE_TEXT[d.actions[0].range] || ''), p, townCoin() >= p, function () {
+          if (!townPay(p)) return;
+          var rr = SAVE.rpg();
+          rr.allies[id] = { how: 'hire' };
+          rr.hire = { day: rr.day, ids: rr.hire.ids.filter(function (x) { return x !== id; }) };
+          SAVE.rpgSet({ allies: rr.allies, hire: rr.hire });
+          townToast(d.name + ' が仲間になった');
+          innPane();
+        });
+    });
   }
 
   /* 街のひと部屋ぶんの箱。中身を作る関数を渡すと、押すたびに描き直す */
@@ -1241,34 +1562,6 @@
     });
   }
 
-  /* ── 宿 ── */
-  function showInn() {
-    townModal('宿', function (box, redraw) {
-      var party = townParty();
-      var hurt = party.filter(function (m) { return m.hp < m.mx; });
-      townNote(box, hurt.length
-        ? '「傷を負ったまま潜るのは、感心しねえな」'
-        : '「みな、いい顔をしてる。もう休む必要はねえよ」');
-      party.forEach(function (m) {
-        var pct = m.hp / m.mx;
-        var c = pct >= 0.99 ? 'ok' : pct <= 0.34 ? 'bad' : 'warn';
-        townRow(box, m.name, '<b class="' + c + '">' + m.hp + '</b> / ' + m.mx, null, false, null);
-      });
-      if (!hurt.length) return;
-      INN.forEach(function (s) {
-        townRow(box, s.n, s.t, s.p, townCoin() >= s.p, function () {
-          if (!townPay(s.p)) return;
-          var rr = SAVE.rpg(), pt = {};
-          townParty().forEach(function (m) {
-            pt[m.id] = Math.min(m.mx, m.hp + Math.ceil(m.mx * s.r));
-          });
-          SAVE.rpgSet({ party: pt });
-          townToast(s.n + 'で、ひと晩を過ごした');
-          redraw();
-        });
-      });
-    });
-  }
 
   /* =========================================================
      ホーム ── 闘技場・世界の探索・叙事詩
