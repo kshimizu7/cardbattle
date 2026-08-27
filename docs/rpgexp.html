@@ -2732,12 +2732,24 @@ function camApply(){
   svg.style.top  = (wh / 2 - cy * z + S.cam.pany) + 'px';
 }
 function camReset(){ if (S && S.cam){ S.cam.panx = 0; S.cam.pany = 0; S.cam.fit = false; } }
+/* 操作盤を呼び戻す。呼び戻した一叩きが、そのままボタンを押すことのないように待つ */
+var padWake = 0;
+function showPad(){
+  var pad = document.getElementById('pad');
+  if (!pad) return;
+  var was = pad.classList.contains('away');
+  pad.classList.remove('away');
+  if (!was) return;
+  pad.style.pointerEvents = 'none';
+  clearTimeout(padWake);
+  padWake = setTimeout(function(){ pad.style.pointerEvents = ''; }, 450);
+}
 function camInit(){
   var el = document.getElementById('mapwrap');
   var ptrs = {};
   var pinch0 = 0, z0 = 1;
   el.addEventListener('pointerdown', function(ev){
-    if (ev.target.closest && ev.target.closest('.pad, .sheet, .mapui')) return;
+    if (ev.target.closest && ev.target.closest('.pad, .sheet, .mapui, .entryart')) return;
     el.setPointerCapture(ev.pointerId);
     ptrs[ev.pointerId] = { x: ev.clientX, y: ev.clientY };
     var ks = Object.keys(ptrs);
@@ -2768,13 +2780,18 @@ function camInit(){
   });
   var down0 = null;
   el.addEventListener('pointerdown', function(ev){
-    if (ev.target.closest && ev.target.closest('.pad, .sheet, .mapui')) { down0 = null; return; }
+    if (ev.target.closest && ev.target.closest('.pad, .sheet, .mapui, .entryart')) { down0 = null; return; }
     down0 = { x: ev.clientX, y: ev.clientY, t: 1 };
   });
   var up = function(ev){
     delete ptrs[ev.pointerId]; pinch0 = 0;
     if (down0 && Math.hypot(ev.clientX - down0.x, ev.clientY - down0.y) < 8){
-      document.getElementById('pad').classList.toggle('away');   /* 地図をよく見たいとき */
+      /* 地図をよく見たいときは、軽く叩けば操作盤が消える。
+         消えているときの一叩きは「呼び戻すだけ」。そのまま下のボタンを押してしまわないよう、
+         呼び戻した直後のひと呼吸は操作盤を受け付けにしない */
+      var pad = document.getElementById('pad');
+      if (pad.classList.contains('away')) showPad();
+      else pad.classList.add('away');
     }
     down0 = null;
   };
@@ -2923,6 +2940,7 @@ function enter(id){
   var n = S.map.byId[id], first = !S.been[id];
   S.at = id; S.been[id] = 1; S.steps++;
   camReset();
+  showPad();                       /* 部屋に入ったら、操作盤は必ず出ている */
   /* 前の場所の話は畳む。新しい場所の話が、いつも頭から読める */
   narrBox().innerHTML = '';
   if (S.spellLeft > 0){ S.spellLeft--; if (S.spellLeft === 0) say('トーチの光が、静かに消えた。', 'sys'); }
