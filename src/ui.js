@@ -795,7 +795,9 @@
     m.innerHTML = '<div class="box"><div class="rules">' +
       '<h3 style="color:var(--gold)">🗺 RPGモード ── 依頼板（試験版）</h3>' +
       '<p style="font-size:12.5px;opacity:.8">所持硬貨：<b>' + r.coin + '</b> 枚' +
-        ((r.bag && r.bag.salve) ? '／傷薬 <b>' + r.bag.salve + '</b> つ（持って行けます）' : '') + '。' +
+        ((r.bag && (r.bag.salve || r.bag.oil)) ? '／' +
+          [r.bag.salve ? '傷薬 <b>' + r.bag.salve + '</b> つ' : '', r.bag.oil ? '油 <b>' + r.bag.oil + '</b> つ' : '']
+            .filter(Boolean).join('・') + '（持って行けます）' : '') + '。' +
         '依頼を選ぶとダンジョンに入ります。最奥の主を討てば達成、報酬の硬貨が貯まります' +
         '（硬貨の使い道＝街の武器屋・道具屋は、次の段で入ります）。</p>' +
       '<div class="opt-col">' +
@@ -908,7 +910,7 @@
           mw.querySelector('#rokw').onclick = function () { mw.remove(); renderTitle(); };
           return;
         }
-        if (res.coin || (res.bag && res.bag.salve)) {
+        if (res.coin || (res.bag && (res.bag.salve || res.bag.oil))) {
           var r3 = SAVE.rpgReward(null, res.coin, res);
           var m3 = document.createElement('div');
           m3.className = 'modal';
@@ -930,7 +932,9 @@
         '<p>「' + q.name + '」を果たした。<br>報酬として硬貨 <b>' + res.coin + '</b> 枚を受け取った。</p>' +
         (res.loot ? '<p style="font-size:12.5px;opacity:.8">（うち ' + res.loot * 10 + ' 枚は、道中で拾い集めたぶん' +
           (res.sold ? '。銘の合わなくなった品 ' + res.sold + ' つを ' + res.sold * 3 + ' 枚で引き取ってもらった' : '') + '）</p>' : '') +
-        (res.bag && res.bag.salve ? '<p style="font-size:12.5px;opacity:.8">傷薬 ' + res.bag.salve + ' つを持ち帰った。次の探索へ持って行ける</p>' : '') +
+        ((res.bag && (res.bag.salve || res.bag.oil)) ? '<p style="font-size:12.5px;opacity:.8">' +
+          [res.bag.salve ? '傷薬 ' + res.bag.salve + ' つ' : '', res.bag.oil ? '使いさしの油 ' + res.bag.oil + ' つ' : '']
+            .filter(Boolean).join('と') + 'を持ち帰った。次の探索へ持って行ける</p>' : '') +
         '<p>所持硬貨：<b>' + r2.coin + '</b> 枚</p>' +
         '<button class="btn primary" id="rok" style="width:100%">受け取る</button>' +
         '</div></div>';

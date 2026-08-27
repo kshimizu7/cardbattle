@@ -85,7 +85,7 @@
 html,body{height:100%}
 html,body{overscroll-behavior:none}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
-  font-size:14px;line-height:1.75;-webkit-text-size-adjust:100%;
+  font-size:13.5px;line-height:1.62;-webkit-text-size-adjust:100%;
   position:fixed;inset:0;overflow:hidden}
 .wrap{display:flex;flex-direction:column;height:100svh}
 .top{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:8px 10px;
@@ -169,10 +169,10 @@ body.mapbig .mapbig{background:rgba(22,17,9,.8)}
   border:1px solid var(--line2);border-radius:999px;padding:2px 10px;cursor:pointer}
 .side{flex:1 1 auto;display:flex;flex-direction:column;min-height:0;padding:8px 10px 0;
   position:relative}
-.narr{flex:1 1 0;overflow-y:auto;overscroll-behavior:contain;min-height:7.5em;padding:10px 12px;
+.narr{flex:1 1 0;overflow-y:auto;overscroll-behavior:contain;min-height:7.5em;padding:9px 12px;
   background:var(--panel);border:1px solid var(--line);border-radius:10px;
   -webkit-overflow-scrolling:touch}
-.narr p{margin:0 0 10px}
+.narr p{margin:0 0 7px}
 .narr p:last-child{margin-bottom:0}
 .side{position:relative}
 .more{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;z-index:4;
@@ -186,8 +186,8 @@ body.mapbig .mapbig{background:rgba(22,17,9,.8)}
   border-radius:0 0 10px 10px;opacity:0;transition:opacity .2s;
   background:linear-gradient(to bottom,rgba(13,18,32,0),rgba(13,18,32,.96))}
 .fade.on{opacity:1}
-.narr .cap{color:var(--gold);font-weight:700;font-size:15px;margin:4px 0 8px;
-  padding-top:10px;border-top:1px dashed var(--line2)}
+.narr .cap{color:var(--gold);font-weight:700;font-size:14.5px;margin:0 0 6px;
+  padding-top:6px;border-top:1px dashed var(--line2)}
 .narr .cap:first-child{border-top:0;padding-top:0}
 .narr .em{color:var(--gold)}
 .narr .sys{color:var(--mid);font-size:12.5px}
@@ -2888,8 +2888,8 @@ function describeRoom(n, first){
     }
   }
 
-  /* ③のあと：見つけたもの。選択肢の直前に置き、行動と地続きにする */
-  if (seedText) say(seedText);
+  /* ③のあと：見つけたもの。ひと呼吸おいて足す（最初の画面を短く保つ） */
+  if (seedText) setTimeout(function(){ say(seedText); }, 900);
 
   /* ④ 危機。ここで説明を止め、選択肢に落とす */
   if (pendingFoe){
@@ -2906,6 +2906,8 @@ function enter(id){
   var n = S.map.byId[id], first = !S.been[id];
   S.at = id; S.been[id] = 1; S.steps++;
   camReset();
+  /* 前の場所の話は畳む。新しい場所の話が、いつも頭から読める */
+  narrBox().innerHTML = '';
   if (S.spellLeft > 0){ S.spellLeft--; if (S.spellLeft === 0) say('トーチの光が、静かに消えた。', 'sys'); }
   S.pos = { ox: 0, oy: 0.24 };
   S.noise = (!S.enc && rnd() < 0.22) ? 1 : 0;
@@ -2963,9 +2965,11 @@ function enter(id){
   }
   /* 物音: 危機と重なるときは立てない。立てたら必ず文で語ってから選択肢に出す */
   if (S.enc) S.noise = 0;
-  if (S.noise)
+  if (S.noise) setTimeout(function(){
+    if (!S.noise) return;
     say('{……どこかで、低い物音がした|……短い音がした。石が転がるような音だ|'
       + '……何かが動く気配が、壁越しに伝わってきた}。{遠くない|方角の見当は、つく}。');
+  }, 1400);
   render();
   if (anchor) narrBox().scrollTop = Math.max(0, anchor.offsetTop - 8);
   if (window.syncMore) setTimeout(syncMore, 40);
@@ -3008,6 +3012,7 @@ function startBattle(kind, after){
     /* 生き残りのHPを持ち帰る */
     res.survivors.forEach(function(sv, i){ if (PARTY[i]) PARTY[i].hp = sv.alive ? sv.hp : 0; });
     if (!res.won || !anyAlive()){ wipeOut(); return; }
+    battleSpoils(kind);
     after(res);
   };
   var ok = false;
@@ -3021,6 +3026,40 @@ function startBattle(kind, after){
     after({ won: true, survivors: [] });
   }
 }
+/* 戦いのあとの拾いもの。雑魚は運次第、主は必ず何かを遺す */
+var BAGCAP = 9;
+function gainItem(kind, n){
+  n = n || 1;
+  var cur = (kind === 'coin') ? (S.loot || 0) : (S.bag[kind] || 0);
+  var room = Math.max(0, BAGCAP - cur);
+  var got = Math.min(n, room);
+  var over = n - got;
+  if (kind === 'coin'){ S.loot = (S.loot || 0) + got; }
+  else if (got) S.bag[kind] = cur + got;
+  return { got: got, over: over };
+}
+function battleSpoils(kind){
+  var drops = [];
+  if (kind === 'boss'){
+    drops.push(['salve', 2], ['coin', 2]);
+    if (rnd() < 0.45) drops.push(['oil', 1]);
+  } else {
+    if (rnd() >= 0.45) return;                    /* 何も遺さないこともある */
+    var r = rnd();
+    drops.push(r < 0.5 ? ['salve', 1] : r < 0.82 ? ['coin', 1] : ['oil', 1]);
+  }
+  var NAME = { salve: '傷薬', coin: '古い硬貨のひと握り', oil: '使いさしの油' };
+  say('{——骸のそばに、布に包まれたものが落ちていた|'
+    + '倒れたものの傍らに、持ち物が散っている|'
+    + '$who が、こぼれ落ちたものを拾い上げた}。', 'em');
+  drops.forEach(function(d){
+    var res = gainItem(d[0], d[1]);
+    if (!res.got){ say('── ' + NAME[d[0]] + 'は、もう荷に入らない', 'sys'); return; }
+    var have = d[0] === 'coin' ? S.loot : S.bag[d[0]];
+    say('── ' + NAME[d[0]] + (res.got > 1 ? ' ×' + res.got : '') + ' を手に入れた（' + have + '）', 'sys');
+  });
+}
+
 function wipeOut(){
   S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
   say('——立っている者は、もういない。', 'bad');
@@ -3066,7 +3105,8 @@ function exitDungeon(){
     var leftovers = dungeonItems().length;
     try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: !!S.qdone,
       coin: (S.qdone ? (RPGQ.coin || 0) : 0) + (S.loot || 0) * 10 + leftovers * 3,
-      loot: S.loot || 0, sold: leftovers, bag: { salve: S.bag.salve || 0 },
+      loot: S.loot || 0, sold: leftovers,
+      bag: { salve: S.bag.salve || 0, oil: S.bag.oil || 0 },
       chests: S.chests, kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
   }, 3400);
 }
@@ -3116,6 +3156,7 @@ function showExitAsk(){
   rows.push(['傷', String(S.hurt), '']);
   rows.push(['拾った硬貨', S.loot ? (S.loot + ' 束（' + (S.loot * 10) + ' 枚）') : 'なし', '']);
   if (S.bag.salve) rows.push(['傷薬（持ち帰る）', S.bag.salve + ' つ', 'ok']);
+  if (S.bag.oil) rows.push(['使いさしの油（持ち帰る）', S.bag.oil + ' つ', 'ok']);
   var lost = dungeonItems();
   if (lost.length) rows.push(['置いていく品', lost.length + ' つ——銘の合う扉は、この先にない（売れば ' +
     (lost.length * 3) + ' 枚）', 'ng']);
@@ -3207,11 +3248,11 @@ function useFeature(n, fid){
   }
   if (e.get){
     var giveSalve = function(pre){
-      S.bag.salve = (S.bag.salve || 0) + 1;
+      if (!gainItem('salve', 1).got){ say('── ' + pre + '傷薬だった。だが、もう荷に入らない', 'sys'); return; }
       say('── ' + pre + '傷薬だった。荷に加えた（傷薬 ' + S.bag.salve + '）', 'sys');
     };
     var giveCoin = function(pre){
-      S.loot = (S.loot || 0) + 1;
+      if (!gainItem('coin', 1).got){ say('── ' + pre + '硬貨だったが、もう持てない', 'sys'); return; }
       say('── ' + pre + '古い硬貨がひと握り。荷の底に収めた（戦利品 ' + S.loot + '）', 'sys');
     };
     if (e.get === 'note'){
@@ -3408,6 +3449,17 @@ function render(){
         + hurtOne.n + ' の傷が塞がった。', 'em');
       say('── 傷薬 のこり ' + S.bag.salve, 'sys');
       render(); });
+  if (S.bag.oil > 0) addSkill('使いさしの油　×' + S.bag.oil,
+    S.spellUsed ? '魔法使いのトーチを、もう一度' : 'いまは、まだ要らない',
+    S.spellUsed ? 'act' : '', function(){
+      if (!S.spellUsed){ say('── トーチはまだ使っていない。油の出番ではない', 'sys'); render(); return; }
+      S.bag.oil--;
+      S.spellUsed = 0;
+      say('{魔法使いが、瓶の底に残った油を杖の先へ落とした|'
+        + '油の匂いが、ひととき闇を押しのけた}。'
+        + '{もう一度、あの光を呼べる|精霊は、また応えてくれるだろう}。', 'em');
+      say('── 使いさしの油 のこり ' + S.bag.oil, 'sys');
+      render(); });
   var INAME = { key:'錆びた鍵', scale:'厚い鱗', tablet:'石板', food:'保存の効く食料' };
   var dItems = dungeonItems();
   dItems.forEach(function(it){
@@ -3417,7 +3469,7 @@ function render(){
       render(); });
   });
   if (S.loot) addSkill('拾った硬貨　×' + S.loot, '持ち帰れば ' + (S.loot * 10) + ' 枚', '', function(){});
-  if (!S.bag.salve && !S.loot && !dItems.length)
+  if (!S.bag.salve && !S.bag.oil && !S.loot && !dItems.length)
     addSkill('（荷は、軽いままだ）', '', '', function(){});
 
   }
@@ -3563,7 +3615,10 @@ function begin(){
   var map = generate(g);
   verify(map);
   var carry = {};
-  if (RPGQ && RPGQ.bag && RPGQ.bag.salve) carry.salve = RPGQ.bag.salve;   /* 街から持ち込んだ道具 */
+  if (RPGQ && RPGQ.bag){                                   /* 街から持ち込んだ道具 */
+    if (RPGQ.bag.salve) carry.salve = RPGQ.bag.salve;
+    if (RPGQ.bag.oil) carry.oil = RPGQ.bag.oil;
+  }
   S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:carry, marks:{},
         did:{}, notes:{}, book:[], fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
         chests:(RPGQ && RPGQ.chests) || {},
