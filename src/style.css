@@ -1900,9 +1900,9 @@ body.shake{animation:shk2 .56s}
 .hbtn:active{background:linear-gradient(180deg,rgba(242,198,92,.18),rgba(242,198,92,.03))}
 .hbtn i{position:absolute;left:2px;top:50%;transform:translateY(-50%);font-style:normal;
   font-size:9px;color:rgba(242,198,92,.5)}
-.hbtn b{display:block;font-size:20px;font-weight:700;letter-spacing:.2em;color:#f4dda2;
-  text-shadow:0 0 18px rgba(242,198,92,.32),0 2px 6px rgba(0,0,0,.95)}
-.hbtn span{display:block;margin-top:4px;font-size:11px;letter-spacing:.05em;color:#a9b1c1;
+.hbtn b{display:block;font-size:16.5px;font-weight:700;letter-spacing:.18em;color:#f4dda2;
+  text-shadow:0 0 16px rgba(242,198,92,.3),0 2px 6px rgba(0,0,0,.95)}
+.hbtn span{display:block;margin-top:3px;font-size:10.5px;letter-spacing:.04em;color:#a9b1c1;
   text-shadow:0 1px 4px rgba(0,0,0,.95)}
 .hbtn span em{font-style:normal;color:#f2c65c}
 .hbtn:active i{color:#f2c65c}
@@ -1930,7 +1930,7 @@ body.shake{animation:shk2 .56s}
 .home-foot{display:flex;gap:8px;justify-content:center;padding-top:12px}
 #screen-home .verlab{text-align:center;margin-top:7px;font-size:10px;color:#79839a;letter-spacing:.16em}
 @media (max-height:660px){
-  .hbtn{padding:10px 10px 9px} .hbtn b{font-size:17px} .hbtn span{font-size:10.5px;margin-top:2px}
+  .hbtn{padding:10px 10px 9px} .hbtn b{font-size:15px} .hbtn span{font-size:10px;margin-top:2px}
 }
 /* 横長の画面：縦長の絵を切らずに全部見せ、まわりはぼかした同じ絵で埋める */
 @media (min-width:640px){

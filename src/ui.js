@@ -26,9 +26,13 @@
 
   // 最初のタップでオーディオを解錠（iOS対策）
   /* ブラウザは最初のタップまで音を鳴らせない。1回目の操作で両方を起こす。 */
+  /* 起動して最初の操作で全画面へ。ブラウザは操作の中でしか全画面を許さないので、
+     ここが「起動時」にできる最も早い機会。1回だけ試み、断られたら⛶ボタンに任せる */
+  var FS_TRIED = false;
   document.addEventListener('pointerdown', function () {
     if (S.sound) SFX.unlock();
     if (S.bgm) syncBgm();
+    if (!FS_TRIED) { FS_TRIED = true; tryFullscreen(); }
   }, { passive: true });
   document.addEventListener('click', function (ev) {
     if (!S.sound) return;

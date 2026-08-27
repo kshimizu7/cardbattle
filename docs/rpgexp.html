@@ -125,6 +125,8 @@ body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);
   font-size:15px;cursor:pointer;padding:0}
 body.mapbig .mapwrap{position:fixed;inset:0;z-index:12;flex:none;border:0}
 body.mapbig .mapbig{background:rgba(22,17,9,.8)}
+/* 全画面は「地図を見るだけ」。操作盤と行動シートは伏せる */
+body.mapbig .pad,body.mapbig .sheet{display:none!important}
 .pad{position:absolute;right:2px;bottom:2px;z-index:5;width:152px;height:152px;
   transition:opacity .2s}
 .pad.away{opacity:0;pointer-events:none}
@@ -3758,8 +3760,23 @@ document.addEventListener('DOMContentLoaded', function(){
   mEl.onclick = function(){ nEl.scrollTo({ top: nEl.scrollHeight, behavior: 'smooth' }); };
   addEventListener('resize', function(){ setTimeout(syncMore, 60); });
 
+  /* 地図の全画面：見るためだけの構え。全図が入る縮尺まで引き、操作盤は伏せる。
+     もう一度押すと、説明文つきの画面と、いつもの縮尺に戻る */
   document.getElementById('mz_full').onclick = function(){
-    document.body.classList.toggle('mapbig');
+    var on = !document.body.classList.contains('mapbig');
+    document.body.classList.toggle('mapbig', on);
+    if (S && S.cam){
+      if (on){
+        if (!S.cam.fit) S.cam.zBack = S.cam.z;       /* いつもの縮尺を覚えておく */
+        S.cam.fit = true;
+      } else {
+        S.cam.fit = false;
+        if (S.cam.zBack) S.cam.z = S.cam.zBack;
+      }
+      S.cam.panx = 0; S.cam.pany = 0;
+    }
+    if (on && S){ S.ui.sheet = 0; syncSheet(); }
+    try { if (on && parent !== window && parent.RPGFULL) parent.RPGFULL(); } catch (e) {}
     setTimeout(function(){ if (S) camApply(); }, 30);
   };
   document.getElementById('tb_info').onclick = showInfo;
