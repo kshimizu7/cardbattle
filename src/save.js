@@ -41,6 +41,9 @@ var CBSAVE = (function () {
     if (!d.rpg.gear || typeof d.rpg.gear !== 'object') d.rpg.gear = { eq: {}, bag: [] };
     if (!d.rpg.gear.eq || typeof d.rpg.gear.eq !== 'object') d.rpg.gear.eq = {};
     if (!Array.isArray(d.rpg.gear.bag)) d.rpg.gear.bag = [];
+    if (!d.rpg.party || typeof d.rpg.party !== 'object') d.rpg.party = {};   /* 街へ持ち帰った傷 */
+    if (typeof d.rpg.day !== 'number') d.rpg.day = 1;                        /* 街の品揃えが変わる節目 */
+    if (!d.rpg.stock || typeof d.rpg.stock !== 'object') d.rpg.stock = { day: 0, items: [] };
     d.v = 1;
     return d;
   }
@@ -74,8 +77,17 @@ var CBSAVE = (function () {
     if (res) {
       if (res.bag) r.bag = res.bag;                       /* 道具は街へ持ち帰る */
       if (res.gear) r.gear = { eq: res.gear.eq || {}, bag: (res.gear.bag || []).slice(0, 12) };
+      if (res.party) r.party = res.party;                 /* 傷は街まで持ち帰る */
+      r.day = (r.day || 1) + 1;                           /* 一度もぐれば、店の顔ぶれも変わる */
       if (res.chests) Object.keys(res.chests).forEach(function (k) { r.chests[k] = 1; });
     }
+    save(); return r;
+  }
+
+  /* 街での出入り。硬貨・荷・装備・傷を、そのまま書き戻す */
+  function rpgSet(patch) {
+    var r = load().rpg;
+    Object.keys(patch).forEach(function (k) { r[k] = patch[k]; });
     save(); return r;
   }
 
@@ -209,7 +221,7 @@ var CBSAVE = (function () {
     available: function () { return !!store; },
     warned: function () { return warned; },
     getSettings: getSettings, setSettings: setSettings,
-    rpg: rpg, rpgReward: rpgReward,
+    rpg: rpg, rpgReward: rpgReward, rpgSet: rpgSet,
     addGame: addGame, games: games, gameCount: gameCount,
     addReplay: addReplay, replays: replays, replayCode: replayCode,
     decks: decks, addDeck: addDeck, removeDeck: removeDeck,

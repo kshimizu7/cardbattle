@@ -802,13 +802,12 @@
     var m = document.createElement('div');
     m.className = 'modal';
     m.innerHTML = '<div class="box"><div class="rules">' +
-      '<h3 style="color:var(--gold)">🗺 RPGモード ── 依頼板（試験版）</h3>' +
+      '<h3 style="color:var(--gold)">📜 依頼板</h3>' +
       '<p style="font-size:12.5px;opacity:.8">所持硬貨：<b>' + r.coin + '</b> 枚' +
         ((r.bag && (r.bag.salve || r.bag.oil)) ? '／' +
           [r.bag.salve ? '傷薬 <b>' + r.bag.salve + '</b> つ' : '', r.bag.oil ? '油 <b>' + r.bag.oil + '</b> つ' : '']
             .filter(Boolean).join('・') + '（持って行けます）' : '') + '。' +
-        '依頼を選ぶとダンジョンに入ります。最奥の主を討てば達成、報酬の硬貨が貯まります' +
-        '（硬貨の使い道＝街の武器屋・道具屋は、次の段で入ります）。</p>' +
+        '依頼を選ぶと、その場所へ出立します。最奥の主を討ち、生きて戻れば達成。</p>' +
       '<div class="opt-col">' +
       RPGQUESTS.map(function (q) {
         var c = r.clears[q.id] || 0;
@@ -824,8 +823,8 @@
       '<button class="btn ghost" id="rpgqx" style="width:100%;margin-top:10px">とじる</button>' +
       '</div></div>';
     document.body.appendChild(m);
-    m.onclick = function (e) { if (e.target === m) m.remove(); };
-    m.querySelector('#rpgqx').onclick = function () { m.remove(); };
+    m.onclick = function (e) { if (e.target === m) { m.remove(); renderTown(); } };
+    m.querySelector('#rpgqx').onclick = function () { m.remove(); renderTown(); };
     [].forEach.call(m.querySelectorAll('[data-quest]'), function (b) {
       b.onclick = function () {
         var q = RPGQUESTS.filter(function (x) { return x.id === b.dataset.quest; })[0];
@@ -902,14 +901,15 @@
     var payout = again ? Math.max(5, Math.round(q.coin / 3)) : q.coin;
     f.name = JSON.stringify({ rpgq: 1, id: q.id, name: q.name, lead: q.lead,
       coin: payout, dun: q.dun, rooms: q.rooms, seed: questSeed(q.id),
-      bag: rr.bag || {}, chests: rr.chests || {}, gear: rr.gear || { eq:{}, bag:[] } });
+      bag: rr.bag || {}, chests: rr.chests || {}, gear: rr.gear || { eq:{}, bag:[] },
+      party: rr.party || {} });
     ov.appendChild(f);
     document.body.appendChild(ov);
     f.srcdoc = window.RPG_PAGE;
     function closeRPG() { ov.remove(); window.RPGDONE = null; S.screen = 'title'; syncBgm(); }
     window.RPGDONE = function (res) {
       closeRPG();
-      if (!res) { renderTitle(); return; }
+      if (!res) { renderTown(); return; }
       if (!res.cleared) {
         if (res.wiped) {
           SAVE.rpgReward(null, 0, res);          /* 荷は失われる。宝箱の記録だけは残す */
@@ -919,25 +919,28 @@
             '<h3 style="color:var(--p2)">全滅</h3>' +
             '<p>一行は闇に呑まれ、気がつけば街の外れに運ばれていた。<br>' +
             '<b>荷に入れていたものは、すべて失った。</b></p>' +
-            '<p style="font-size:12.5px;opacity:.8">傷は癒える。次の依頼を受けられる。</p>' +
+            '<p style="font-size:12.5px;opacity:.8">みな、虫の息のまま運ばれてきた。宿で休ませるほかない。</p>' +
             '<p>所持硬貨：<b>' + SAVE.rpg().coin + '</b> 枚</p>' +
             '<button class="btn primary" id="rokw" style="width:100%">街へ戻る</button></div></div>';
           document.body.appendChild(mw);
-          mw.querySelector('#rokw').onclick = function () { mw.remove(); renderHome(); };
+          mw.querySelector('#rokw').onclick = function () { mw.remove(); renderTown(); };
           return;
         }
-        if (res.coin || (res.bag && (res.bag.salve || res.bag.oil))) {
-          var r3 = SAVE.rpgReward(null, res.coin, res);
+        {
+          var r3 = SAVE.rpgReward(null, res.coin || 0, res);
           var m3 = document.createElement('div');
           m3.className = 'modal';
           m3.innerHTML = '<div class="box"><div class="rules" style="text-align:center">' +
             '<h3>引き上げた</h3>' +
-            '<p>依頼は果たせなかったが、拾い集めた硬貨 <b>' + res.coin + '</b> 枚は持ち帰った。</p>' +
+            '<p>依頼は果たせなかった。' +
+            (res.coin ? '拾い集めた硬貨 <b>' + res.coin + '</b> 枚は持ち帰った。' : '手ぶらで戻った。') + '</p>' +
+            (gearCount(res) ? '<p style="font-size:12.5px;opacity:.8">装備は <b>' + gearCount(res) +
+              '</b> 点、手元に残っている</p>' : '') +
             '<p>所持硬貨：<b>' + r3.coin + '</b> 枚</p>' +
             '<button class="btn primary" id="rok3" style="width:100%">とじる</button></div></div>';
           document.body.appendChild(m3);
-          m3.querySelector('#rok3').onclick = function () { m3.remove(); renderHome(); };
-        } else renderHome();
+          m3.querySelector('#rok3').onclick = function () { m3.remove(); renderTown(); };
+        }
         return;
       }
       var r2 = SAVE.rpgReward(res.id, res.coin, res);
@@ -957,7 +960,7 @@
         '<button class="btn primary" id="rok" style="width:100%">受け取る</button>' +
         '</div></div>';
       document.body.appendChild(mm);
-      mm.querySelector('#rok').onclick = function () { mm.remove(); renderHome(); };
+      mm.querySelector('#rok').onclick = function () { mm.remove(); renderTown(); };
     };
   }
 
@@ -970,6 +973,301 @@
       ['weapon', 'armor', 't1', 't2'].forEach(function (sl) { if (g.eq[k][sl]) n++; });
     });
     return n;
+  }
+
+  /* =========================================================
+     交界域の街 ── 依頼板・道具屋・鑑定人・神殿・宿
+     ========================================================= */
+  var PARTY_IDS = ['paladin', 'berserker', 'spearman', 'highpriest', 'mage', 'archer'];
+  var INN = [
+    { n: 'わら束の寝床', p: 8,  r: 1 / 3, t: '固い床。それでも、寝ないよりはいい' },
+    { n: '板の間',       p: 20, r: 2 / 3, t: '毛布が一枚。朝には、だいぶ楽になる' },
+    { n: '奥の間',       p: 40, r: 1,     t: '静かで暖かい。傷はすっかり癒える' }
+  ];
+  var IDENT_FEE = 15, UNCURSE_FEE = 60;
+  var SHOP_ITEMS = [
+    { k: 'salve', n: '傷薬',         p: 12, t: '傷口に当てれば、8ほど塞がる' },
+    { k: 'oil',   n: '使いさしの油', p: 30, t: '魔法使いのトーチを、もう一度' }
+  ];
+
+  /* 探索の一行は、いつも「全カード」の値で数える。
+     編成中のプールに引きずられて街と迷宮で体力が食い違わないよう、ここで固定する */
+  function townBase(id) {
+    var was = E.getPool();
+    if (was !== 'full') E.setPool('full');
+    var d = E.BY_ID[id], out = { hp: d.hp, name: d.name };
+    if (was !== 'full') E.setPool(was);
+    return out;
+  }
+  /* その者のいまの体力。装備ぶんの下駄を足して数える */
+  function townMember(id) {
+    var d = townBase(id), r = SAVE.rpg();
+    var eq = (r.gear.eq || {})[id] || {};
+    var b = { atk: 0, hp: 0, spd: 0 };
+    ['weapon', 'armor', 't1', 't2'].forEach(function (sl) {
+      if (!eq[sl]) return;
+      var s = gearStats(eq[sl]);
+      b.atk += s.atk; b.hp += s.hp; b.spd += s.spd;
+    });
+    var mx = Math.max(1, d.hp + b.hp);
+    var hp = r.party[id] != null ? Math.max(1, Math.min(mx, r.party[id])) : mx;
+    return { id: id, name: d.name, hp: hp, mx: mx, eq: eq, bonus: b };
+  }
+  function townParty() { return PARTY_IDS.map(townMember); }
+  function townHurt() { return townParty().filter(function (m) { return m.hp < m.mx; }); }
+
+  /* 店の顔ぶれ。一度もぐるたびに入れ替わる */
+  function shopStock() {
+    var r = SAVE.rpg();
+    if (r.stock && r.stock.day === r.day && r.stock.items && r.stock.items.length) return r.stock.items;
+    var items = [];
+    var n = 1 + (Math.random() < 0.6 ? 1 : 0);
+    for (var i = 0; i < n; i++) {
+      var it = rollGear(Math.random() < 0.22 ? 3 : Math.random() < 0.5 ? 2 : 1);
+      it.curse = null;                     /* 店の品は、まっとうなものだけ */
+      it.idd = 1;
+      it.u = 's' + r.day + '_' + i;
+      items.push(it);
+    }
+    SAVE.rpgSet({ stock: { day: r.day, items: items } });
+    return items;
+  }
+  function shopPrice(it) { return Math.round(gearValue(it) * 1.6); }
+
+  function townCoin() { return SAVE.rpg().coin; }
+  function townPay(n) {
+    var r = SAVE.rpg();
+    if (r.coin < n) return false;
+    SAVE.rpgSet({ coin: r.coin - n });
+    return true;
+  }
+  function townToast(msg) { toast(msg); }
+
+  function renderTown() {
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
+    S.gen = (S.gen || 0) + 1;
+    S.screen = 'title'; syncBgm();
+    var art = (window.VOT_ART && (VOT_ART.town || VOT_ART.title)) || '';
+    var r = SAVE.rpg();
+    var party = townParty();
+    var hurt = party.filter(function (m) { return m.hp < m.mx; }).length;
+    var loose = (r.gear.bag || []).length;
+    var unknown = (r.gear.bag || []).filter(function (it) { return !it.idd; }).length;
+    var cursed = 0;
+    Object.keys(r.gear.eq || {}).forEach(function (k) {
+      ['weapon', 'armor', 't1', 't2'].forEach(function (sl) {
+        var it = r.gear.eq[k][sl];
+        if (it && it.idd && it.curse) cursed++;
+      });
+    });
+    app.innerHTML =
+      '<div id="screen-home" class="town"' + (art ? ' style="--homebg:url(' + art + ')"' : '') + '>' +
+        '<div class="home-bg"></div><div class="home-pic"></div>' +
+        '<div class="home-scrim"></div>' +
+        '<div class="townbar">' +
+          '<span class="tb-coin">🪙 <b>' + r.coin + '</b> 枚</span>' +
+          '<span class="tb-party">' + party.map(function (m) {
+            var pct = m.hp / m.mx;
+            var c = pct >= 0.99 ? 'ok' : pct <= 0.34 ? 'bad' : 'warn';
+            return '<i class="' + c + '">' + m.hp + '</i>';
+          }).join('') + '</span>' +
+        '</div>' +
+        '<div class="home-menu">' +
+          '<button class="hbtn" id="t_quest"><i>◆</i><b>依 頼 板</b>' +
+            '<span>受けた依頼の場所へ、もぐる</span></button>' +
+          '<button class="hbtn" id="t_shop"><i>◆</i><b>道 具 屋</b>' +
+            '<span>薬と油を買う。いらぬ品を売る' +
+            (loose ? '　<em>手つかず ' + loose + '</em>' : '') + '</span></button>' +
+          '<button class="hbtn" id="t_ident"><i>◆</i><b>鑑 定 人</b>' +
+            '<span>正体の知れぬ品を見てもらう' +
+            (unknown ? '　<em>' + unknown + ' 点</em>' : '') + '</span></button>' +
+          '<button class="hbtn" id="t_temple"><i>◆</i><b>神 殿</b>' +
+            '<span>呪いを解く' + (cursed ? '　<em>' + cursed + ' 点</em>' : '') + '</span></button>' +
+          '<button class="hbtn" id="t_inn"><i>◆</i><b>宿</b>' +
+            '<span>傷を癒して、次の探索へ' +
+            (hurt ? '　<em>' + hurt + ' 人が傷を負っている</em>' : '') + '</span></button>' +
+          '<div class="home-foot">' +
+            '<button class="hmini" id="t_home">← ホームへ</button>' +
+          '</div>' +
+          (VERSION ? '<div class="verlab">交界域の街 ── ver ' + VERSION + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    $('#t_quest').onclick = showRPGQuests;
+    $('#t_shop').onclick = showShop;
+    $('#t_ident').onclick = showIdent;
+    $('#t_temple').onclick = showTemple;
+    $('#t_inn').onclick = showInn;
+    $('#t_home').onclick = renderHome;
+  }
+
+  /* 街のひと部屋ぶんの箱。中身を作る関数を渡すと、押すたびに描き直す */
+  function townModal(title, build) {
+    var m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = '<div class="box lorebox">' +
+      '<div class="lorehead"><h3></h3><button class="lorex" id="tmx">✕</button></div>' +
+      '<div class="lorebody"></div></div>';
+    document.body.appendChild(m);
+    var head = m.querySelector('.lorehead h3'), body = m.querySelector('.lorebody');
+    var redraw = function () {
+      head.innerHTML = title + '　<span style="font-size:11.5px;color:var(--dim)">🪙 ' + townCoin() + '</span>';
+      body.innerHTML = '';
+      build(body, redraw, m);
+    };
+    m.onclick = function (e) { if (e.target === m) { m.remove(); renderTown(); } };
+    m.querySelector('#tmx').onclick = function () { m.remove(); renderTown(); };
+    redraw();
+    return m;
+  }
+  /* 街の一行。押せる行と、押せない行 */
+  function townRow(box, label, note, price, can, fn) {
+    var b = document.createElement('button');
+    b.className = 'btn townrow' + (can ? ' act' : ' off');
+    b.innerHTML = '<span class="tr-n">' + label + '</span>' +
+      (price != null ? '<span class="tr-p">' + price + ' 枚</span>' : '') +
+      '<span class="tr-t">' + note + '</span>';
+    if (can) b.onclick = fn;
+    box.appendChild(b);
+    return b;
+  }
+  function townNote(box, txt) {
+    var d = document.createElement('p');
+    d.className = 'townnote';
+    d.innerHTML = txt;
+    box.appendChild(d);
+  }
+
+  /* ── 道具屋 ── */
+  function showShop() {
+    townModal('道具屋', function (box, redraw) {
+      var r = SAVE.rpg();
+      townNote(box, '「傷薬は切らしちゃいねえ。掘り出しもんは、そのときどきだ」');
+      SHOP_ITEMS.forEach(function (s) {
+        var have = (r.bag && r.bag[s.k]) || 0;
+        var full = have >= 9;
+        townRow(box, s.n + (have ? '　<em>持ち ' + have + '</em>' : ''),
+          full ? '荷はもう一杯だ' : s.t, s.p, !full && townCoin() >= s.p, function () {
+            if (!townPay(s.p)) return;
+            var rr = SAVE.rpg(), bag = rr.bag || {};
+            bag[s.k] = (bag[s.k] || 0) + 1;
+            SAVE.rpgSet({ bag: bag });
+            townToast(s.n + ' を買った');
+            redraw();
+          });
+      });
+      var stock = shopStock();
+      townNote(box, '<b>今ある品</b>　次にもぐって戻れば、顔ぶれは変わる');
+      stock.forEach(function (it) {
+        var sold = (r.gear.bag || []).some(function (x) { return x.u === it.u; });
+        var p = shopPrice(it);
+        townRow(box, gearName(it), sold ? 'もう売れてしまった' : gearLine(it),
+          p, !sold && townCoin() >= p && (r.gear.bag || []).length < 12, function () {
+            if (!townPay(p)) return;
+            var rr = SAVE.rpg();
+            rr.gear.bag.push(JSON.parse(JSON.stringify(it)));
+            SAVE.rpgSet({ gear: rr.gear });
+            townToast(gearName(it) + ' を買った');
+            redraw();
+          });
+      });
+      var bag = SAVE.rpg().gear.bag || [];
+      townNote(box, bag.length ? '<b>売る</b>　正体の知れぬ品は、二束三文にしかならない'
+                               : '<b>売る</b>　手放せる品は、いま持っていない');
+      bag.forEach(function (it, i) {
+        var s = gearSell(it);
+        townRow(box, gearName(it), it.idd ? gearLine(it) : '見ずに売るのは、もったいないかもしれない',
+          s, true, function () {
+            var rr = SAVE.rpg();
+            rr.gear.bag.splice(i, 1);
+            SAVE.rpgSet({ gear: rr.gear, coin: rr.coin + s });
+            townToast(gearName(it) + ' を ' + s + ' 枚で売った');
+            redraw();
+          });
+      });
+    });
+  }
+
+  /* ── 鑑定人 ── */
+  function showIdent() {
+    townModal('鑑定人', function (box, redraw) {
+      var r = SAVE.rpg();
+      var un = (r.gear.bag || []).map(function (it, i) { return { it: it, i: i }; })
+        .filter(function (x) { return !x.it.idd; });
+      townNote(box, '「見るだけなら、' + IDENT_FEE + '枚。呪われていても、身につける前に分かる」');
+      if (!un.length) { townNote(box, '正体の知れぬ品は、いま荷にない。'); return; }
+      un.forEach(function (x) {
+        townRow(box, gearName(x.it), '正体を見てもらう', IDENT_FEE, townCoin() >= IDENT_FEE, function () {
+          if (!townPay(IDENT_FEE)) return;
+          var rr = SAVE.rpg();
+          rr.gear.bag[x.i].idd = 1;
+          SAVE.rpgSet({ gear: rr.gear });
+          var it = rr.gear.bag[x.i];
+          townToast(gearName(it) + '（' + gearLine(it) + '）');
+          redraw();
+        });
+      });
+    });
+  }
+
+  /* ── 神殿 ── */
+  function showTemple() {
+    townModal('神殿', function (box, redraw) {
+      var r = SAVE.rpg();
+      var list = [];
+      Object.keys(r.gear.eq || {}).forEach(function (id) {
+        ['weapon', 'armor', 't1', 't2'].forEach(function (sl) {
+          var it = r.gear.eq[id][sl];
+          if (it && it.idd && it.curse) list.push({ id: id, sl: sl, it: it });
+        });
+      });
+      (r.gear.bag || []).forEach(function (it, i) {
+        if (it.idd && it.curse) list.push({ bag: i, it: it });
+      });
+      townNote(box, '「持ち主から離れぬ品か。祈りで解いてやれる。' + UNCURSE_FEE + '枚だ」');
+      if (!list.length) { townNote(box, '呪われた品は、いま手元にない。'); return; }
+      list.forEach(function (x) {
+        var who = x.id ? townBase(x.id).name + 'の' : '荷の中の';
+        townRow(box, who + gearName(x.it), CURSES[x.it.curse].t + '　→　呪いだけが消える',
+          UNCURSE_FEE, townCoin() >= UNCURSE_FEE, function () {
+            if (!townPay(UNCURSE_FEE)) return;
+            var rr = SAVE.rpg();
+            var t = x.id ? rr.gear.eq[x.id][x.sl] : rr.gear.bag[x.bag];
+            t.curse = null;
+            SAVE.rpgSet({ gear: rr.gear, party: rr.party });
+            townToast(gearName(t) + ' の呪いが解けた');
+            redraw();
+          });
+      });
+    });
+  }
+
+  /* ── 宿 ── */
+  function showInn() {
+    townModal('宿', function (box, redraw) {
+      var party = townParty();
+      var hurt = party.filter(function (m) { return m.hp < m.mx; });
+      townNote(box, hurt.length
+        ? '「傷を負ったまま潜るのは、感心しねえな」'
+        : '「みな、いい顔をしてる。もう休む必要はねえよ」');
+      party.forEach(function (m) {
+        var pct = m.hp / m.mx;
+        var c = pct >= 0.99 ? 'ok' : pct <= 0.34 ? 'bad' : 'warn';
+        townRow(box, m.name, '<b class="' + c + '">' + m.hp + '</b> / ' + m.mx, null, false, null);
+      });
+      if (!hurt.length) return;
+      INN.forEach(function (s) {
+        townRow(box, s.n, s.t, s.p, townCoin() >= s.p, function () {
+          if (!townPay(s.p)) return;
+          var rr = SAVE.rpg(), pt = {};
+          townParty().forEach(function (m) {
+            pt[m.id] = Math.min(m.mx, m.hp + Math.ceil(m.mx * s.r));
+          });
+          SAVE.rpgSet({ party: pt });
+          townToast(s.n + 'で、ひと晩を過ごした');
+          redraw();
+        });
+      });
+    });
   }
 
   /* =========================================================
@@ -1002,7 +1300,7 @@
         '</div>' +
       '</div>';
     $('#h_arena').onclick = function () { renderTitle(); };
-    $('#h_rpg').onclick = showRPGQuests;
+    $('#h_rpg').onclick = renderTown;
     $('#h_lore').onclick = showLore;
     $('#h_snd').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderHome(); };
     $('#h_bgm').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderHome(); };

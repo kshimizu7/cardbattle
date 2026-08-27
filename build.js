@@ -43,6 +43,9 @@ ${R('engine.js')}
 ${R('ai.js')}
 </script>
 <script>
+${R('gear.js')}
+</script>
+<script>
 ${R('save.js')}
 </script>
 <script>
