@@ -302,7 +302,7 @@ var CB = (function () {
       編成画面でも同じ規則を掛けているが、AI・保存デッキ・引き継ぎコードなど
       別経路から来た配置も、ここで必ず正す。 */
   function normalizeTeam(team) {
-    var out = team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; });
+    var out = team.map(function (c) { return { id: c.id, row: c.row, col: c.col, hp: c.hp }; });
     for (var col = 0; col < 3; col++) {
       if (out.some(function (c) { return c.row === 0 && c.col === col; })) continue;
       for (var i = 0; i < out.length; i++) {
@@ -333,6 +333,11 @@ var CB = (function () {
     [st.teams[0], st.teams[1]].forEach(function (team, side) {
       team.forEach(function (slot) {
         var u = makeUnit(slot.id, side, slot.row, slot.col);
+        /* RPGモード：前の戦いから持ち越したHPで始める */
+        if (slot.hp != null){
+          u.hp = Math.max(0, Math.min(u.maxHp, slot.hp));
+          if (u.hp <= 0){ u.hp = 0; u.alive = false; }
+        }
         st.players[side].units.push(u);
         st.players[side].cost += u.def.cost;
       });

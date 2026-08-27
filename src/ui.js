@@ -807,6 +807,44 @@
       };
     });
   }
+  /* ── RPGモードの戦闘：探索画面から呼ばれ、終わったら結果を返す ── */
+  window.RPGBATTLE = function (cfg) {
+    var ov = document.getElementById('rpgov');
+    if (ov) ov.style.display = 'none';
+    S.rpgBattle = cfg;
+    S.mode = 'cpu';
+    S.diff = cfg.diff || 'normal';
+    E.setPool('full'); E.setDealMode('full');
+    S.teams = [cfg.allies.slice(), cfg.foes.slice()];
+    S.hands = [[], []];
+    beginBattle();
+  };
+  function endRPGBattle() {
+    var cfg = S.rpgBattle, st = S.st;
+    S.rpgBattle = null;
+    var survivors = st.players[0].units.map(function (u) {
+      return { id: u.defId, hp: u.alive ? u.hp : 0, alive: !!u.alive };
+    });
+    var won = st.result && st.result.winner === 0;
+    var ov = document.getElementById('rpgov');
+    if (ov) ov.style.display = '';
+    var f = ov && ov.querySelector('iframe');
+    try {
+      if (f && f.contentWindow && f.contentWindow.RPGBATTLE_DONE)
+        f.contentWindow.RPGBATTLE_DONE({ won: !!won, survivors: survivors, tag: cfg.tag });
+    } catch (e) {}
+  }
+
+  window.RPGSTATS = function (ids) {
+    var out = {};
+    E.setPool('full');
+    (ids || []).forEach(function (id) {
+      var d = E.BY_ID[id];
+      if (d) out[id] = { hp: d.hp, name: d.name };
+    });
+    return out;
+  };
+
   window.RPGFULL = function () {
     try {
       var el = document.documentElement;
@@ -839,6 +877,21 @@
       closeRPG();
       if (!res) { renderTitle(); return; }
       if (!res.cleared) {
+        if (res.wiped) {
+          SAVE.rpgReward(null, 0, res);          /* 荷は失われる。宝箱の記録だけは残す */
+          var mw = document.createElement('div');
+          mw.className = 'modal';
+          mw.innerHTML = '<div class="box"><div class="rules" style="text-align:center">' +
+            '<h3 style="color:var(--p2)">全滅</h3>' +
+            '<p>一行は闇に呑まれ、気がつけば街の外れに運ばれていた。<br>' +
+            '<b>荷に入れていたものは、すべて失った。</b></p>' +
+            '<p style="font-size:12.5px;opacity:.8">傷は癒える。次の依頼を受けられる。</p>' +
+            '<p>所持硬貨：<b>' + SAVE.rpg().coin + '</b> 枚</p>' +
+            '<button class="btn primary" id="rokw" style="width:100%">街へ戻る</button></div></div>';
+          document.body.appendChild(mw);
+          mw.querySelector('#rokw').onclick = function () { mw.remove(); renderTitle(); };
+          return;
+        }
         if (res.coin || (res.bag && res.bag.salve)) {
           var r3 = SAVE.rpgReward(null, res.coin, res);
           var m3 = document.createElement('div');
@@ -3298,6 +3351,33 @@
     } catch (e) {}
   }
 
+  /* RPGモードの戦闘結果。集計は簡潔に、探索へ戻る導線ひとつ */
+  function showRPGResult() {
+    var st = S.st, r = st.result;
+    var won = r.winner === 0;
+    var alive = st.players[0].units.filter(function (u) { return u.alive; });
+    S.gen = (S.gen || 0) + 1;
+    S.screen = 'result'; syncBgm();
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
+    app.innerHTML =
+      '<div id="screen-result" style="padding:18px;display:flex;flex-direction:column;gap:12px;justify-content:center;min-height:100svh">' +
+        '<h2 style="text-align:center;color:' + (won ? 'var(--gold)' : 'var(--p2)') + ';margin:0">' +
+          (won ? '——退けた' : '——全滅した') + '</h2>' +
+        '<div style="text-align:center;color:var(--dim);font-size:13px">' +
+          (won ? '生き残り ' + alive.length + ' / ' + st.players[0].units.length + ' 人'
+               : '一行は、闇に呑まれた') + '</div>' +
+        '<div class="rpgsur">' + st.players[0].units.map(function (u) {
+          var pct = Math.max(0, Math.round(u.hp / u.maxHp * 100));
+          var c = !u.alive ? 'var(--p2)' : pct <= 30 ? 'var(--bad)' : pct <= 60 ? 'var(--warn)' : 'var(--ok)';
+          return '<div class="rs"><span>' + u.def.name + '</span><b style="color:' + c + '">' +
+            (u.alive ? u.hp + '/' + u.maxHp : '戦闘不能') + '</b></div>';
+        }).join('') + '</div>' +
+        '<button class="btn primary" id="rpgback" style="width:100%;padding:14px;font-size:15px">' +
+          (won ? '探索に戻る' : '街へ運ばれる') + '</button>' +
+      '</div>';
+    $('#rpgback').onclick = endRPGBattle;
+  }
+
   /* 端末をまたいで貼れるように、文字列にして写す */
   function copyText(txt, okMsg) {
     var done = function () { toast(okMsg || 'コピーしました'); };
@@ -3341,6 +3421,7 @@
 
   function showResult() {
     var st = S.st, r = st.result;
+    if (S.rpgBattle) return showRPGResult();
     S.gen = (S.gen || 0) + 1;
     S.screen = 'result'; syncBgm();
     /* 横並びレイアウトは戦闘画面専用。結果画面では必ず解除する

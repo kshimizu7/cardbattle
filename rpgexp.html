@@ -2079,10 +2079,24 @@ function verify(map) {
 
 /* ================= 状態 ================= */
 var PARTY = [
-  { n:'聖騎士', hp:14, mx:14, row:0 }, { n:'狂戦士', hp:12, mx:12, row:0 },
-  { n:'槍兵',   hp:11, mx:11, row:0 }, { n:'高僧',   hp:9,  mx:9,  row:1 },
-  { n:'魔法使い', hp:8,  mx:8,  row:1 }, { n:'弓兵',   hp:10, mx:10, row:1 }
+  { n:'聖騎士',   id:'paladin',    hp:26, mx:26, row:0 },
+  { n:'狂戦士',   id:'berserker',  hp:26, mx:26, row:0 },
+  { n:'槍兵',     id:'spearman',   hp:21, mx:21, row:0 },
+  { n:'高僧',     id:'highpriest', hp:26, mx:26, row:1 },
+  { n:'魔法使い', id:'mage',       hp:11, mx:11, row:1 },
+  { n:'弓兵',     id:'archer',     hp:11, mx:11, row:1 }
 ];
+/* 本編のカードと同じ体力にそろえる（親アプリがあれば、そこから受け取る） */
+function syncPartyStats(){
+  try {
+    if (parent === window || !parent.RPGSTATS) return;
+    var st = parent.RPGSTATS(PARTY.map(function(p){ return p.id; }));
+    PARTY.forEach(function(p){
+      var d = st[p.id];
+      if (d && d.hp){ p.mx = d.hp; p.hp = d.hp; if (d.name) p.n = d.name; }
+    });
+  } catch (e) {}
+}
 var S = null;
 
 function rnd(){ return Math.random(); }
@@ -2964,27 +2978,88 @@ function enter(id){
   if (window.syncMore) setTimeout(syncMore, 40);
 }
 
+/* ================= 戦い =================
+   遭遇も主も、本編のカードバトルで決着をつける。
+   パーティのHPは戦闘のあとも持ち越し、倒れた者はその探索のあいだ戦えない。 */
+var FOES = {
+  beast:  { small: ['werewolf','ogre','harpy'],   big: ['troll','yeti','werewolf'] },
+  mine:   { small: ['ogre','golem','shaman'],     big: ['golem','troll','ogre'] },
+  maze:   { small: ['rogue','assassin','harpy'],  big: ['assassin','valkyrie','rogue'] },
+  shrine: { small: ['shieldguard','knight','priest'], big: ['dragon','paladin','knight'] }
+};
+var SLOTS6 = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]];
+function foeTeam(kind){
+  var pool = (FOES[S.dun] || FOES.beast)[kind === 'boss' ? 'big' : 'small'];
+  var n = kind === 'boss' ? 4 + Math.floor(rnd() * 2) : 2 + Math.floor(rnd() * 2);
+  var out = [];
+  for (var i = 0; i < n; i++){
+    var id = pool[Math.floor(rnd() * pool.length)];
+    if (kind === 'boss' && i === 0) id = pool[0];              /* 主は、その場所の一番大きな個体 */
+    out.push({ id: id, row: SLOTS6[i][0], col: SLOTS6[i][1] });
+  }
+  return out;
+}
+function partyTeam(){
+  return PARTY.map(function(p, i){
+    return { id: p.id, row: p.row, col: SLOTS6[i][1], hp: p.hp };
+  });
+}
+/* 戦えるかどうか。全員倒れていたら、そこで終わり */
+function anyAlive(){ return PARTY.some(function(p){ return p.hp > 0; }); }
+
+function startBattle(kind, after){
+  var cfg = { allies: partyTeam(), foes: foeTeam(kind), tag: kind,
+              diff: kind === 'boss' ? 'hard' : 'normal' };
+  window.RPGBATTLE_DONE = function(res){
+    window.RPGBATTLE_DONE = null;
+    /* 生き残りのHPを持ち帰る */
+    res.survivors.forEach(function(sv, i){ if (PARTY[i]) PARTY[i].hp = sv.alive ? sv.hp : 0; });
+    if (!res.won || !anyAlive()){ wipeOut(); return; }
+    after(res);
+  };
+  var ok = false;
+  try { if (parent !== window && parent.RPGBATTLE){ parent.RPGBATTLE(cfg); ok = true; } } catch (e) {}
+  if (!ok){
+    /* 単体デモ（本編の外）では、これまでどおり文章で決着をつける */
+    window.RPGBATTLE_DONE = null;
+    var hurt = PARTY.filter(function(p){ return p.hp > 0; });
+    if (hurt.length) hurt[Math.floor(rnd() * hurt.length)].hp -= 2;
+    say('{短い戦いだった|数を頼みに押し切った|$who が、先に動いた}。', 'em');
+    after({ won: true, survivors: [] });
+  }
+}
+function wipeOut(){
+  S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
+  say('——立っている者は、もういない。', 'bad');
+  setTimeout(function(){
+    say('気がつけば、外の光の下にいた。誰が運んだのかは、分からない。'
+      + '荷は軽くなっている。持っていたものは、闇の底に置いてきたらしい。', 'em');
+  }, 1800);
+  setTimeout(function(){
+    try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ ? RPGQ.id : null, cleared: false,
+      wiped: true, coin: 0, loot: 0, bag: { salve: 0 }, chests: S.chests,
+      kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
+  }, 3800);
+}
+
 /* ================= 依頼：主との対決と脱出 =================
    文字を一度に流さず、間を置いて達成を味わえるようにする */
 function bossFight(){
-  S.boss = 0; S.bossDown = 1;
+  S.boss = 0;
   S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
   say('得物が抜かれる。誰も、口をきかなかった。', 'em');
-  setTimeout(function(){
-    say('長い戦いだった。壁が震え、灯りは幾度も掻き消えかけた。', 'em');
-  }, 1600);
-  setTimeout(function(){
+  startBattle('boss', function(){
+    S.bossDown = 1; S.kills++;
     say('——終わった。それは、二度と動かなかった。', 'em');
-  }, 3400);
-  setTimeout(function(){
-    say('── 依頼達成：' + RPGQ.name, 'sys');
-    say('（主との本式の戦闘は、次の段で入ります。いまは幕だけ下ろしています）', 'sys');
-  }, 5000);
-  setTimeout(function(){
-    S.qdone = 1; S.ui.lock = 0;
-    say('あとは、来た道を戻るだけだ。生きて、外の光を見る。', 'em');
-    render();
-  }, 6400);
+    setTimeout(function(){
+      say('── 依頼達成：' + RPGQ.name, 'sys');
+    }, 1200);
+    setTimeout(function(){
+      S.qdone = 1; S.ui.lock = 0;
+      say('あとは、来た道を戻るだけだ。生きて、外の光を見る。', 'em');
+      render();
+    }, 2400);
+  });
 }
 function exitDungeon(){
   S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
@@ -3128,13 +3203,13 @@ function useFeature(n, fid){
   if (e.heal){
     var hurt = PARTY.filter(function(p){return p.hp>0 && p.hp<p.mx;})
       .sort(function(a,b){return (a.hp/a.mx)-(b.hp/b.mx);})[0];
-    if (hurt){ hurt.hp = Math.min(hurt.mx, hurt.hp + e.heal);
+    if (hurt){ hurt.hp = Math.min(hurt.mx, hurt.hp + e.heal * 3);
       say('── ' + hurt.n + ' の傷が少し塞がった', 'sys'); }
   }
   if (e.dmg){
     var v = PARTY.filter(function(p){return p.hp>0;});
     var t2 = v[Math.floor(rnd()*v.length)];
-    t2.hp = Math.max(1, t2.hp - e.dmg); S.hurt++;
+    t2.hp = Math.max(1, t2.hp - e.dmg * 3); S.hurt++;
     say('── ' + t2.n + ' が傷を負った', 'bad');
   }
   if (e.get){
@@ -3269,11 +3344,16 @@ function render(){
     forced = true;
     var gid0 = S.enc.gate;
     add('斬りかかる', gid0 ? '倒せば、道が変わる' : '倒せば、不殺の条件は消える', 'act', function(){
-      S.kills++; if (gid0) S.did['slay:'+gid0] = 1;
-      if (S.enc.room){ S.evDone[S.enc.room]=1; revealName(S.map.byId[S.enc.room]); }
+      var room0 = S.enc.room;
       S.enc = 0;
-      say('{短い戦いだった|数を頼みに押し切った|$who が、先に動いた}。','em');
-      say('── 倒した数 '+S.kills, 'sys'); render(); });
+      S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
+      startBattle('mob', function(){
+        S.kills++; if (gid0) S.did['slay:'+gid0] = 1;
+        if (room0){ S.evDone[room0]=1; revealName(S.map.byId[room0]); }
+        S.ui.lock = 0;
+        say('── 倒した数 '+S.kills, 'sys');
+        render();
+      }); });
     add('やり過ごす', '刃を抜かない', 'act', function(){
       S.enc = 0;
       if (rnd()<0.4){ S.hurt++; say('{擦れ違いざま、$hurt が浅く裂かれた|通り抜けたが、無傷とはいかない}。','bad'); }
@@ -3330,7 +3410,7 @@ function render(){
     hurtOne ? hurtOne.n + ' の傷が塞がる' : '傷を負った者がいない', hurtOne ? 'act' : '', function(){
       if (!hurtOne){ say('── いまは、使うまでもない', 'sys'); render(); return; }
       S.bag.salve--;
-      hurtOne.hp = Math.min(hurtOne.mx, hurtOne.hp + 3);
+      hurtOne.hp = Math.min(hurtOne.mx, hurtOne.hp + 8);
       say('{布を裂いて、傷に当てる|$who が、手早く手当てをした}。'
         + hurtOne.n + ' の傷が塞がった。', 'em');
       say('── 傷薬 のこり ' + S.bag.salve, 'sys');
@@ -3498,6 +3578,7 @@ function begin(){
         cam:{ z:1, panx:0, pany:0, fit:false },
         ui:{ sheet:0, forced:false, lock:0, acts:[], skills:[] }, pre:0,
         ctx:ctxOf(SETUP.dun) };
+  syncPartyStats();
   PARTY.forEach(function(p){ p.hp = p.mx; });
   document.getElementById('setup').style.display='none';
   document.getElementById('dunname').textContent = DUNGEONS[SETUP.dun].name;
