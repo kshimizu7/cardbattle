@@ -490,6 +490,7 @@ var BGM = (function () {
     if (ctx.state === 'suspended') ctx.resume();
     if (timer) { clearInterval(timer); timer = null; }
     killVoice(voice, 0.35);
+    voice = null;                     /* 前の曲は必ず手放す。重なって鳴らないように */
     cur = { song: songId in SONGS ? songId : 'up', tone: tone === 'chip' ? 'chip' : 'orch' };
     revWet.gain.setValueAtTime(cur.tone === 'orch' ? 0.32 : 0.1, ctx.currentTime);
     master.gain.cancelScheduledValues(ctx.currentTime);

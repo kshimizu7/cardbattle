@@ -61,16 +61,31 @@
      再描画のたびに頭から鳴り直すことはない。
      音色はオーケストラ風で固定。 */
   var BGM_FOR = { battle: 'up', title: 'mid', draft: 'mid', ready: 'mid',
-                  pass: 'mid', result: 'mid' };
+                  pass: 'mid', result: 'mid', rpg: 'mid' };
   var BGM_VOL = 0.3;               // 効果音より一段下げる
+  var BGM_TONE = 'chip';           // 電子音（オーケストラ風は 'orch'）
   function syncBgm() {
     if (typeof BGM === 'undefined') return;
-    var want = S.bgm ? BGM_FOR[S.screen] : null;
+    var want = (S.bgm && !document.hidden) ? BGM_FOR[S.screen] : null;
     var now = BGM.current();
     if (!want) { if (now) BGM.stop(); return; }
     if (now && now.song === want) return;
-    try { BGM.setVolume(BGM_VOL); BGM.play(want, 'orch'); } catch (e) {}
+    try {
+      if (now) BGM.stop();          /* 前の曲を必ず止めてから。重なって鳴らない */
+      BGM.setVolume(BGM_VOL);
+      BGM.play(want, BGM_TONE);
+    } catch (e) {}
   }
+  /* 画面を隠したら音を止め、戻ったら鳴らし直す（裏で鳴りっぱなしにしない） */
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden) { try { if (typeof BGM !== 'undefined') BGM.stop(); } catch (e) {} }
+    else syncBgm();
+  });
+  addEventListener('pagehide', function () { try { if (typeof BGM !== 'undefined') BGM.stop(); } catch (e) {} });
+  addEventListener('blur', function () {
+    /* iframe（RPGモード）へ焦点が移っただけのときは止めない */
+    if (document.hidden) { try { if (typeof BGM !== 'undefined') BGM.stop(); } catch (e) {} }
+  });
 
   /* ---------- 設定の記憶 ---------- */
   function rememberSettings() {
@@ -828,6 +843,7 @@
     var won = st.result && st.result.winner === 0;
     var ov = document.getElementById('rpgov');
     if (ov) ov.style.display = '';
+    S.screen = 'rpg'; syncBgm();
     var f = ov && ov.querySelector('iframe');
     try {
       if (f && f.contentWindow && f.contentWindow.RPGBATTLE_DONE)
@@ -853,8 +869,8 @@
     } catch (e) {}
   };
   function openRPGQuest(q) {
-    BGM.stop && BGM.stop();
     window.RPGFULL();
+    S.screen = 'rpg'; syncBgm();          /* 探索の間は静かな曲。戦闘で切り替わる */
     var ov = document.createElement('div');
     ov.id = 'rpgov';
     ov.style.cssText = 'position:fixed;inset:0;z-index:400;background:#000;display:flex;flex-direction:column';
