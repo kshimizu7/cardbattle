@@ -282,11 +282,13 @@ var CB = (function () {
      状態生成
      ========================================================= */
   var _uid = 1;
-  function makeUnit(defId, side, row, col) {
+  /* gear … RPGモードの装備ぶんの下駄 {atk,hp,spd}。本編の対戦では常に空 */
+  function makeUnit(defId, side, row, col, gear) {
     var d = BY_ID[defId];
+    var g = { atk: (gear && gear.atk) || 0, hp: (gear && gear.hp) || 0, spd: (gear && gear.spd) || 0 };
     var u = {
       uid: 'u' + (_uid++), def: d, defId: defId, side: side, row: row, col: col,
-      maxHp: d.hp, hp: d.hp, alive: true,
+      gear: g, maxHp: Math.max(1, d.hp + g.hp), hp: Math.max(1, d.hp + g.hp), alive: true,
       cd: {}, uses: {}, statuses: [], counters: {},
       stats: { dmg: 0, heal: 0, kills: 0, taken: 0 },
       flags: {}
@@ -302,7 +304,7 @@ var CB = (function () {
       編成画面でも同じ規則を掛けているが、AI・保存デッキ・引き継ぎコードなど
       別経路から来た配置も、ここで必ず正す。 */
   function normalizeTeam(team) {
-    var out = team.map(function (c) { return { id: c.id, row: c.row, col: c.col, hp: c.hp }; });
+    var out = team.map(function (c) { return { id: c.id, row: c.row, col: c.col, hp: c.hp, gear: c.gear }; });
     for (var col = 0; col < 3; col++) {
       if (out.some(function (c) { return c.row === 0 && c.col === col; })) continue;
       for (var i = 0; i < out.length; i++) {
@@ -332,7 +334,7 @@ var CB = (function () {
     st.teams = [normalizeTeam(teamA), normalizeTeam(teamB)];
     [st.teams[0], st.teams[1]].forEach(function (team, side) {
       team.forEach(function (slot) {
-        var u = makeUnit(slot.id, side, slot.row, slot.col);
+        var u = makeUnit(slot.id, side, slot.row, slot.col, slot.gear);
         /* RPGモード：前の戦いから持ち越したHPで始める */
         if (slot.hp != null){
           u.hp = Math.max(0, Math.min(u.maxHp, slot.hp));
@@ -431,7 +433,7 @@ var CB = (function () {
 
   /* ---------- 有効ステータス ---------- */
   function getAtk(u, st) {
-    var v = u.def.atk;
+    var v = u.def.atk + (u.gear ? u.gear.atk : 0);
     u.def.passives.forEach(function (pk) {
       var p = PASSIVES[pk];
       if (p && p.selfMod) { var m = p.selfMod(u, st) || {}; v += (m.atk || 0); }
@@ -442,7 +444,7 @@ var CB = (function () {
     return Math.max(0, v);
   }
   function getSpd(u, st) {
-    var v = u.def.spd;
+    var v = u.def.spd + (u.gear ? u.gear.spd : 0);
     u.def.passives.forEach(function (pk) {
       var p = PASSIVES[pk];
       if (p && p.selfMod) { var m = p.selfMod(u, st) || {}; v += (m.spd || 0); }

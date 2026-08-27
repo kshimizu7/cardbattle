@@ -38,6 +38,9 @@ var CBSAVE = (function () {
     if (!d.rpg.clears || typeof d.rpg.clears !== 'object') d.rpg.clears = {};
     if (!d.rpg.bag || typeof d.rpg.bag !== 'object') d.rpg.bag = {};
     if (!d.rpg.chests || typeof d.rpg.chests !== 'object') d.rpg.chests = {};
+    if (!d.rpg.gear || typeof d.rpg.gear !== 'object') d.rpg.gear = { eq: {}, bag: [] };
+    if (!d.rpg.gear.eq || typeof d.rpg.gear.eq !== 'object') d.rpg.gear.eq = {};
+    if (!Array.isArray(d.rpg.gear.bag)) d.rpg.gear.bag = [];
     d.v = 1;
     return d;
   }
@@ -46,7 +49,7 @@ var CBSAVE = (function () {
     if (mem) return mem;
     var raw = null;
     try { raw = store ? store.getItem(KEY) : null; } catch (e) { raw = null; }
-    if (!raw) { mem = blank(); return mem; }
+    if (!raw) { mem = normalize(blank()); return mem; }   /* 初回でも RPG まわりの器をそろえる */
     try { mem = normalize(JSON.parse(raw)); } catch (e) { mem = blank(); }
     return mem;
   }
@@ -70,6 +73,7 @@ var CBSAVE = (function () {
     if (questId) r.clears[questId] = (r.clears[questId] || 0) + 1;
     if (res) {
       if (res.bag) r.bag = res.bag;                       /* 道具は街へ持ち帰る */
+      if (res.gear) r.gear = { eq: res.gear.eq || {}, bag: (res.gear.bag || []).slice(0, 12) };
       if (res.chests) Object.keys(res.chests).forEach(function (k) { r.chests[k] = 1; });
     }
     save(); return r;

@@ -902,7 +902,7 @@
     var payout = again ? Math.max(5, Math.round(q.coin / 3)) : q.coin;
     f.name = JSON.stringify({ rpgq: 1, id: q.id, name: q.name, lead: q.lead,
       coin: payout, dun: q.dun, rooms: q.rooms, seed: questSeed(q.id),
-      bag: rr.bag || {}, chests: rr.chests || {} });
+      bag: rr.bag || {}, chests: rr.chests || {}, gear: rr.gear || { eq:{}, bag:[] } });
     ov.appendChild(f);
     document.body.appendChild(ov);
     f.srcdoc = window.RPG_PAGE;
@@ -948,6 +948,8 @@
         '<p>「' + q.name + '」を果たした。<br>報酬として硬貨 <b>' + res.coin + '</b> 枚を受け取った。</p>' +
         (res.loot ? '<p style="font-size:12.5px;opacity:.8">（うち ' + res.loot * 10 + ' 枚は、道中で拾い集めたぶん' +
           (res.sold ? '。銘の合わなくなった品 ' + res.sold + ' つを ' + res.sold * 3 + ' 枚で引き取ってもらった' : '') + '）</p>' : '') +
+        (gearCount(res) ? '<p style="font-size:12.5px;opacity:.8">装備を <b>' + gearCount(res) +
+          '</b> 点持ち帰った。次の探索にも、そのまま身につけて行ける</p>' : '') +
         ((res.bag && (res.bag.salve || res.bag.oil)) ? '<p style="font-size:12.5px;opacity:.8">' +
           [res.bag.salve ? '傷薬 ' + res.bag.salve + ' つ' : '', res.bag.oil ? '使いさしの油 ' + res.bag.oil + ' つ' : '']
             .filter(Boolean).join('と') + 'を持ち帰った。次の探索へ持って行ける</p>' : '') +
@@ -957,6 +959,17 @@
       document.body.appendChild(mm);
       mm.querySelector('#rok').onclick = function () { mm.remove(); renderHome(); };
     };
+  }
+
+  /* 持ち帰った装備の点数（身につけているぶんと、荷の中と） */
+  function gearCount(res) {
+    var g = res && res.gear;
+    if (!g) return 0;
+    var n = (g.bag || []).length;
+    Object.keys(g.eq || {}).forEach(function (k) {
+      ['weapon', 'armor', 't1', 't2'].forEach(function (sl) { if (g.eq[k][sl]) n++; });
+    });
+    return n;
   }
 
   /* =========================================================

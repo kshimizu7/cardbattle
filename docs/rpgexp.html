@@ -1932,6 +1932,33 @@ function generate(opts) {
     if (key.cond.t === 'slay' && bag.length) { const r = bag.pop(); r.ev = { t: 'foe', gate: gid, key: key.id }; }
   });
 
+  /* ── 宝箱 ──
+     置き方は二通り。
+     ① 最奥の間（＝依頼の主がいる部屋）には必ずひとつ。討った者への報い。
+     ② 依頼とは関わりなく、道の行き止まりや関門の先に、ひっそりと。
+     地形と同じく種から決まるので、同じ依頼なら同じ場所に同じ箱がある。
+     （一度取った箱は復活しない。その記録は本編側の save が持つ） */
+  {
+    const zmax = Math.max(0, share.length - 1);
+    const rar = (r, bonus) => {
+      const deep = zmax > 0 ? (r.zone || 0) / zmax : 0;
+      const v = rnd() - (bonus || 0);
+      return v < 0.03 + deep * 0.14 ? 3 : v < 0.14 + deep * 0.34 ? 2 : 1;
+    };
+    let ci = 0;
+    const goal = nodes.filter(r => r.goal)[0];
+    if (goal) goal.chest = { id: 'ch' + (ci++), rar: rnd() < 0.45 ? 3 : 2, why: 'goal' };
+    /* 行き止まり（通路ひとつしか繋がっていない部屋）と、関門の先の部屋 */
+    const quiet = nodes.filter(r =>
+      !r.entrance && !r.goal && !r.ev && (r.links.length <= 1 || (r.zone || 0) > 0));
+    const bag = shuffle(rnd, quiet);
+    const want = Math.min(bag.length, Math.max(1, Math.round(nodes.length / 6)));
+    bag.slice(0, want).forEach(r => {
+      /* 行き止まりは、わざわざ足を延ばした褒美として少し良いものが出る */
+      r.chest = { id: 'ch' + (ci++), rar: rar(r, r.links.length <= 1 ? 0.08 : 0), why: 'quiet' };
+    });
+  }
+
   /* ── 形クラス（描写・通り名用）── */
   nodes.forEach(r => {
     const area = r.rects.reduce((s2, q) => s2 + q.w * q.h, 0);
@@ -2089,12 +2116,12 @@ function verify(map) {
 
 /* ================= 状態 ================= */
 var PARTY = [
-  { n:'聖騎士',   id:'paladin',    hp:26, mx:26, row:0 },
-  { n:'狂戦士',   id:'berserker',  hp:26, mx:26, row:0 },
-  { n:'槍兵',     id:'spearman',   hp:21, mx:21, row:0 },
-  { n:'高僧',     id:'highpriest', hp:26, mx:26, row:1 },
-  { n:'魔法使い', id:'mage',       hp:11, mx:11, row:1 },
-  { n:'弓兵',     id:'archer',     hp:11, mx:11, row:1 }
+  { n:'聖騎士',   id:'paladin',    hp:26, mx:26, base:26, row:0, eq:{} },
+  { n:'狂戦士',   id:'berserker',  hp:26, mx:26, base:26, row:0, eq:{} },
+  { n:'槍兵',     id:'spearman',   hp:21, mx:21, base:21, row:0, eq:{} },
+  { n:'高僧',     id:'highpriest', hp:26, mx:26, base:26, row:1, eq:{} },
+  { n:'魔法使い', id:'mage',       hp:11, mx:11, base:11, row:1, eq:{} },
+  { n:'弓兵',     id:'archer',     hp:11, mx:11, base:11, row:1, eq:{} }
 ];
 /* 本編のカードと同じ体力にそろえる（親アプリがあれば、そこから受け取る） */
 function syncPartyStats(){
@@ -2103,11 +2130,125 @@ function syncPartyStats(){
     var st = parent.RPGSTATS(PARTY.map(function(p){ return p.id; }));
     PARTY.forEach(function(p){
       var d = st[p.id];
-      if (d && d.hp){ p.mx = d.hp; p.hp = d.hp; if (d.name) p.n = d.name; }
+      if (d && d.hp){ p.base = d.hp; p.mx = d.hp; p.hp = d.hp; if (d.name) p.n = d.name; }
     });
   } catch (e) {}
 }
 var S = null;
+
+/* ================= 装備 =================
+   宝箱から出るのは武器・防具・装身具。同じ品でも出来には幅があり（＋0〜＋3）、
+   稀に呪われている。拾った時点では正体が分からず、身につけてはじめて分かる。 */
+var GEAR = {
+  weapon: [
+    { b:'club',   n:'木の棍棒',     t:1, atk:1 },
+    { b:'sword',  n:'鉄の剣',       t:1, atk:1 },
+    { b:'axe',    n:'戦斧',         t:2, atk:2, spd:-1 },
+    { b:'long',   n:'鋼の長剣',     t:2, atk:2 },
+    { b:'silver', n:'銀の刃',       t:3, atk:3, spd:1 },
+    { b:'fang',   n:'竜牙の剣',     t:4, atk:4 }
+  ],
+  armor: [
+    { b:'leather',n:'革の胴',       t:1, hp:3 },
+    { b:'chain',  n:'鎖帷子',       t:2, hp:5 },
+    { b:'plate',  n:'鋼の胸当て',   t:3, hp:8, spd:-1 },
+    { b:'mith',   n:'聖銀の鎧',     t:4, hp:11 }
+  ],
+  trinket: [
+    { b:'ring',   n:'銅の環',       t:1, spd:1 },
+    { b:'charm',  n:'木彫りの護符', t:1, hp:2 },
+    { b:'pow',    n:'力の指輪',     t:2, atk:1 },
+    { b:'boots',  n:'俊足の靴',     t:2, spd:2 },
+    { b:'life',   n:'生命の護符',   t:3, hp:5 },
+    { b:'sign',   n:'古びた聖印',   t:3, atk:1, hp:3 }
+  ]
+};
+/* 呪い。品そのものは腕が立つことが多い。身につけるまで分からず、
+   一度つけたらその探索のあいだ外せない（街での解呪は次の段） */
+var CURSES = {
+  drain: { n:'蝕む',   t:'戦いのたび、持ち主が削られる（戦闘後 -2）', atk:1 },
+  heavy: { n:'重い',   t:'身体が思うように動かない（素早さ -3）',     spd:-3 },
+  greed: { n:'貪る',   t:'傷薬の効きが半分になる',                    atk:1 },
+  frail: { n:'脆い',   t:'守りが薄くなる（HP -4）',                   hp:-4 }
+};
+var SLOTNAME = { weapon:'武器', armor:'防具', t1:'装身具', t2:'装身具' };
+var VAGUE = { weapon:'刃物のような何か', armor:'身を守る何か', trinket:'小さな品' };
+var _gid = 1;
+function rollGear(rar){
+  var ks = ['weapon','armor','trinket'];
+  var k = ks[Math.floor(rnd() * 3)];
+  var top = rar === 3 ? 4 : rar === 2 ? 3 : 2;
+  var cand = GEAR[k].filter(function(g){ return g.t <= top; });
+  var pick = cand[Math.min(cand.length - 1,
+    Math.floor(Math.pow(rnd(), rar === 3 ? 0.6 : rar === 2 ? 0.85 : 1.35) * cand.length))];
+  var plus = 0, r2 = rnd();
+  if (rar === 1) plus = r2 < 0.62 ? 0 : r2 < 0.92 ? 1 : 2;
+  else if (rar === 2) plus = r2 < 0.34 ? 0 : r2 < 0.74 ? 1 : r2 < 0.94 ? 2 : 3;
+  else plus = r2 < 0.16 ? 1 : r2 < 0.62 ? 2 : 3;
+  var curse = null;
+  if (rnd() < (rar === 3 ? 0.28 : rar === 2 ? 0.16 : 0.08)){
+    var cks = Object.keys(CURSES);
+    curse = cks[Math.floor(rnd() * cks.length)];
+    plus = Math.max(plus, rar === 1 ? 1 : 2);
+  }
+  return { u:'g' + (_gid++), k:k, b:pick.b, plus:plus, curse:curse, idd:0 };
+}
+function gearDef(it){
+  var pool = GEAR[it.k];
+  for (var i = 0; i < pool.length; i++) if (pool[i].b === it.b) return pool[i];
+  return pool[0];
+}
+function gearStats(it){
+  var d = gearDef(it), c = it.curse ? CURSES[it.curse] : null;
+  var atk = d.atk || 0, hp = d.hp || 0, spd = d.spd || 0;
+  /* ＋値は、その品がいちばん得意な数字に乗る */
+  if (it.plus){
+    if (d.atk) atk += it.plus;
+    else if (d.hp) hp += it.plus;
+    else if (d.spd) spd += it.plus;
+  }
+  return {
+    atk: atk + ((c && c.atk) || 0),
+    hp:  hp  + ((c && c.hp)  || 0),
+    spd: spd + ((c && c.spd) || 0)
+  };
+}
+function gearName(it){
+  if (!it.idd) return VAGUE[it.k] + '？';
+  return (it.curse ? CURSES[it.curse].n : '') + gearDef(it).n + (it.plus ? '＋' + it.plus : '');
+}
+function gearLine(it){
+  if (!it.idd) return '正体は、身につけてみるまで分からない';
+  var s = gearStats(it), out = [];
+  if (s.atk) out.push('攻撃 ' + (s.atk > 0 ? '+' : '') + s.atk);
+  if (s.hp)  out.push('HP ' + (s.hp > 0 ? '+' : '') + s.hp);
+  if (s.spd) out.push('素早さ ' + (s.spd > 0 ? '+' : '') + s.spd);
+  if (it.curse) out.push('呪：' + CURSES[it.curse].t);
+  return out.join('／') || 'これといった効き目はない';
+}
+function gearBonus(p){
+  var b = { atk:0, hp:0, spd:0 };
+  ['weapon','armor','t1','t2'].forEach(function(sl){
+    var it = p.eq && p.eq[sl];
+    if (!it) return;
+    var s = gearStats(it);
+    b.atk += s.atk; b.hp += s.hp; b.spd += s.spd;
+  });
+  return b;
+}
+/* 装備が変わると最大HPも変わる。増えた分は、そのまま体力になる */
+function applyGear(p){
+  var was = p.mx;
+  p.mx = Math.max(1, (p.base || p.mx) + gearBonus(p).hp);
+  if (p.mx > was) p.hp += (p.mx - was);
+  p.hp = Math.max(0, Math.min(p.mx, p.hp));
+}
+function hasCurse(p, ck){
+  return ['weapon','armor','t1','t2'].some(function(sl){
+    var it = p.eq && p.eq[sl];
+    return it && it.idd && it.curse === ck;
+  });
+}
 
 function rnd(){ return Math.random(); }
 function ctxOf(dun){
@@ -2666,6 +2807,14 @@ function drawMap(){
     }
     if (!S.been[n.id]) return;
     var cx = px(n.gx), cy = py(n.gy);
+    /* 手つかずの宝箱は、部屋の隅に小さな箱の印で残す（開ければ消える） */
+    if (n.chest && !S.chests[chestKey(n)]){
+      var bx = px(n.gx + n.w * 0.30), by = py(n.gy - n.h * 0.28);
+      s += '<g stroke="' + INK + '" stroke-width="1.4" fill="#c9a13a" opacity="0.9">'
+        + '<rect x="' + (bx - 7) + '" y="' + (by - 5) + '" width="14" height="10" rx="2"/>'
+        + '<line x1="' + (bx - 7) + '" y1="' + (by - 1) + '" x2="' + (bx + 7) + '" y2="' + (by - 1) + '"/>'
+        + '<line x1="' + bx + '" y1="' + (by - 1) + '" x2="' + bx + '" y2="' + (by + 3) + '"/></g>';
+    }
     var icon = '';
     var nm = labelOf(n);
     var fpx = Math.min(13, Math.max(8.5, (n.w * CELL - 8) / Math.max(1, nm.length)));
@@ -2925,6 +3074,14 @@ function describeRoom(n, first){
   /* ③のあと：見つけたもの。ひと呼吸おいて足す（最初の画面を短く保つ） */
   if (seedText) setTimeout(function(){ say(seedText); }, 900);
 
+  /* 宝箱は、ひと呼吸おいてから目に入る */
+  if (n.chest && !S.chests[chestKey(n)]) setTimeout(function(){
+    if (S.at !== n.id || S.ui.lock) return;
+    say(CHESTRAR[n.chest.rar].look + '。'
+      + '{手つかずに見える|誰かが開けた跡はない|長いこと、誰の手も触れていない}。', 'em');
+    render();
+  }, 1100);
+
   /* ④ 危機。ここで説明を止め、選択肢に落とす */
   if (pendingFoe){
     say('{$placeの奥から|部屋の中央に|灯りの輪の縁に}、{ひときわ大きいものが|'
@@ -3033,7 +3190,7 @@ function foeTeam(kind){
 }
 function partyTeam(){
   return PARTY.map(function(p, i){
-    return { id: p.id, row: p.row, col: SLOTS6[i][1], hp: p.hp };
+    return { id: p.id, row: p.row, col: SLOTS6[i][1], hp: p.hp, gear: gearBonus(p) };
   });
 }
 /* 戦えるかどうか。全員倒れていたら、そこで終わり */
@@ -3046,6 +3203,13 @@ function startBattle(kind, after){
     window.RPGBATTLE_DONE = null;
     /* 生き残りのHPを持ち帰る */
     res.survivors.forEach(function(sv, i){ if (PARTY[i]) PARTY[i].hp = sv.alive ? sv.hp : 0; });
+    /* 「蝕む」呪い：戦いのたび、持ち主が削られる */
+    PARTY.forEach(function(p){
+      if (p.hp > 0 && hasCurse(p, 'drain')){
+        p.hp = Math.max(1, p.hp - 2);
+        say('── ' + p.n + ' の得物が、持ち主から力を吸っている（-2）', 'bad');
+      }
+    });
     if (!res.won || !anyAlive()){ wipeOut(); return; }
     /* 拾いものは、戦闘結果の画面で受け取り済み（そこで荷に入っている） */
     after(res);
@@ -3112,6 +3276,86 @@ function battleSpoils(kind){
   });
 }
 
+/* ================= 宝箱 =================
+   置かれ方は二通り。最奥の間の「主を討った者への報い」と、
+   道の行き止まりや関門の先に、依頼とは関わりなく置かれているもの。
+   開ければ中身は必ず手に入る。危ういのは開け方のほうで、
+   仕掛けを見落とせば傷を負う。そして中身が呪われていることもある。 */
+var CHESTRAR = {
+  1: { n:'宝箱',     trap:0.25, coin:[1,2], look:'木の箱が、埃をかぶって置かれている' },
+  2: { n:'至宝',     trap:0.42, coin:[2,3], look:'鉄の帯で締めた櫃が、壁ぎわに据えられている' },
+  3: { n:'古代遺物', trap:0.60, coin:[3,4], look:'見たことのない意匠の匣が、床から生えるように据わっている' }
+};
+function chestKey(n){
+  return (RPGQ ? RPGQ.id : S.dun) + ':' + n.chest.id;
+}
+function openChest(n, careful){
+  var ch = n.chest, CR = CHESTRAR[ch.rar];
+  S.chests[chestKey(n)] = 1;
+  S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
+
+  var trapped = rnd() < CR.trap;
+  var spotted = false;
+  if (careful){
+    say('{$who が手を上げ、みなを下がらせた|'
+      + '$who が箱の縁を指でなぞり、蓋の合わせ目を確かめる}。'
+      + '{埃の積もり方、板の反り、金具の当たり——ひとつずつ見ていく|'
+      + '息を詰めて、ゆっくりと調べる}。', 'em');
+    if (trapped){
+      spotted = rnd() < 0.72;
+      say(spotted
+        ? '{蓋の裏に、糸が張ってある|針が仕込まれている——蓋を上げれば飛ぶ仕掛けだ|'
+          + '底板の下で、何かが押さえつけられている}。'
+          + '{$who は、それを丁寧に外した|手を伸ばし、静かに殺した}。'
+        : '{何も見つからなかった|外から見るかぎり、仕掛けはない}。', spotted ? 'em' : 'sys');
+    } else {
+      say('{仕掛けはない。ただの箱だ|見たかぎり、何も仕込まれてはいない}。', 'sys');
+    }
+    if (rnd() < 0.3 && !S.enc){ S.noise = 1; }        /* 手間取れば、音を呼ぶ */
+  }
+
+  setTimeout(function(){
+    if (trapped && !spotted) chestTrap(ch.rar);
+    setTimeout(function(){
+      var it = rollGear(ch.rar);
+      S.gear.push(it);
+      var c = CHESTRAR[ch.rar].coin;
+      var coins = c[0] + Math.floor(rnd() * (c[1] - c[0] + 1));
+      gainItem('coin', coins);
+      say('{蓋が、重い音を立てて開いた|中を検める|布をほどくと、それが出てきた}。', 'em');
+      say('── ' + VAGUE[it.k] + 'を手に入れた（正体は、身につけてみるまで分からない）', 'sys');
+      if (coins) say('── 古い硬貨 ×' + coins + '（持ち帰れば ' + (S.loot * 10) + ' 枚）', 'sys');
+      if (rnd() < 0.45 && gainItem('salve', 1).got) say('── 傷薬 ×1 も入っていた', 'sys');
+      S.ui.lock = 0;
+      render();
+    }, trapped && !spotted ? 1500 : 500);
+  }, careful ? 1200 : 300);
+}
+/* 罠。小さいものは一人の擦り傷、大きいものは一行をまとめて薙ぐ */
+function chestTrap(rar){
+  var living = PARTY.filter(function(p){ return p.hp > 0; });
+  if (!living.length) return;
+  var one = living[Math.floor(rnd() * living.length)];
+  var big = rnd() < (rar === 3 ? 0.5 : rar === 2 ? 0.3 : 0.15);
+  var dmg;
+  if (!big){
+    dmg = rar + 2 + Math.floor(rnd() * 3);
+    one.hp = Math.max(1, one.hp - dmg);
+    S.hurt++;
+    say('{蓋を上げた指に、鋭い痛みが走った——針だ|'
+      + '合わせ目から、細い針が跳ねた|刃が仕込まれていた}。'
+      + one.n + ' が傷を負った（-' + dmg + '）。', 'bad');
+  } else {
+    dmg = rar + 3 + Math.floor(rnd() * 3);
+    living.forEach(function(p){ p.hp = Math.max(1, p.hp - dmg); });
+    S.hurt++;
+    say('{蓋が跳ね、中の空気が破裂した|'
+      + '箱の底が焼け、炎が噴き上がった|'
+      + '白い粉が舞い、息が詰まった}。'
+      + '一行がまとめて傷を負った（それぞれ -' + dmg + '）。', 'bad');
+  }
+}
+
 function wipeOut(){
   S.ui.lock = 1; S.ui.sheet = 0; S.ui.forced = false; syncSheet();
   say('——立っている者は、もういない。', 'bad');
@@ -3121,7 +3365,7 @@ function wipeOut(){
   }, 1800);
   setTimeout(function(){
     try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ ? RPGQ.id : null, cleared: false,
-      wiped: true, coin: 0, loot: 0, bag: { salve: 0 }, chests: S.chests,
+      wiped: true, coin: 0, loot: 0, bag: { salve: 0 }, gear: { eq:{}, bag:[] }, chests: S.chests,
       kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
   }, 3800);
 }
@@ -3158,7 +3402,7 @@ function exitDungeon(){
     try { parent.RPGDONE && parent.RPGDONE({ id: RPGQ.id, cleared: !!S.qdone,
       coin: (S.qdone ? (RPGQ.coin || 0) : 0) + (S.loot || 0) * 10 + leftovers * 3,
       loot: S.loot || 0, sold: leftovers,
-      bag: { salve: S.bag.salve || 0, oil: S.bag.oil || 0 },
+      bag: { salve: S.bag.salve || 0, oil: S.bag.oil || 0 }, gear: gearHome(),
       chests: S.chests, kills: S.kills, hurt: S.hurt, steps: S.steps }); } catch (e) {}
   }, 3400);
 }
@@ -3209,6 +3453,11 @@ function showExitAsk(){
   rows.push(['拾った硬貨', S.loot ? (S.loot + ' 束（' + (S.loot * 10) + ' 枚）') : 'なし', '']);
   if (S.bag.salve) rows.push(['傷薬（持ち帰る）', S.bag.salve + ' つ', 'ok']);
   if (S.bag.oil) rows.push(['使いさしの油（持ち帰る）', S.bag.oil + ' つ', 'ok']);
+  var worn = 0;
+  PARTY.forEach(function(p2){ ['weapon','armor','t1','t2'].forEach(function(sl){ if (p2.eq[sl]) worn++; }); });
+  if (worn || S.gear.length) rows.push(['装備（持ち帰る）',
+    (worn ? '身につけている ' + worn + ' 点' : '') + (worn && S.gear.length ? '／' : '') +
+    (S.gear.length ? '荷の中 ' + S.gear.length + ' 点' : ''), 'ok']);
   var lost = dungeonItems();
   if (lost.length) rows.push(['置いていく品', lost.length + ' つ——銘の合う扉は、この先にない（売れば ' +
     (lost.length * 3) + ' 枚）', 'ng']);
@@ -3474,6 +3723,15 @@ function render(){
     add((fp ? fp.w + '側の' : '') + FEATURES[fid].act, '', 'act', function(){ useFeature(n, fid); });
   });
 
+  /* 宝箱。開ければ必ず中身は手に入る。危ないのは、開け方のほう */
+  if (n.chest && !S.chests[chestKey(n)]){
+    var CR = CHESTRAR[n.chest.rar];
+    add(CR.n + 'を、そのまま開ける', '早いが、仕掛けは分からないまま', 'act',
+      function(){ openChest(n, false); });
+    add(CR.n + 'を、まず調べる', '罠を探す。手間はかかる', 'act',
+      function(){ openChest(n, true); });
+  }
+
   if (S.noise) add('物音のする方をうかがう', '遭遇するかもしれない', 'act', function(){ S.noise = 0; encounter(); });
 
   addSkill((S.torch ? '松明を伏せる' : '松明を掲げる'), (S.torch ? '光の輪 大 → 小' : '光の輪 小 → 大'), 'act', function(){
@@ -3496,9 +3754,11 @@ function render(){
     hurtOne ? hurtOne.n + ' の傷が塞がる' : '傷を負った者がいない', hurtOne ? 'act' : '', function(){
       if (!hurtOne){ say('── いまは、使うまでもない', 'sys'); render(); return; }
       S.bag.salve--;
-      hurtOne.hp = Math.min(hurtOne.mx, hurtOne.hp + 8);
+      var amt = hasCurse(hurtOne, 'greed') ? 4 : 8;      /* 「貪る」呪いは効きを半分にする */
+      hurtOne.hp = Math.min(hurtOne.mx, hurtOne.hp + amt);
       say('{布を裂いて、傷に当てる|$who が、手早く手当てをした}。'
-        + hurtOne.n + ' の傷が塞がった。', 'em');
+        + hurtOne.n + ' の傷が塞がった'
+        + (amt < 8 ? '——が、思ったほど効かない。呪いのせいだ' : '') + '。', 'em');
       say('── 傷薬 のこり ' + S.bag.salve, 'sys');
       render(); });
   if (S.bag.oil > 0) addSkill('使いさしの油　×' + S.bag.oil,
@@ -3521,7 +3781,11 @@ function render(){
       render(); });
   });
   if (S.loot) addSkill('拾った硬貨　×' + S.loot, '持ち帰れば ' + (S.loot * 10) + ' 枚', '', function(){});
-  if (!S.bag.salve && !S.bag.oil && !S.loot && !dItems.length)
+  var unworn = S.gear.length;
+  addSkill('一行の装い' + (unworn ? '　（手つかず ' + unworn + '）' : ''),
+    unworn ? '拾った品を、誰かに持たせる' : '身につけているものを、あらためる',
+    unworn ? 'act' : '', function(){ S.ui.sheet = 'gear'; S.ui.gearAt = null; syncSheet(); });
+  if (!S.bag.salve && !S.bag.oil && !S.loot && !dItems.length && !unworn)
     addSkill('（荷は、軽いままだ）', '', '', function(){});
 
   }
@@ -3610,7 +3874,8 @@ function syncSheet(){
   var sh = document.getElementById('sheet');
   var body2 = document.getElementById('sheetbody');
   body2.innerHTML = '';
-  if (mode){
+  if (mode === 'gear') gearSheet(body2);
+  else if (mode){
     (mode === 'skill' ? S.ui.skills : S.ui.acts).forEach(function(el){ body2.appendChild(el); });
     var bk2 = document.getElementById('bok2');
     if (bk2) bk2.onclick = showBook;
@@ -3619,8 +3884,120 @@ function syncSheet(){
   document.getElementById('sheetx').style.display = S.ui.forced ? 'none' : '';
   document.getElementById('sheettl').textContent =
     S.ui.forced ? (S.enc ? '——どうする' : '決断のとき')
+    : mode === 'gear' ? '一行の装い'
     : mode === 'skill' ? '灯りと術' : '行動';
   document.getElementById('pad').classList.toggle('lockpad', !!S.ui.forced || !!S.ui.lock);
+}
+
+/* 街から持ち込んだ装備を、前回のまま身につけ直す */
+function restoreGear(){
+  PARTY.forEach(function(p){ p.eq = {}; });
+  var g = RPGQ && RPGQ.gear;
+  if (!g) return;
+  (g.bag || []).forEach(function(it){ S.gear.push(it); if (it.u) _gid = Math.max(_gid, 1 + (+String(it.u).slice(1) || 0)); });
+  PARTY.forEach(function(p){
+    var e = (g.eq || {})[p.id];
+    if (!e) return;
+    ['weapon','armor','t1','t2'].forEach(function(sl){ if (e[sl]) p.eq[sl] = e[sl]; });
+  });
+}
+/* 持ち帰る装備。呪われた品も、そのまま街へ運ばれる */
+function gearHome(){
+  var eq = {};
+  PARTY.forEach(function(p){
+    var e = {};
+    ['weapon','armor','t1','t2'].forEach(function(sl){ if (p.eq[sl]) e[sl] = p.eq[sl]; });
+    if (Object.keys(e).length) eq[p.id] = e;
+  });
+  return { eq: eq, bag: S.gear.slice(0, 12) };
+}
+
+/* ================= 装いのシート =================
+   一覧 → 一人を選ぶ → その者の4枠と、持たせられる品。
+   身につけた瞬間に正体が分かる。呪われていれば、その探索のあいだ外せない。 */
+function gearSheet(box){
+  var mk = function(label, key, cls, fn){
+    var b = document.createElement('button');
+    b.className = 'btn ' + (cls || '');
+    b.innerHTML = label + (key ? '<span class="k">' + key + '</span>' : '');
+    b.onclick = fn;
+    return b;
+  };
+  var at = S.ui.gearAt;
+  if (at == null){
+    PARTY.forEach(function(p, i){
+      var b = gearBonus(p);
+      var worn = ['weapon','armor','t1','t2'].filter(function(sl){ return p.eq[sl]; }).length;
+      var sum = [];
+      if (b.atk) sum.push('攻撃 ' + (b.atk > 0 ? '+' : '') + b.atk);
+      if (b.hp)  sum.push('HP ' + (b.hp > 0 ? '+' : '') + b.hp);
+      if (b.spd) sum.push('素早さ ' + (b.spd > 0 ? '+' : '') + b.spd);
+      box.appendChild(mk(p.n + '　<i style="font-style:normal;opacity:.6">' + worn + '/4</i>',
+        sum.length ? sum.join('／') : '身ひとつ', worn ? 'act' : '',
+        function(){ S.ui.gearAt = i; syncSheet(); }));
+    });
+    if (S.gear.length){
+      var head = document.createElement('div');
+      head.className = 'statline';
+      head.innerHTML = '<span>まだ誰も身につけていない品　' + S.gear.length + '</span>';
+      box.appendChild(head);
+      S.gear.forEach(function(it){
+        box.appendChild(mk('　' + gearName(it), gearLine(it) + '　［' + SLOTNAME[it.k === 'trinket' ? 't1' : it.k] + '］', '', function(){}));
+      });
+    }
+    return;
+  }
+  var p = PARTY[at];
+  box.appendChild(mk('← 一行へ戻る', '', '', function(){ S.ui.gearAt = null; syncSheet(); }));
+  ['weapon','armor','t1','t2'].forEach(function(sl){
+    var it = p.eq[sl];
+    if (it){
+      var locked = it.idd && it.curse;
+      box.appendChild(mk(SLOTNAME[sl] + '：' + gearName(it),
+        gearLine(it) + (locked ? '　／外せない' : '　／外す'), locked ? '' : 'act',
+        function(){
+          if (locked){
+            say('── ' + p.n + 'の手から、' + gearName(it) + 'は離れない。呪われている', 'bad');
+            render(); return;
+          }
+          p.eq[sl] = null; S.gear.push(it); applyGear(p);
+          say('── ' + p.n + ' が ' + gearName(it) + ' を外した', 'sys');
+          render();
+        }));
+    } else {
+      box.appendChild(mk(SLOTNAME[sl] + '：——', '空いている', '', function(){}));
+    }
+  });
+  var fits = S.gear.filter(function(it){
+    return it.k === 'trinket' ? (!p.eq.t1 || !p.eq.t2) : !p.eq[it.k];
+  });
+  var head2 = document.createElement('div');
+  head2.className = 'statline';
+  head2.innerHTML = '<span>' + (fits.length ? p.n + ' に持たせる' : '持たせられる品がない') + '</span>';
+  box.appendChild(head2);
+  fits.forEach(function(it){
+    box.appendChild(mk('　' + gearName(it), gearLine(it), 'act', function(){ equipTo(p, it); }));
+  });
+}
+function equipTo(p, it){
+  var sl = it.k === 'trinket' ? (p.eq.t1 ? 't2' : 't1') : it.k;
+  var i = S.gear.indexOf(it);
+  if (i >= 0) S.gear.splice(i, 1);
+  p.eq[sl] = it;
+  var first = !it.idd;
+  it.idd = 1;
+  applyGear(p);
+  if (first){
+    say('{' + p.n + ' が、それを手に取った|' + p.n + ' が身につける}。'
+      + '{手になじむのが分かる|重さで、正体が知れた|布をほどくと、正体が現れた}。', 'em');
+    say('── ' + gearName(it) + '（' + gearLine(it) + '）', it.curse ? 'bad' : 'sys');
+    if (it.curse)
+      say('{持ち主の手から離れない——呪われている|'
+        + '外そうとしたが、外れない。呪いだ}。街の者に頼るほかない。', 'bad');
+  } else {
+    say('── ' + p.n + ' が ' + gearName(it) + ' を身につけた', 'sys');
+  }
+  render();
 }
 
 /* ================= 入口の前 ================= */
@@ -3693,13 +4070,14 @@ function begin(){
   }
   S = { map:map, dun:SETUP.dun, at:map.start, been:{}, seen:{}, open:{}, bag:carry, marks:{},
         did:{}, notes:{}, book:[], fx:{}, evDone:{}, litCells:{}, cellIdx:null, sensed:{},
-        chests:(RPGQ && RPGQ.chests) || {},
+        chests:(RPGQ && RPGQ.chests) || {}, gear:[],
         kills:0, hurt:0, steps:0, torch:false, spellLeft:0, spellUsed:0, enc:0, noise:0,
         cam:{ z:1, panx:0, pany:0, fit:false },
-        ui:{ sheet:0, forced:false, lock:0, acts:[], skills:[] }, pre:0,
+        ui:{ sheet:0, forced:false, lock:0, acts:[], skills:[], gearAt:null }, pre:0,
         ctx:ctxOf(SETUP.dun) };
   syncPartyStats();
-  PARTY.forEach(function(p){ p.hp = p.mx; });
+  restoreGear();
+  PARTY.forEach(function(p){ applyGear(p); p.hp = p.mx; });
   document.getElementById('setup').style.display='none';
   document.getElementById('dunname').textContent = DUNGEONS[SETUP.dun].name;
   document.getElementById('spot').textContent = '入口の前';

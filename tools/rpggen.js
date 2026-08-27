@@ -409,6 +409,33 @@ function generate(opts) {
     if (key.cond.t === 'slay' && bag.length) { const r = bag.pop(); r.ev = { t: 'foe', gate: gid, key: key.id }; }
   });
 
+  /* ── 宝箱 ──
+     置き方は二通り。
+     ① 最奥の間（＝依頼の主がいる部屋）には必ずひとつ。討った者への報い。
+     ② 依頼とは関わりなく、道の行き止まりや関門の先に、ひっそりと。
+     地形と同じく種から決まるので、同じ依頼なら同じ場所に同じ箱がある。
+     （一度取った箱は復活しない。その記録は本編側の save が持つ） */
+  {
+    const zmax = Math.max(0, share.length - 1);
+    const rar = (r, bonus) => {
+      const deep = zmax > 0 ? (r.zone || 0) / zmax : 0;
+      const v = rnd() - (bonus || 0);
+      return v < 0.03 + deep * 0.14 ? 3 : v < 0.14 + deep * 0.34 ? 2 : 1;
+    };
+    let ci = 0;
+    const goal = nodes.filter(r => r.goal)[0];
+    if (goal) goal.chest = { id: 'ch' + (ci++), rar: rnd() < 0.45 ? 3 : 2, why: 'goal' };
+    /* 行き止まり（通路ひとつしか繋がっていない部屋）と、関門の先の部屋 */
+    const quiet = nodes.filter(r =>
+      !r.entrance && !r.goal && !r.ev && (r.links.length <= 1 || (r.zone || 0) > 0));
+    const bag = shuffle(rnd, quiet);
+    const want = Math.min(bag.length, Math.max(1, Math.round(nodes.length / 6)));
+    bag.slice(0, want).forEach(r => {
+      /* 行き止まりは、わざわざ足を延ばした褒美として少し良いものが出る */
+      r.chest = { id: 'ch' + (ci++), rar: rar(r, r.links.length <= 1 ? 0.08 : 0), why: 'quiet' };
+    });
+  }
+
   /* ── 形クラス（描写・通り名用）── */
   nodes.forEach(r => {
     const area = r.rects.reduce((s2, q) => s2 + q.w * q.h, 0);
