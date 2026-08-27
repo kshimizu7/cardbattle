@@ -6,6 +6,13 @@ const VERSION = process.env.CBVER || '21';
 
 /* RPGモード：探索ページをまるごと文字列として埋め込み、iframe（srcdoc）で開く */
 require('child_process').execSync('node ' + __dirname + '/tools/rpgexp.js', { stdio: 'inherit' });
+const ART_FILES = { title: 'title_vot', beast: 'entry_beast', mine: 'entry_mine',
+                    maze: 'entry_maze', shrine: 'entry_shrine' };
+const ARTJS = 'window.VOT_ART = {' + Object.keys(ART_FILES).map(k =>
+  JSON.stringify(k) + ':"data:image/webp;base64,' +
+  fs.readFileSync(__dirname + '/art/' + ART_FILES[k] + '.webp').toString('base64') + '"'
+).join(',') + '};';
+
 const RPGJS = 'window.RPG_PAGE = '
   + JSON.stringify(fs.readFileSync(__dirname + '/rpgexp.html', 'utf8')).replace(/<\//g, '<\\/')
   + ';';
@@ -46,6 +53,9 @@ ${R('bgm.js')}
 </script>
 <script>
 ${R('art.js')}
+</script>
+<script>
+${ARTJS}
 </script>
 <script>
 ${RPGJS}

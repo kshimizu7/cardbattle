@@ -1878,3 +1878,32 @@ body.shake{animation:shk2 .56s}
   .detailbox .livebox ~ .cardwrap .art .ovbox{padding:6px 8px 0}
   .detailbox .livebox ~ .cardwrap .dmeta{padding:12px 8px 7px}
 }
+
+/* ================= ホーム画面（VORTEX OF THREE） ================= */
+#screen-home{position:relative;display:flex;flex-direction:column;min-height:100svh;overflow:hidden}
+#screen-home:before{content:"";position:absolute;inset:-40px;z-index:0;
+  background:var(--homebg) center/cover no-repeat;filter:blur(22px) brightness(.62) saturate(.85)}
+#screen-home:after{content:"";position:absolute;inset:0;z-index:0;
+  background:linear-gradient(to bottom,rgba(8,11,18,.35) 0%,rgba(8,11,18,.58) 45%,rgba(8,11,18,.8) 100%)}
+.home-art{position:relative;z-index:1;flex:0 0 auto;width:100%;aspect-ratio:1000/435;
+  background-size:cover;background-position:center;background-color:#0a0d14}
+.home-fade{position:absolute;inset:0;
+  background:linear-gradient(to bottom,rgba(8,11,18,.2) 0%,rgba(8,11,18,0) 40%,rgba(8,11,18,.55) 88%,rgba(8,11,18,.9) 100%)}
+.home-menu{flex:1 1 auto;display:flex;flex-direction:column;gap:11px;
+  padding:20px 18px calc(16px + var(--safe-b));justify-content:flex-start;position:relative;z-index:2}
+.hbtn{appearance:none;width:100%;text-align:left;font:inherit;cursor:pointer;
+  background:linear-gradient(100deg,rgba(20,26,42,.88),rgba(12,17,29,.9));
+  backdrop-filter:blur(3px);box-shadow:0 4px 18px rgba(0,0,0,.4);
+  border:1px solid #2b3752;border-left:3px solid var(--gold,#f2c65c);
+  border-radius:12px;padding:13px 16px;color:#dde5f5;
+  display:flex;flex-direction:column;gap:3px;transition:transform .12s,border-color .12s}
+.hbtn:active{transform:translateX(2px);border-color:var(--gold,#f2c65c)}
+.hbtn b{font-size:17px;letter-spacing:.08em;color:var(--gold,#f2c65c);font-weight:700}
+.hbtn span{font-size:11.5px;color:#94a4c4;letter-spacing:.02em}
+.hbtn span i{font-style:normal;color:var(--gold,#f2c65c)}
+.home-menu .hbtn:first-of-type{margin-top:auto}
+.home-foot{display:flex;gap:8px;margin-top:auto;padding-top:14px}
+.home-foot .btn{flex:1;white-space:nowrap;font-size:12px;padding:8px}
+.home-foot .btn:last-child{flex:0 0 52px}
+#screen-home .verlab{text-align:center;margin-top:8px;font-size:10.5px;color:#6c7b9c;letter-spacing:.08em}
+@media (max-height:620px){ .hbtn{padding:10px 14px} .hbtn b{font-size:15.5px} }

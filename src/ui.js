@@ -890,7 +890,7 @@
     ov.appendChild(f);
     document.body.appendChild(ov);
     f.srcdoc = window.RPG_PAGE;
-    function closeRPG() { ov.remove(); window.RPGDONE = null; syncBgm(); }
+    function closeRPG() { ov.remove(); window.RPGDONE = null; S.screen = 'title'; syncBgm(); }
     window.RPGDONE = function (res) {
       closeRPG();
       if (!res) { renderTitle(); return; }
@@ -907,7 +907,7 @@
             '<p>所持硬貨：<b>' + SAVE.rpg().coin + '</b> 枚</p>' +
             '<button class="btn primary" id="rokw" style="width:100%">街へ戻る</button></div></div>';
           document.body.appendChild(mw);
-          mw.querySelector('#rokw').onclick = function () { mw.remove(); renderTitle(); };
+          mw.querySelector('#rokw').onclick = function () { mw.remove(); renderHome(); };
           return;
         }
         if (res.coin || (res.bag && (res.bag.salve || res.bag.oil))) {
@@ -920,8 +920,8 @@
             '<p>所持硬貨：<b>' + r3.coin + '</b> 枚</p>' +
             '<button class="btn primary" id="rok3" style="width:100%">とじる</button></div></div>';
           document.body.appendChild(m3);
-          m3.querySelector('#rok3').onclick = function () { m3.remove(); renderTitle(); };
-        } else renderTitle();
+          m3.querySelector('#rok3').onclick = function () { m3.remove(); renderHome(); };
+        } else renderHome();
         return;
       }
       var r2 = SAVE.rpgReward(res.id, res.coin, res);
@@ -939,8 +939,83 @@
         '<button class="btn primary" id="rok" style="width:100%">受け取る</button>' +
         '</div></div>';
       document.body.appendChild(mm);
-      mm.querySelector('#rok').onclick = function () { mm.remove(); renderTitle(); };
+      mm.querySelector('#rok').onclick = function () { mm.remove(); renderHome(); };
     };
+  }
+
+  /* =========================================================
+     ホーム ── 闘技場・世界の探索・叙事詩
+     ========================================================= */
+  function renderHome() {
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
+    S.gen = (S.gen || 0) + 1;
+    S.screen = 'title'; syncBgm();
+    var art = (window.VOT_ART && VOT_ART.title) || '';
+    var r = SAVE.rpg();
+    app.innerHTML =
+      '<div id="screen-home"' + (art ? ' style="--homebg:url(' + art + ')"' : '') + '>' +
+        '<div class="home-art"' + (art ? ' style="background-image:url(' + art + ')"' : '') + '>' +
+          '<div class="home-fade"></div>' +
+        '</div>' +
+        '<div class="home-menu">' +
+          '<button class="hbtn" id="h_arena"><b>闘技場</b><span>カードを組み、腕を競う</span></button>' +
+          '<button class="hbtn" id="h_rpg"><b>世界の探索</b><span>交界域から、依頼を受けて潜る' +
+            (r.coin ? '　<i>硬貨 ' + r.coin + '</i>' : '') + '</span></button>' +
+          '<button class="hbtn" id="h_lore"><b>叙事詩</b><span>いま分かっている、この世界のこと</span></button>' +
+          '<div class="home-foot">' +
+            '<button class="btn ghost" id="h_snd">' + (S.sound ? '♪ 効果音 ON' : '♪ 効果音 OFF') + '</button>' +
+            '<button class="btn ghost" id="h_bgm">' + (S.bgm ? '🎵 BGM ON' : '🎵 BGM OFF') + '</button>' +
+            '<button class="btn ghost" id="h_fs">⛶</button>' +
+          '</div>' +
+          (VERSION ? '<div class="verlab">ver ' + VERSION + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    $('#h_arena').onclick = function () { renderTitle(); };
+    $('#h_rpg').onclick = showRPGQuests;
+    $('#h_lore').onclick = showLore;
+    $('#h_snd').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderHome(); };
+    $('#h_bgm').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderHome(); };
+    $('#h_fs').onclick = toggleFullscreen;
+  }
+
+  /* 叙事詩 ── いま分かっている世界のこと */
+  var LORE = [
+    { h: '交界域 ― Vortex', t: 'かつて世界はひとつだった。人も、獣も、竜も、精霊も、同じ地を踏んでいた。'
+      + 'それが三つの力によって分かたれたとき、完全な分断は行われなかった。'
+      + '三つが互いに触れ続けなければ、世界そのものが均衡を失うからだ。\n\n'
+      + 'そうして残されたのが交界域。人の街のすぐ外に獣の森があり、古い遺跡には精霊が宿り、'
+      + '洞には魔獣がいる。ここでは、敵と味方は種族では決まらない。' },
+    { h: '三つの理 ― The Three Realms', t: '秩序（Order）。人が世界に意味を与え、正しさを定めようとする力。文明を作るが、行き過ぎれば支配になる。\n\n'
+      + '生命（Life）。獣と竜が息づく力。生まれ、喰らい、争い、死ぬ。世界を生かすが、行き過ぎれば捕食と破壊になる。\n\n'
+      + '精神（Spirit）。精霊とマナ、世界が世界であり続けるための流れ。調和をもたらすが、行き過ぎれば個も意志も消してしまう。\n\n'
+      + '——三つとも正しく、三つとも危険である。' },
+    { h: '三王 ― The Three Sovereigns', t: 'それぞれの理には、象徴となる存在がいるという。\n\n'
+      + '人の王。かつて世界を救った聖王。秩序を極めた果てに、何を求めたのかは伝わっていない。\n\n'
+      + '生命の王。神話に語られる完全なる古竜。すべての生命の根源だと言う者がいる。\n\n'
+      + '精霊の王。世界そのものに最も近い存在。時間と記憶と、存在の流れを司るという。\n\n'
+      + '——ここから先は、まだ誰も語らない。' },
+    { h: 'この地の噂', t: '喰らいの洞。村の北、崩れた沢の奥。きこりが二人、羊を追った子どもが一人、戻っていない。\n\n'
+      + '黙した坑道。ある年の冬、三十人が住人ごと姿を消した。家財も鉱石も、置き去りのままだという。\n\n'
+      + '欲深き迷路。財宝を求めた者たちが、帰らなかった迷宮。\n\n'
+      + '護りの神域。古代の何かを封じている神殿。何を封じたのかは、記録に残っていない。' }
+  ];
+  function showLore() {
+    var m = document.createElement('div');
+    m.className = 'modal';
+    m.innerHTML = '<div class="box"><div class="rules">' +
+      '<h3 style="color:var(--gold)">叙事詩</h3>' +
+      '<p style="font-size:12px;opacity:.7">冒険を進めるほど、ここに書き足されていく。</p>' +
+      LORE.map(function (x) {
+        return '<h4 style="color:var(--gold);margin:16px 0 6px">' + x.h + '</h4>' +
+          x.t.split('\n\n').map(function (p2) {
+            return '<p style="font-size:13px;line-height:1.75;margin:0 0 8px">' + p2 + '</p>';
+          }).join('');
+      }).join('') +
+      '<button class="btn ghost" id="lorex" style="width:100%;margin-top:14px">とじる</button>' +
+      '</div></div>';
+    document.body.appendChild(m);
+    m.onclick = function (e) { if (e.target === m) m.remove(); };
+    m.querySelector('#lorex').onclick = function () { m.remove(); };
   }
 
   function renderTitle() {
@@ -997,8 +1072,6 @@
           '<button class="btn ghost" id="gallery" style="flex:1;white-space:nowrap">🗂 カード図鑑</button>' +
           '<button class="btn ghost" id="fs0" style="flex:0 0 52px" title="全画面">⛶</button>' +
         '</div>' +
-        '<button class="btn ghost" id="rpg0" style="width:100%;white-space:nowrap">🗺 RPGモード（試験版）' +
-          (SAVE.rpg().coin ? '<span class="rcnt">硬貨 ' + SAVE.rpg().coin + '</span>' : '') + '</button>' +
         '<div style="display:flex;gap:8px">' +
           '<button class="btn ghost" id="snd0" style="flex:1;white-space:nowrap">' +
             (S.sound ? '♪ 効果音 ON' : '♪ 効果音 OFF') + '</button>' +
@@ -1016,6 +1089,7 @@
               '向きがひとつなので、どちらからも同じように読めます</span></div>' +
 
         '</div></div>' +
+        '<button class="btn ghost" id="home0" style="width:100%">← ホームへ</button>' +
         '<button class="btn ghost" id="record" style="width:100%">📊 戦績・記録' +
           (SAVE.gameCount() ? '<span class="rcnt">' + SAVE.gameCount() + '戦</span>' : '') + '</button>' +
         (VERSION ? '<div class="verlab">ver ' + VERSION + '</div>' : '') +
@@ -1036,7 +1110,7 @@
     $('#snd0').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderTitle(); };
     $('#bgm0').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderTitle(); };
     $('#record').onclick = showRecord;
-    $('#rpg0').onclick = showRPGQuests;
+    $('#home0').onclick = renderHome;
   }
 
   function showRules() {
@@ -3548,5 +3622,5 @@
   SFX.setEnabled(S.sound);
   if (S.bgm === undefined) S.bgm = true;
   E.setPool(S.pool); E.setDealMode(S.deal);
-  renderTitle();
+  renderHome();
 })();
