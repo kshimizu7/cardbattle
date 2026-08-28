@@ -458,7 +458,8 @@
       '<div class="tlist">' + ch.map(function (x, i) {
         return '<div class="tli' + (x.id === id ? ' me' : '') + (x.teaser ? ' soon' : '') + '">' +
           '<i class="tp' + (x.id === id ? ' on' : '') + (x.teaser ? ' soon' : '') + '"></i>' +
-          '<b>' + x.name + '</b><span>' + (x.teaser ? '近日' : 'Tier ' + (i + 1)) + '</span></div>';
+          '<b>' + x.name + '</b><span>' +
+          (x.teaser ? '近日' : x.noDeck ? 'Tier ' + (i + 1) + '・敵として' : 'Tier ' + (i + 1)) + '</span></div>';
       }).join('') + '</div>' +
       '<p class="poptx">下にいくほど強力です。点線の枠は<b>まだ実装されていません</b>。</p>' +
       '<button class="btn ghost" data-pc="1">閉じる</button></div>';
@@ -1163,7 +1164,11 @@
   function hireList() {
     var r = SAVE.rpg();
     if (r.hire && r.hire.day === r.day && r.hire.ids) return r.hire.ids.filter(function (id) { return !r.allies[id]; });
-    var pool = E.poolIds().filter(function (id) { return !r.allies[id]; });
+    /* いま宿に流れ着くのは、ひと（人系）だけ。獣・竜・精霊は、この先の出来事で仲間になる */
+    var pool = E.poolIds().filter(function (id) {
+      var d = E.BY_ID[id];
+      return d && d.line === '人' && !r.allies[id];
+    });
     var ids = [];
     for (var i = 0; i < 2 && pool.length; i++) ids.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     SAVE.rpgSet({ hire: { day: r.day, ids: ids } });
@@ -1455,7 +1460,8 @@
     var team = r.team.slice();
     var cost = teamCost(team);
     townNote(box, '枠を選んでから、下の面々を押すと入れ替わります。同じ人をもう一度押すと外れます。<br>' +
-      '<b>大</b>の者は、狭い入口をくぐれません（どの依頼に行けるかは依頼板に出ます）。');
+      '<b>大</b>の者は、狭い入口をくぐれません（どの依頼に行けるかは依頼板に出ます）。<br>' +
+      'いま仲間にできるのは<b>ひと</b>だけ。獣・竜・精霊は、この先の出来事で加わります。');
     [0, 1].forEach(function (row) {
       var lab = document.createElement('div');
       lab.className = 'rowlab'; lab.textContent = row ? '後 衛' : '前 衛';
@@ -2195,9 +2201,10 @@
       return atkInfo(d).val;
     }
     function poolIds() {
-      /* 休ませたカードは図鑑にも出さない（データは残っているので、いつでも戻せる） */
-      var live = function (id) { var d = E.BY_ID[id]; return d && !d.retired; };
-      return (tab === 'full') ? E.ROSTER.filter(function (x) { return !x.retired; }).map(function (x) { return x.id; })
+      /* 休ませたカード（retired）と、敵としてだけ現れるカード（noDeck）は図鑑の棚に並べない。
+         系統の「段階」を開けば、上位の姿としてちゃんと見えます */
+      var live = function (id) { var d = E.BY_ID[id]; return d && !d.retired && !d.noDeck; };
+      return (tab === 'full') ? E.ROSTER.filter(function (x) { return !x.retired && !x.noDeck; }).map(function (x) { return x.id; })
                               : E.POOLS[tab].ids.filter(live);
     }
 
@@ -2294,7 +2301,7 @@
           '<button class="gtab' + (tab === 'tutorial' ? ' on' : '') + '" data-tab="tutorial">🌱 入門 ' + E.POOLS.tutorial.ids.length + '</button>' +
           '<button class="gtab' + (tab === 'starter' ? ' on' : '') + '" data-tab="starter">🎓 スターター ' + E.POOLS.starter.ids.length + '</button>' +
           '<button class="gtab' + (tab === 'full' ? ' on' : '') + '" data-tab="full">🏆 ' + E.POOLS.full.name + ' ' +
-            E.ROSTER.filter(function (x) { return !x.retired; }).length + '</button>' +
+            E.ROSTER.filter(function (x) { return !x.retired && !x.noDeck; }).length + '</button>' +
         '</div>' +
         '<div class="gsorts">' + SORTS.map(function (o) {
           return '<button class="gsort' + (sort === o.k ? ' on' : '') + '" data-sort="' + o.k + '">' + o.n + '</button>';

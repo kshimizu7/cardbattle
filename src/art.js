@@ -389,6 +389,8 @@ var CBART = (function () {
     salamander:  { body:'wisp',  head:'flame',     wep:'orb',        deco:'embers' },
     yeti:        { body:'bulk',  head:'horns',     wep:'claw',       deco:'flakes' },
     frost:       { body:'robe',  head:'veil',      wep:'staff',      deco:'flakes' },
+    warrior:     { body:'human', head:'helm',      wep:'sword',      deco:'none' },
+    whelp:       { body:'drake', head:'dragon',    wep:'claw',       deco:'embers' },
     /* --- イメージ枠（図鑑にだけ出る） --- */
     paladinking: { body:'human', head:'crown',     wep:'greatsword', deco:'rays' },
     grandsage:   { body:'robe',  head:'crown',     wep:'orb',        deco:'runes' },
@@ -396,10 +398,13 @@ var CBART = (function () {
     divinearcher:{ body:'human', head:'winghelm',  wep:'bow',        deco:'rays' },
     royalguard:  { body:'bulk',  head:'greathelm', wep:'shield',     deco:'runes' },
     colossus:    { body:'bulk',  head:'mask',      wep:'mace',       deco:'runes' },
-    elderdragon: { body:'drake', head:'dragon',    wep:'dwing',      deco:'embers' },
-    dragonlord:  { body:'drake', head:'dragon',    wep:'dwing',      deco:'rays' },
     lich:        { body:'robe',  head:'skull',     wep:'scythe',     deco:'runes' },
     jotunn:      { body:'bulk',  head:'horns',     wep:'axe',        deco:'flakes' },
+    ancientdragon:{body:'drake', head:'dragon',    wep:'dwing',      deco:'rays' },
+    warfiend:    { body:'bulk',  head:'horns',     wep:'axe',        deco:'embers' },
+    shadowblade: { body:'human', head:'hood',      wep:'dagger',     deco:'mist' },
+    skald:       { body:'human', head:'circlet',   wep:'lute',       deco:'wings' },
+    bragi:       { body:'robe',  head:'crown',     wep:'lute',       deco:'rays' },
     odin:        { body:'robe',  head:'crown',     wep:'spear',      deco:'runes' }
   };
 

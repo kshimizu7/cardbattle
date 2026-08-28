@@ -46,7 +46,14 @@ var CB = (function () {
       passives:['guardian'],
       flavor:'穂先は前の敵を貫き、後ろの敵まで届く。' },
 
-    { id:'berserker', size:'s', name:'狂戦士', en:'Berserker', cost:4, role:'melee', elem:'blood', line:'人',
+    /* 戦士 … 狂戦士の前の姿。癖のない前衛。育つと血の狂乱に呑まれていく */
+    { id:'warrior', size:'s', name:'戦士', en:'Warrior', cost:3, role:'melee', elem:'steel', line:'人', up:'berserker', tier:1,
+      hpT:5, atkT:3, spd:3,
+      actions:[{key:'strike', name:'打ち込み', kind:'dmg', range:'melee', dtype:'phys', fx:'slash'}],
+      passives:[],
+      flavor:'まだ、退くという選択肢を持っている。' },
+
+    { id:'berserker', size:'s', name:'狂戦士', en:'Berserker', cost:4, role:'melee', elem:'blood', line:'人', base:'warrior', up:'warfiend', tier:2,
       hpT:6, atkT:2, spd:1,
       actions:[{key:'sweep', name:'薙ぎ払い', kind:'dmg', range:'front_row', dtype:'phys', fx:'sweep'}],
       passives:['bloodrage','defenseless'],
@@ -101,13 +108,13 @@ var CB = (function () {
       passives:['snipe'],
       flavor:'敵陣のどこであろうと、狙った一点に届く。' },
 
-    { id:'rogue', size:'s', name:'盗賊', en:'Rogue', cost:3, role:'ranged', elem:'shadow', line:'人',
+    { id:'rogue', size:'s', name:'盗賊', en:'Thief', cost:3, role:'ranged', elem:'shadow', line:'人', up:'assassin', tier:1,
       hpT:2, atkT:3, spd:7,
       actions:[{key:'stab', name:'投げ短剣', kind:'dmg', range:'any1', dtype:'phys', fx:'dagger'}],
       passives:['ambush'],
       flavor:'開戦の一瞬だけ、影は誰よりも速い。' },
 
-    { id:'assassin', size:'s', name:'暗殺者', en:'Assassin', cost:4, role:'ranged', elem:'shadow', line:'人',
+    { id:'assassin', size:'s', name:'暗殺者', en:'Assassin', cost:4, role:'ranged', elem:'shadow', line:'人', base:'rogue', up:'shadowblade', tier:2,
       hpT:3, atkT:4, spd:7,
       actions:[{key:'mark', name:'死の刻印', kind:'dmg', range:'weakest', dtype:'phys', fx:'mark'}],
       passives:['decapitate'],
@@ -143,7 +150,18 @@ var CB = (function () {
       passives:['resonance'],
       flavor:'空を裂き、星を落とす。ただし詠唱には時が要る。' },
 
-    { id:'dragon', size:'l', name:'竜', en:'Dragon', cost:6, role:'melee', elem:'fire', line:'竜', up:'elderdragon', tier:1,
+    /* 幼竜 … 竜の前の姿。まだ小さく、狭い場所にも入っていける。
+       闘技場に出る竜はこの姿だけ（竜と古代竜は、いまは敵として現れる） */
+    { id:'whelp', size:'m', name:'幼竜', en:'Dragon Whelp', cost:4, role:'melee', elem:'fire', line:'竜', up:'dragon', tier:1,
+      hpT:4, atkT:3, spd:5,
+      actions:[
+        {key:'bite',  name:'噛みつき', kind:'dmg', range:'melee', dtype:'phys', fx:'slash'},
+        {key:'spark', name:'火の粉',   kind:'dmg', range:'any1', dtype:'magic', power:3, fx:'ember', cd:2}
+      ],
+      passives:['flight'],
+      flavor:'まだ空は飛べない。だが、跳べば屋根には届く。' },
+
+    { id:'dragon', size:'l', noDeck:true, name:'竜', en:'Dragon', cost:6, role:'melee', elem:'fire', line:'竜', base:'whelp', up:'ancientdragon', tier:2,
       hpT:6, atkT:5, spd:3,
       actions:[
         {key:'talon',  name:'竜爪', kind:'dmg', range:'melee', dtype:'phys', fx:'dclaw'},
@@ -207,7 +225,7 @@ var CB = (function () {
       passives:['frostskin','frostair'],
       flavor:'その足跡が見つかった翌朝、村の井戸は必ず凍っている。' },
 
-    { id:'bard', size:'s', name:'吟遊詩人', en:'Bard', cost:5, role:'support', elem:'wind', line:'人',
+    { id:'bard', size:'s', name:'吟遊詩人', en:'Bard', cost:5, role:'support', elem:'wind', line:'人', up:'skald', tier:1,
       hpT:3, atkT:1, spd:5,
       actions:[{key:'chord', name:'不協和音', kind:'dmg', range:'all', dtype:'magic', power:2, fx:'discord'}],
       passives:['warsong'],
@@ -1197,12 +1215,21 @@ var CB = (function () {
     { id:'colossus', name:'古代巨神', en:'Ancient Colossus', line:'物', tier:3, base:'ancient',
       art:{ body:'bulk', head:'mask', wep:'mace', deco:'runes' }, elem:'steel',
       tech:'創世の一撃', flavor:'動き出すのに千年、倒れるのにもう千年。' },
-    { id:'elderdragon', name:'古竜', en:'Elder Dragon', line:'竜', tier:2, base:'dragon', up:'dragonlord',
-      art:{ body:'drake', head:'dragon', wep:'dwing', deco:'embers' }, elem:'fire',
-      tech:'千年の吐息', flavor:'若い竜たちが頭を垂れる、最後の生き証人。' },
-    { id:'dragonlord', name:'竜王', en:'Dragon Lord', line:'竜', tier:3, base:'elderdragon',
-      art:{ body:'drake', head:'dragon', wep:'dwing', deco:'rays' }, elem:'holy',
-      tech:'天蓋崩し', flavor:'空を統べる者。地上に降りたことは一度もない。' },
+    { id:'ancientdragon', name:'古代竜', en:'Ancient Dragon', line:'竜', tier:3, base:'dragon',
+      art:{ body:'drake', head:'dragon', wep:'dwing', deco:'rays' }, elem:'fire',
+      tech:'天蓋崩し', flavor:'空を統べる者。地上に降りたのは、数えるほどしかない。' },
+    { id:'warfiend', name:'戦鬼', en:'Warfiend', line:'人', tier:3, base:'berserker',
+      art:{ body:'bulk', head:'horns', wep:'axe', deco:'embers' }, elem:'blood',
+      tech:'鏖の宴', flavor:'名を呼んでも、もう振り向かない。' },
+    { id:'shadowblade', name:'闇の刃', en:'Shadowblade', line:'人', tier:3, base:'assassin',
+      art:{ body:'human', head:'hood', wep:'dagger', deco:'mist' }, elem:'shadow',
+      tech:'影渡り', flavor:'斬られたことに気づくのは、たいてい次の朝である。' },
+    { id:'skald', name:'武勲詩人', en:'Skald', line:'人', tier:2, base:'bard', up:'bragi',
+      art:{ body:'human', head:'circlet', wep:'lute', deco:'wings' }, elem:'wind',
+      tech:'凱歌', flavor:'その歌が始まると、退く者がいなくなる。' },
+    { id:'bragi', name:'ブラギ', en:'Bragi', line:'神', tier:3, base:'skald',
+      art:{ body:'robe', head:'crown', wep:'lute', deco:'rays' }, elem:'holy',
+      tech:'不滅の詩', flavor:'語られたことは、二度と失われない。' },
     { id:'necromancer', name:'死霊術師', en:'Necromancer', line:'邪', tier:2, base:'shaman', up:'lich',
       art:{ body:'robe', head:'hood', wep:'scythe', deco:'mist' }, elem:'shadow',
       tech:'亡者の手', flavor:'倒れた者が増えるほど、その力は膨れ上がる。' },
@@ -1309,11 +1336,12 @@ var CB = (function () {
   function getPool() { return activePool; }
   function poolIds() {
     /* retired … 札は残してあるが、いまは出さないカード。戻したくなったら retired を外すだけ */
+    /* retired … 札は残してあるが、いまは出さないカード
+       noDeck  … 敵としては現れるが、プレイヤーには配らないカード */
+    var live = function (d) { return d && !d.retired && !d.noDeck; };
     if (activePool === 'full')
-      return ROSTER.filter(function (d) { return !d.retired; }).map(function (d) { return d.id; });
-    return POOLS[activePool].ids.filter(function (id) {
-      var d = BY_ID[id]; return d && !d.retired;
-    });
+      return ROSTER.filter(live).map(function (d) { return d.id; });
+    return POOLS[activePool].ids.filter(function (id) { return live(BY_ID[id]); });
   }
   function inPool(id) { return poolIds().indexOf(id) >= 0; }
   function handSize() {
@@ -1327,7 +1355,8 @@ var CB = (function () {
     knight:50, berserker:50, spearman:50, shieldguard:50, ogre:50, troll:50,
     golem:50, werewolf:50, paladin:50, archer:50, rogue:50, assassin:50,
     harpy:50, valkyrie:50, mage:50, archmage:50, dragon:50, shaman:50,
-    priest:50, highpriest:50, salamander:50, yeti:50, frost:50, bard:50
+    priest:50, highpriest:50, salamander:50, yeti:50, frost:50, bard:50,
+    warrior:50, whelp:50
   };
   // スターター15枚だけで戦ったときの実測勝率（AIの編成評価に使用）
   var RATING_STARTER = {

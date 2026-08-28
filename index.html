@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="75">
+<meta name="app-version" content="76">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -2173,7 +2173,14 @@ var CB = (function () {
       passives:['guardian'],
       flavor:'穂先は前の敵を貫き、後ろの敵まで届く。' },
 
-    { id:'berserker', size:'s', name:'狂戦士', en:'Berserker', cost:4, role:'melee', elem:'blood', line:'人',
+    /* 戦士 … 狂戦士の前の姿。癖のない前衛。育つと血の狂乱に呑まれていく */
+    { id:'warrior', size:'s', name:'戦士', en:'Warrior', cost:3, role:'melee', elem:'steel', line:'人', up:'berserker', tier:1,
+      hpT:5, atkT:3, spd:3,
+      actions:[{key:'strike', name:'打ち込み', kind:'dmg', range:'melee', dtype:'phys', fx:'slash'}],
+      passives:[],
+      flavor:'まだ、退くという選択肢を持っている。' },
+
+    { id:'berserker', size:'s', name:'狂戦士', en:'Berserker', cost:4, role:'melee', elem:'blood', line:'人', base:'warrior', up:'warfiend', tier:2,
       hpT:6, atkT:2, spd:1,
       actions:[{key:'sweep', name:'薙ぎ払い', kind:'dmg', range:'front_row', dtype:'phys', fx:'sweep'}],
       passives:['bloodrage','defenseless'],
@@ -2228,13 +2235,13 @@ var CB = (function () {
       passives:['snipe'],
       flavor:'敵陣のどこであろうと、狙った一点に届く。' },
 
-    { id:'rogue', size:'s', name:'盗賊', en:'Rogue', cost:3, role:'ranged', elem:'shadow', line:'人',
+    { id:'rogue', size:'s', name:'盗賊', en:'Thief', cost:3, role:'ranged', elem:'shadow', line:'人', up:'assassin', tier:1,
       hpT:2, atkT:3, spd:7,
       actions:[{key:'stab', name:'投げ短剣', kind:'dmg', range:'any1', dtype:'phys', fx:'dagger'}],
       passives:['ambush'],
       flavor:'開戦の一瞬だけ、影は誰よりも速い。' },
 
-    { id:'assassin', size:'s', name:'暗殺者', en:'Assassin', cost:4, role:'ranged', elem:'shadow', line:'人',
+    { id:'assassin', size:'s', name:'暗殺者', en:'Assassin', cost:4, role:'ranged', elem:'shadow', line:'人', base:'rogue', up:'shadowblade', tier:2,
       hpT:3, atkT:4, spd:7,
       actions:[{key:'mark', name:'死の刻印', kind:'dmg', range:'weakest', dtype:'phys', fx:'mark'}],
       passives:['decapitate'],
@@ -2270,7 +2277,18 @@ var CB = (function () {
       passives:['resonance'],
       flavor:'空を裂き、星を落とす。ただし詠唱には時が要る。' },
 
-    { id:'dragon', size:'l', name:'竜', en:'Dragon', cost:6, role:'melee', elem:'fire', line:'竜', up:'elderdragon', tier:1,
+    /* 幼竜 … 竜の前の姿。まだ小さく、狭い場所にも入っていける。
+       闘技場に出る竜はこの姿だけ（竜と古代竜は、いまは敵として現れる） */
+    { id:'whelp', size:'m', name:'幼竜', en:'Dragon Whelp', cost:4, role:'melee', elem:'fire', line:'竜', up:'dragon', tier:1,
+      hpT:4, atkT:3, spd:5,
+      actions:[
+        {key:'bite',  name:'噛みつき', kind:'dmg', range:'melee', dtype:'phys', fx:'slash'},
+        {key:'spark', name:'火の粉',   kind:'dmg', range:'any1', dtype:'magic', power:3, fx:'ember', cd:2}
+      ],
+      passives:['flight'],
+      flavor:'まだ空は飛べない。だが、跳べば屋根には届く。' },
+
+    { id:'dragon', size:'l', noDeck:true, name:'竜', en:'Dragon', cost:6, role:'melee', elem:'fire', line:'竜', base:'whelp', up:'ancientdragon', tier:2,
       hpT:6, atkT:5, spd:3,
       actions:[
         {key:'talon',  name:'竜爪', kind:'dmg', range:'melee', dtype:'phys', fx:'dclaw'},
@@ -2334,7 +2352,7 @@ var CB = (function () {
       passives:['frostskin','frostair'],
       flavor:'その足跡が見つかった翌朝、村の井戸は必ず凍っている。' },
 
-    { id:'bard', size:'s', name:'吟遊詩人', en:'Bard', cost:5, role:'support', elem:'wind', line:'人',
+    { id:'bard', size:'s', name:'吟遊詩人', en:'Bard', cost:5, role:'support', elem:'wind', line:'人', up:'skald', tier:1,
       hpT:3, atkT:1, spd:5,
       actions:[{key:'chord', name:'不協和音', kind:'dmg', range:'all', dtype:'magic', power:2, fx:'discord'}],
       passives:['warsong'],
@@ -3324,12 +3342,21 @@ var CB = (function () {
     { id:'colossus', name:'古代巨神', en:'Ancient Colossus', line:'物', tier:3, base:'ancient',
       art:{ body:'bulk', head:'mask', wep:'mace', deco:'runes' }, elem:'steel',
       tech:'創世の一撃', flavor:'動き出すのに千年、倒れるのにもう千年。' },
-    { id:'elderdragon', name:'古竜', en:'Elder Dragon', line:'竜', tier:2, base:'dragon', up:'dragonlord',
-      art:{ body:'drake', head:'dragon', wep:'dwing', deco:'embers' }, elem:'fire',
-      tech:'千年の吐息', flavor:'若い竜たちが頭を垂れる、最後の生き証人。' },
-    { id:'dragonlord', name:'竜王', en:'Dragon Lord', line:'竜', tier:3, base:'elderdragon',
-      art:{ body:'drake', head:'dragon', wep:'dwing', deco:'rays' }, elem:'holy',
-      tech:'天蓋崩し', flavor:'空を統べる者。地上に降りたことは一度もない。' },
+    { id:'ancientdragon', name:'古代竜', en:'Ancient Dragon', line:'竜', tier:3, base:'dragon',
+      art:{ body:'drake', head:'dragon', wep:'dwing', deco:'rays' }, elem:'fire',
+      tech:'天蓋崩し', flavor:'空を統べる者。地上に降りたのは、数えるほどしかない。' },
+    { id:'warfiend', name:'戦鬼', en:'Warfiend', line:'人', tier:3, base:'berserker',
+      art:{ body:'bulk', head:'horns', wep:'axe', deco:'embers' }, elem:'blood',
+      tech:'鏖の宴', flavor:'名を呼んでも、もう振り向かない。' },
+    { id:'shadowblade', name:'闇の刃', en:'Shadowblade', line:'人', tier:3, base:'assassin',
+      art:{ body:'human', head:'hood', wep:'dagger', deco:'mist' }, elem:'shadow',
+      tech:'影渡り', flavor:'斬られたことに気づくのは、たいてい次の朝である。' },
+    { id:'skald', name:'武勲詩人', en:'Skald', line:'人', tier:2, base:'bard', up:'bragi',
+      art:{ body:'human', head:'circlet', wep:'lute', deco:'wings' }, elem:'wind',
+      tech:'凱歌', flavor:'その歌が始まると、退く者がいなくなる。' },
+    { id:'bragi', name:'ブラギ', en:'Bragi', line:'神', tier:3, base:'skald',
+      art:{ body:'robe', head:'crown', wep:'lute', deco:'rays' }, elem:'holy',
+      tech:'不滅の詩', flavor:'語られたことは、二度と失われない。' },
     { id:'necromancer', name:'死霊術師', en:'Necromancer', line:'邪', tier:2, base:'shaman', up:'lich',
       art:{ body:'robe', head:'hood', wep:'scythe', deco:'mist' }, elem:'shadow',
       tech:'亡者の手', flavor:'倒れた者が増えるほど、その力は膨れ上がる。' },
@@ -3436,11 +3463,12 @@ var CB = (function () {
   function getPool() { return activePool; }
   function poolIds() {
     /* retired … 札は残してあるが、いまは出さないカード。戻したくなったら retired を外すだけ */
+    /* retired … 札は残してあるが、いまは出さないカード
+       noDeck  … 敵としては現れるが、プレイヤーには配らないカード */
+    var live = function (d) { return d && !d.retired && !d.noDeck; };
     if (activePool === 'full')
-      return ROSTER.filter(function (d) { return !d.retired; }).map(function (d) { return d.id; });
-    return POOLS[activePool].ids.filter(function (id) {
-      var d = BY_ID[id]; return d && !d.retired;
-    });
+      return ROSTER.filter(live).map(function (d) { return d.id; });
+    return POOLS[activePool].ids.filter(function (id) { return live(BY_ID[id]); });
   }
   function inPool(id) { return poolIds().indexOf(id) >= 0; }
   function handSize() {
@@ -3454,7 +3482,8 @@ var CB = (function () {
     knight:50, berserker:50, spearman:50, shieldguard:50, ogre:50, troll:50,
     golem:50, werewolf:50, paladin:50, archer:50, rogue:50, assassin:50,
     harpy:50, valkyrie:50, mage:50, archmage:50, dragon:50, shaman:50,
-    priest:50, highpriest:50, salamander:50, yeti:50, frost:50, bard:50
+    priest:50, highpriest:50, salamander:50, yeti:50, frost:50, bard:50,
+    warrior:50, whelp:50
   };
   // スターター15枚だけで戦ったときの実測勝率（AIの編成評価に使用）
   var RATING_STARTER = {
@@ -6277,6 +6306,8 @@ var CBART = (function () {
     salamander:  { body:'wisp',  head:'flame',     wep:'orb',        deco:'embers' },
     yeti:        { body:'bulk',  head:'horns',     wep:'claw',       deco:'flakes' },
     frost:       { body:'robe',  head:'veil',      wep:'staff',      deco:'flakes' },
+    warrior:     { body:'human', head:'helm',      wep:'sword',      deco:'none' },
+    whelp:       { body:'drake', head:'dragon',    wep:'claw',       deco:'embers' },
     /* --- イメージ枠（図鑑にだけ出る） --- */
     paladinking: { body:'human', head:'crown',     wep:'greatsword', deco:'rays' },
     grandsage:   { body:'robe',  head:'crown',     wep:'orb',        deco:'runes' },
@@ -6284,10 +6315,13 @@ var CBART = (function () {
     divinearcher:{ body:'human', head:'winghelm',  wep:'bow',        deco:'rays' },
     royalguard:  { body:'bulk',  head:'greathelm', wep:'shield',     deco:'runes' },
     colossus:    { body:'bulk',  head:'mask',      wep:'mace',       deco:'runes' },
-    elderdragon: { body:'drake', head:'dragon',    wep:'dwing',      deco:'embers' },
-    dragonlord:  { body:'drake', head:'dragon',    wep:'dwing',      deco:'rays' },
     lich:        { body:'robe',  head:'skull',     wep:'scythe',     deco:'runes' },
     jotunn:      { body:'bulk',  head:'horns',     wep:'axe',        deco:'flakes' },
+    ancientdragon:{body:'drake', head:'dragon',    wep:'dwing',      deco:'rays' },
+    warfiend:    { body:'bulk',  head:'horns',     wep:'axe',        deco:'embers' },
+    shadowblade: { body:'human', head:'hood',      wep:'dagger',     deco:'mist' },
+    skald:       { body:'human', head:'circlet',   wep:'lute',       deco:'wings' },
+    bragi:       { body:'robe',  head:'crown',     wep:'lute',       deco:'rays' },
     odin:        { body:'robe',  head:'crown',     wep:'spear',      deco:'runes' }
   };
 
@@ -6822,7 +6856,8 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       '<div class="tlist">' + ch.map(function (x, i) {
         return '<div class="tli' + (x.id === id ? ' me' : '') + (x.teaser ? ' soon' : '') + '">' +
           '<i class="tp' + (x.id === id ? ' on' : '') + (x.teaser ? ' soon' : '') + '"></i>' +
-          '<b>' + x.name + '</b><span>' + (x.teaser ? '近日' : 'Tier ' + (i + 1)) + '</span></div>';
+          '<b>' + x.name + '</b><span>' +
+          (x.teaser ? '近日' : x.noDeck ? 'Tier ' + (i + 1) + '・敵として' : 'Tier ' + (i + 1)) + '</span></div>';
       }).join('') + '</div>' +
       '<p class="poptx">下にいくほど強力です。点線の枠は<b>まだ実装されていません</b>。</p>' +
       '<button class="btn ghost" data-pc="1">閉じる</button></div>';
@@ -7527,7 +7562,11 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
   function hireList() {
     var r = SAVE.rpg();
     if (r.hire && r.hire.day === r.day && r.hire.ids) return r.hire.ids.filter(function (id) { return !r.allies[id]; });
-    var pool = E.poolIds().filter(function (id) { return !r.allies[id]; });
+    /* いま宿に流れ着くのは、ひと（人系）だけ。獣・竜・精霊は、この先の出来事で仲間になる */
+    var pool = E.poolIds().filter(function (id) {
+      var d = E.BY_ID[id];
+      return d && d.line === '人' && !r.allies[id];
+    });
     var ids = [];
     for (var i = 0; i < 2 && pool.length; i++) ids.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     SAVE.rpgSet({ hire: { day: r.day, ids: ids } });
@@ -7819,7 +7858,8 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     var team = r.team.slice();
     var cost = teamCost(team);
     townNote(box, '枠を選んでから、下の面々を押すと入れ替わります。同じ人をもう一度押すと外れます。<br>' +
-      '<b>大</b>の者は、狭い入口をくぐれません（どの依頼に行けるかは依頼板に出ます）。');
+      '<b>大</b>の者は、狭い入口をくぐれません（どの依頼に行けるかは依頼板に出ます）。<br>' +
+      'いま仲間にできるのは<b>ひと</b>だけ。獣・竜・精霊は、この先の出来事で加わります。');
     [0, 1].forEach(function (row) {
       var lab = document.createElement('div');
       lab.className = 'rowlab'; lab.textContent = row ? '後 衛' : '前 衛';
@@ -8559,9 +8599,10 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       return atkInfo(d).val;
     }
     function poolIds() {
-      /* 休ませたカードは図鑑にも出さない（データは残っているので、いつでも戻せる） */
-      var live = function (id) { var d = E.BY_ID[id]; return d && !d.retired; };
-      return (tab === 'full') ? E.ROSTER.filter(function (x) { return !x.retired; }).map(function (x) { return x.id; })
+      /* 休ませたカード（retired）と、敵としてだけ現れるカード（noDeck）は図鑑の棚に並べない。
+         系統の「段階」を開けば、上位の姿としてちゃんと見えます */
+      var live = function (id) { var d = E.BY_ID[id]; return d && !d.retired && !d.noDeck; };
+      return (tab === 'full') ? E.ROSTER.filter(function (x) { return !x.retired && !x.noDeck; }).map(function (x) { return x.id; })
                               : E.POOLS[tab].ids.filter(live);
     }
 
@@ -8658,7 +8699,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
           '<button class="gtab' + (tab === 'tutorial' ? ' on' : '') + '" data-tab="tutorial">🌱 入門 ' + E.POOLS.tutorial.ids.length + '</button>' +
           '<button class="gtab' + (tab === 'starter' ? ' on' : '') + '" data-tab="starter">🎓 スターター ' + E.POOLS.starter.ids.length + '</button>' +
           '<button class="gtab' + (tab === 'full' ? ' on' : '') + '" data-tab="full">🏆 ' + E.POOLS.full.name + ' ' +
-            E.ROSTER.filter(function (x) { return !x.retired; }).length + '</button>' +
+            E.ROSTER.filter(function (x) { return !x.retired && !x.noDeck; }).length + '</button>' +
         '</div>' +
         '<div class="gsorts">' + SORTS.map(function (o) {
           return '<button class="gsort' + (sort === o.k ? ' on' : '') + '" data-sort="' + o.k + '">' + o.n + '</button>';
