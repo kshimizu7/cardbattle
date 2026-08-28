@@ -1999,26 +1999,28 @@ body.shake{animation:shk2 .56s}
 .innscr .warnline{font-size:11.5px;color:var(--warn);margin:6px 0 0;line-height:1.7}
 /* 装い ── ひと画面。動くのは品の一覧の中だけ */
 .innscr{height:100svh;overflow:hidden}
-.innscr .pane{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.innscr .pane.gearpane{overflow:hidden;display:flex;padding:10px 12px calc(8px + var(--safe-b))}
-.innscr .gearwrap{display:flex;flex-direction:column;min-height:0;flex:1;gap:8px}
-.innscr .gmembers{display:flex;gap:6px;overflow-x:auto;flex:0 0 auto;padding-bottom:2px}
-.innscr .gm{position:relative;flex:1 0 auto;min-width:58px;padding:7px 6px 6px;border-radius:10px;
+.innscr .pane{flex:1;min-height:0;min-width:0;overflow-x:hidden;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.innscr .pane.gearpane{overflow:hidden;display:flex;min-width:0;padding:10px 12px calc(8px + var(--safe-b))}
+.innscr .gearwrap{display:flex;flex-direction:column;min-height:0;min-width:0;width:100%;flex:1;gap:8px}
+.innscr .gmembers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+  flex:0 0 auto;min-width:0}
+.innscr .gm{position:relative;min-width:0;padding:6px 6px 5px;border-radius:10px;
   background:#101828;border:1px solid #253150;color:#c5cfe4;font:inherit;cursor:pointer;
   display:flex;flex-direction:column;align-items:center;gap:1px}
 .innscr .gm.on{border-color:var(--gold);background:#1b1a12;color:#f4dda2}
-.innscr .gm-n{font-size:12.5px;font-weight:700;white-space:nowrap}
+.innscr .gm-n{font-size:12.5px;font-weight:700;white-space:nowrap;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis}
 .innscr .gm-s{font-size:10px;color:#7f8caa}
 .innscr .gm.on .gm-s{color:#c8a86a}
 .innscr .gm-dot{position:absolute;top:5px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--gold)}
-.innscr .gtotal{flex:0 0 auto;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+.innscr .gtotal{flex:0 0 auto;display:flex;align-items:baseline;gap:6px 10px;flex-wrap:wrap;min-width:0;
   padding:7px 11px;border-radius:10px;background:#101828;border:1px solid #253150;transition:background .25s}
 .innscr .gtotal.flash{background:#2a2412;border-color:var(--gold)}
 .innscr .gt-n{font-size:14px;font-weight:700;color:#e9e0c8}
 .innscr .gt-hp{font-size:12px;color:#95a2bd}
 .innscr .gt-b{margin-left:auto;display:flex;gap:5px}
-.innscr .gslots{flex:0 0 auto;display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.innscr .gslot{text-align:left;font:inherit;cursor:pointer;padding:7px 10px;border-radius:10px;
+.innscr .gslots{flex:0 0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;min-width:0}
+.innscr .gslot{text-align:left;font:inherit;cursor:pointer;min-width:0;padding:7px 10px;border-radius:10px;
   background:#101828;border:1px solid #253150;color:var(--ink);display:flex;flex-direction:column;gap:1px}
 .innscr .gslot.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset;background:#171c2b}
 .innscr .gslot.curse{border-color:#5a2f38;background:#1a1014}
@@ -2027,19 +2029,19 @@ body.shake{animation:shk2 .56s}
 .innscr .gs-v{font-size:13.5px;font-weight:700;color:#e9e0c8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .innscr .gslot.empty .gs-v{color:#5f6d8c;font-weight:400}
 .innscr .gs-d{display:flex;gap:4px;flex-wrap:wrap}
-.innscr .glisthead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;
+.innscr .glisthead{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;
   font-size:12px;color:#9aa7c2;padding:2px 2px 0}
 .innscr .glisthead b{color:var(--gold)}
 .innscr .goff{font:inherit;font-size:11.5px;cursor:pointer;color:#c8d0e0;background:#141b2b;
   border:1px solid #2b3752;border-radius:8px;padding:5px 10px}
 .innscr .goff.dis{color:#ff9a9a;border-color:#4a2b32;background:#180f14;cursor:default}
-.innscr .glist{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+.innscr .glist{flex:1 1 auto;min-height:0;min-width:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
   border:1px solid #1c2740;border-radius:10px;padding:6px;background:rgba(9,13,22,.6)}
-.innscr .gitem{width:100%;text-align:left;font:inherit;cursor:pointer;display:grid;
-  grid-template-columns:1fr auto;gap:2px 8px;padding:8px 10px;margin-bottom:6px;border-radius:9px;
+.innscr .gitem{width:100%;text-align:left;font:inherit;cursor:pointer;display:grid;min-width:0;
+  grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;padding:8px 10px;margin-bottom:6px;border-radius:9px;
   background:#111a2b;border:1px solid #24314c;border-left:3px solid var(--gold);color:var(--ink)}
 .innscr .gitem.dis{opacity:.45;border-left-color:#3a3f52;cursor:default}
-.innscr .gi-n{font-size:13.5px;font-weight:700;color:#e9e0c8}
+.innscr .gi-n{font-size:13.5px;font-weight:700;color:#e9e0c8;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .innscr .gi-d{display:flex;gap:4px;align-items:center}
 .innscr .gi-s{grid-column:1/3;font-size:11px;color:#8e9ab5}
 .innscr .gnote{font-size:12px;color:#8e9ab5;line-height:1.8;margin:6px 8px}
