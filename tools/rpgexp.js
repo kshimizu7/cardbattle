@@ -189,6 +189,15 @@ body.land .party{grid-column:2;grid-row:2}
 .askrow b{color:var(--ink);text-align:right}
 .askrow b.ok{color:var(--ok)}
 .askrow b.ng{color:var(--warn)}
+.gotlist{max-height:150px;overflow-y:auto;margin:2px 0 8px;padding:6px 8px;
+  border:1px solid rgba(255,255,255,.10);border-radius:8px;background:rgba(255,255,255,.03)}
+.gotrow{display:flex;justify-content:space-between;gap:8px;align-items:baseline;
+  font-size:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.gotrow:last-child{border-bottom:0}
+.gotrow b{color:var(--ok);flex:0 0 auto}
+.gotrow .cz{display:inline-block;margin-left:4px;padding:0 4px;border-radius:4px;
+  font-style:normal;font-size:10px;color:var(--warn);border:1px solid var(--warn)}
+.gotrow span{color:var(--ink3);text-align:right;min-width:0}
 .askbtns{display:flex;gap:8px;align-items:center;margin:16px 0 0}
 .pd.out .ar{fill:#9fe6c0}
 .pd.out .plate{stroke:#7de8a4;stroke-opacity:.75}
@@ -1452,22 +1461,42 @@ function showExitAsk(){
     : ['依頼', 'まだ果たしていない。奥の主は生きている', 'ng']);
   rows.push(['踏破', been + ' / ' + rooms + ' 室', '']);
   rows.push(['討った数', String(S.kills), '']);
-  rows.push(['傷', String(S.hurt), '']);
   rows.push(['拾った硬貨', S.loot ? (S.loot + ' 束（' + (S.loot * 10) + ' 枚）') : 'なし', '']);
-  if (S.bag.salve) rows.push(['傷薬（持ち帰る）', S.bag.salve + ' つ', 'ok']);
-  if (S.bag.oil) rows.push(['使いさしの油（持ち帰る）', S.bag.oil + ' つ', 'ok']);
-  var worn = 0;
-  PARTY.forEach(function(p2){ ['weapon','armor','t1','t2'].forEach(function(sl){ if (p2.eq[sl]) worn++; }); });
-  if (worn || S.gear.length) rows.push(['装備（持ち帰る）',
-    (worn ? '身につけている ' + worn + ' 点' : '') + (worn && S.gear.length ? '／' : '') +
-    (S.gear.length ? '荷の中 ' + S.gear.length + ' 点' : ''), 'ok']);
+  /* ここで手に入れた分だけを数える。街から持ち込んだ分は勘定に入れない */
+  var br = S.brought || { salve:0, oil:0, gear:{} };
+  var gotSalve = Math.max(0, (S.bag.salve || 0) - (br.salve || 0));
+  var gotOil   = Math.max(0, (S.bag.oil   || 0) - (br.oil   || 0));
+  if (gotSalve) rows.push(['拾った傷薬', gotSalve + ' つ', 'ok']);
+  if (gotOil)   rows.push(['拾った油',   gotOil + ' つ', 'ok']);
+  var got = [];
+  PARTY.forEach(function(p2){
+    ['weapon','armor','t1','t2'].forEach(function(sl){
+      var it = p2.eq[sl];
+      if (it && !(br.gear || {})[it.u]) got.push({ it: it, who: p2.n });
+    });
+  });
+  S.gear.forEach(function(it){ if (!(br.gear || {})[it.u]) got.push({ it: it, who: null }); });
   var lost = dungeonItems();
   if (lost.length) rows.push(['置いていく品', lost.length + ' つ——銘の合う扉は、この先にない（売れば ' +
     (lost.length * 3) + ' 枚）', 'ng']);
+  var esc = function(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); };
   bd.innerHTML = '<p class="lead">南の口から、外の光が差している。ここから出られる。</p>'
     + rows.map(function(r){
         return '<p class="askrow"><span>' + r[0] + '</span><b class="' + r[2] + '">' + r[1] + '</b></p>';
       }).join('')
+    + (got.length
+        ? '<p class="askrow"><span>拾った装備</span><b class="ok">' + got.length + ' 点</b></p>'
+          + '<div class="gotlist">' + got.map(function(g){
+              /* ここは一覧なので短く。呪いの中身は装いの画面で読める */
+              var line = g.it.idd
+                ? gearLine(g.it).split('／').filter(function(s){ return s.indexOf('呪：') !== 0; }).join('／')
+                : '未鑑定';
+              return '<div class="gotrow"><b>' + esc(gearName(g.it))
+                   + (g.it.idd && g.it.curse ? '<i class="cz">呪</i>' : '') + '</b><span>'
+                   + esc(line) + '　／' + (g.who ? esc(g.who) + 'が装備' : '荷の中')
+                   + '</span></div>';
+            }).join('') + '</div>'
+        : '')
     + '<p class="lead">' + (S.qdone
         ? '外へ出れば、依頼は完了し、報酬を受け取る。'
         : '外へ出れば、今回の探索はここまで。拾ったものは持ち帰れる。')
@@ -2087,6 +2116,14 @@ function begin(){
   buildParty(RPGQ && RPGQ.team);
   syncPartyStats();
   restoreGear();
+  /* 潜る前の持ち物を控えておく。出るときは「今回ここで手に入れた分」だけを見せる */
+  S.brought = { salve: S.bag.salve || 0, oil: S.bag.oil || 0, gear: {} };
+  S.gear.forEach(function(it){ if (it.u) S.brought.gear[it.u] = 1; });
+  PARTY.forEach(function(p){
+    ['weapon','armor','t1','t2'].forEach(function(sl){
+      if (p.eq[sl] && p.eq[sl].u) S.brought.gear[p.eq[sl].u] = 1;
+    });
+  });
   var carryHp = (RPGQ && RPGQ.party) || null;
   PARTY.forEach(function(p){
     applyGear(p);
