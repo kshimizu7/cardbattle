@@ -40,92 +40,92 @@ var CB = (function () {
      ========================================================= */
   var ROSTER = [
     /* --- 前衛・物理 --- */
-    { id:'knight', name:'騎士', en:'Knight', cost:4, role:'melee', elem:'steel', line:'人', up:'paladin', tier:1,
+    { id:'knight', size:'s', name:'騎士', en:'Knight', cost:4, role:'melee', elem:'steel', line:'人', up:'paladin', tier:1,
       hpT:5, atkT:5, spd:5,
       actions:[{key:'lance', name:'刺突', kind:'dmg', range:'pierce', dtype:'phys', fx:'pierce', backRatio:0.7}],
       passives:['guardian'],
       flavor:'穂先は前の敵を貫き、後ろの敵まで届く。' },
 
-    { id:'berserker', name:'狂戦士', en:'Berserker', cost:4, role:'melee', elem:'blood', line:'人',
+    { id:'berserker', size:'s', name:'狂戦士', en:'Berserker', cost:4, role:'melee', elem:'blood', line:'人',
       hpT:6, atkT:2, spd:1,
       actions:[{key:'sweep', name:'薙ぎ払い', kind:'dmg', range:'front_row', dtype:'phys', fx:'sweep'}],
       passives:['bloodrage','defenseless'],
       flavor:'痛みを忘れた斧は、横一列を薙ぎ払う。' },
 
-    { id:'spearman', name:'槍兵', en:'Spearman', cost:3, role:'melee', elem:'steel', line:'人',
+    { id:'spearman', size:'s', name:'槍兵', en:'Spearman', cost:3, role:'melee', elem:'steel', line:'人',
       hpT:5, atkT:3, spd:4,
       actions:[{key:'thrust', name:'長槍突き', kind:'dmg', range:'melee', dtype:'phys', fx:'lance'}],
       passives:['longreach','formation'],
       flavor:'長柄ゆえ、後列からでも敵に届く。' },
 
-    { id:'shieldguard', name:'護衛兵', en:'Shield Guardian', cost:4, role:'tank', elem:'steel', line:'人', up:'royalguard', tier:1,
+    { id:'shieldguard', size:'s', name:'護衛兵', en:'Shield Guardian', cost:4, role:'tank', elem:'steel', line:'人', up:'royalguard', tier:1,
       hpT:5, atkT:3, spd:2,
       actions:[{key:'bash', name:'盾殴り', kind:'dmg', range:'melee', dtype:'phys', fx:'bash'}],
       passives:['bulwark'],
       flavor:'その盾があるかぎり、陣は崩れない。' },
 
-    { id:'ogre', name:'オーク', en:'Ork', cost:4, role:'melee', elem:'earth', line:'獣',
+    { id:'ogre', size:'m', name:'オーク', en:'Ork', cost:4, role:'melee', elem:'earth', line:'獣',
       hpT:6, atkT:5, spd:1,
       actions:[{key:'smash', name:'叩き潰し', kind:'dmg', range:'pierce', dtype:'phys', fx:'smash', backRatio:0.75}],
       passives:['slowwit'],
       flavor:'棍棒は前の敵ごと、後ろの敵まで潰す。' },
 
-    { id:'troll', name:'トロール', en:'Troll', cost:5, role:'tank', elem:'earth', line:'獣',
+    { id:'troll', size:'l', name:'トロール', en:'Troll', cost:5, role:'tank', elem:'earth', line:'獣',
       hpT:7, atkT:5, spd:1,
       actions:[{key:'claw', name:'豪腕', kind:'dmg', range:'melee', dtype:'phys', fx:'wallop'}],
       passives:['regen3'],
       flavor:'斬っても裂いても、次の瞬間には塞がっている。' },
 
-    { id:'golem', name:'ゴーレム', en:'Golem', cost:5, role:'tank', elem:'earth', line:'物', up:'ancient', tier:1,
+    { id:'golem', size:'l', name:'ゴーレム', en:'Golem', cost:5, role:'tank', elem:'earth', line:'物', up:'ancient', tier:1,
       hpT:6, atkT:5, spd:1,
       actions:[{key:'crush', name:'岩石打', kind:'dmg', range:'melee', dtype:'phys', fx:'rock'}],
       passives:['ironwall','nonliving'],
       flavor:'魔術で命を与えられた岩。痛みも治癒も知らない。' },
 
-    { id:'werewolf', name:'人狼', en:'Werewolf', cost:4, role:'melee', elem:'blood', line:'獣',
+    { id:'werewolf', size:'m', name:'人狼', en:'Werewolf', cost:4, role:'melee', elem:'blood', line:'獣',
       hpT:5, atkT:5, spd:6,
       actions:[{key:'rend', name:'裂爪', kind:'dmg', range:'melee', dtype:'phys', fx:'claw'}],
       passives:['moonfury'],
       flavor:'月が高くなるほど、爪は深く食い込む。' },
 
-    { id:'paladin', name:'聖騎士', en:'Paladin', cost:5, role:'melee', elem:'holy', line:'人', base:'knight', up:'paladinking', tier:2,
+    { id:'paladin', size:'s', name:'聖騎士', en:'Paladin', cost:5, role:'melee', elem:'holy', line:'人', base:'knight', up:'paladinking', tier:2,
       hpT:6, atkT:6, spd:4,
       actions:[{key:'smite', name:'聖なる一撃', kind:'dmg', range:'melee', dtype:'phys', fx:'holystrike'}],
       passives:['blessing','devotion'],
       flavor:'剣は敵のため、盾は仲間のため。' },
 
     /* --- 遠隔・物理 --- */
-    { id:'archer', name:'弓兵', en:'Archer', cost:3, role:'ranged', elem:'wind', line:'人', up:'phantom', tier:1,
+    { id:'archer', size:'s', name:'弓兵', en:'Archer', cost:3, role:'ranged', elem:'wind', line:'人', up:'phantom', tier:1,
       hpT:2, atkT:3, spd:6,
       actions:[{key:'shoot', name:'射抜き', kind:'dmg', range:'any1', dtype:'phys', fx:'arrow'}],
       passives:['snipe'],
       flavor:'敵陣のどこであろうと、狙った一点に届く。' },
 
-    { id:'rogue', name:'盗賊', en:'Rogue', cost:3, role:'ranged', elem:'shadow', line:'人',
+    { id:'rogue', size:'s', name:'盗賊', en:'Rogue', cost:3, role:'ranged', elem:'shadow', line:'人',
       hpT:2, atkT:3, spd:7,
       actions:[{key:'stab', name:'投げ短剣', kind:'dmg', range:'any1', dtype:'phys', fx:'dagger'}],
       passives:['ambush'],
       flavor:'開戦の一瞬だけ、影は誰よりも速い。' },
 
-    { id:'assassin', name:'暗殺者', en:'Assassin', cost:4, role:'ranged', elem:'shadow', line:'人',
+    { id:'assassin', size:'s', name:'暗殺者', en:'Assassin', cost:4, role:'ranged', elem:'shadow', line:'人',
       hpT:3, atkT:4, spd:7,
       actions:[{key:'mark', name:'死の刻印', kind:'dmg', range:'weakest', dtype:'phys', fx:'mark'}],
       passives:['decapitate'],
       flavor:'最も弱った者から、順に消えていく。' },
 
-    { id:'harpy', name:'ハーピー', en:'Harpy', cost:3, role:'ranged', elem:'wind', line:'獣',
+    { id:'harpy', size:'m', name:'ハーピー', en:'Harpy', cost:3, role:'ranged', elem:'wind', line:'獣',
       hpT:4, atkT:3, spd:7,
       actions:[{key:'screech', name:'かく乱の叫び', kind:'dmg', range:'any1', dtype:'phys', fx:'screech', slow:2}],
       passives:['flight'],
       flavor:'その金切り声を聞いた者は、足がもつれる。' },
 
-    { id:'valkyrie', name:'ヴァルキリー', en:'Valkyrie', cost:5, role:'ranged', elem:'holy', line:'神', up:'odin', tier:1,
+    { id:'valkyrie', size:'m', name:'ヴァルキリー', en:'Valkyrie', cost:5, role:'ranged', elem:'holy', line:'神', up:'odin', tier:1,
       hpT:5, atkT:5, spd:6,
       actions:[{key:'dive', name:'天翔ける槍', kind:'dmg', range:'any1', dtype:'phys', fx:'spear'}],
       passives:['flight','triumph'],
       flavor:'戦乙女は落ちた魂を数え、次の獲物へ翔ぶ。' },
 
-    { id:'mage', name:'魔法使い', en:'Mage', cost:4, role:'caster', elem:'fire', line:'人', up:'archmage', tier:1,
+    { id:'mage', size:'s', name:'魔法使い', en:'Mage', cost:4, role:'caster', elem:'fire', line:'人', up:'archmage', tier:1,
       hpT:2, atkT:0, spd:2,
       actions:[
         {key:'bolt',  name:'ファイアボルト', kind:'dmg', range:'any1',   dtype:'magic', power:8, fx:'firebolt'},
@@ -134,7 +134,7 @@ var CB = (function () {
       passives:[],
       flavor:'一点を焼くか、面を凍らせるか。' },
 
-    { id:'archmage', name:'大魔法使い', en:'Archmage', cost:6, role:'caster', elem:'arcane', line:'人', base:'mage', up:'grandsage', tier:2,
+    { id:'archmage', size:'s', name:'大魔法使い', en:'Archmage', cost:6, role:'caster', elem:'arcane', line:'人', base:'mage', up:'grandsage', tier:2,
       hpT:4, atkT:0, spd:3,
       actions:[
         {key:'arcane', name:'秘術の矢', kind:'dmg', range:'any1', dtype:'magic', power:7, fx:'arcanebolt'},
@@ -143,7 +143,7 @@ var CB = (function () {
       passives:['resonance'],
       flavor:'空を裂き、星を落とす。ただし詠唱には時が要る。' },
 
-    { id:'dragon', name:'竜', en:'Dragon', cost:6, role:'melee', elem:'fire', line:'竜', up:'elderdragon', tier:1,
+    { id:'dragon', size:'l', name:'竜', en:'Dragon', cost:6, role:'melee', elem:'fire', line:'竜', up:'elderdragon', tier:1,
       hpT:6, atkT:5, spd:3,
       actions:[
         {key:'talon',  name:'竜爪', kind:'dmg', range:'melee', dtype:'phys', fx:'dclaw'},
@@ -152,13 +152,13 @@ var CB = (function () {
       passives:['dragonscale'],
       flavor:'炎を吐くには息を溜めねばならぬ。だがその一息が戦を決める。' },
 
-    { id:'shaman', name:'呪術師', en:'Dark Mage', cost:3, role:'caster', elem:'wind', line:'邪', up:'necromancer', tier:1,
+    { id:'shaman', size:'s', name:'呪術師', en:'Dark Mage', cost:3, role:'caster', elem:'wind', line:'邪', up:'necromancer', tier:1,
       hpT:3, atkT:0, spd:4,
       actions:[{key:'hex', name:'呪縛', kind:'dmg', range:'any1', dtype:'magic', power:4, fx:'hex', weaken:2}],
       passives:[],
       flavor:'呪いは刃より深く、腕を鈍らせる。' },
 
-    { id:'priest', name:'僧侶', en:'Priest', cost:3, role:'support', elem:'holy', line:'人', up:'highpriest', tier:1,
+    { id:'priest', size:'s', name:'僧侶', en:'Priest', cost:3, role:'support', elem:'holy', line:'人', up:'highpriest', tier:1,
       hpT:3, atkT:2, spd:4,
       actions:[
         {key:'light', name:'聖光', kind:'dmg',  range:'any1',  dtype:'magic', power:3, fx:'holy'},
@@ -167,7 +167,7 @@ var CB = (function () {
       passives:[],
       flavor:'剣を持たぬ手が、幾人もの命を繋いできた。' },
 
-    { id:'highpriest', name:'高僧', en:'High Priest', cost:5, role:'support', elem:'holy', line:'人', base:'priest', up:'saint', tier:2,
+    { id:'highpriest', size:'s', name:'高僧', en:'High Priest', cost:5, role:'support', elem:'holy', line:'人', base:'priest', up:'saint', tier:2,
       hpT:6, atkT:2, spd:4,
       actions:[
         {key:'light',   name:'聖なる裁き', kind:'dmg', range:'pierce', dtype:'magic', power:5, fx:'holy', backRatio:0.6},
@@ -178,7 +178,7 @@ var CB = (function () {
       flavor:'己の命を差し出してでも、仲間をもう一度立たせる。' },
 
     /* --- 精霊（下位） --- */
-    { id:'salamander', name:'サラマンダー', en:'Salamander', cost:4, role:'caster', elem:'fire', line:'精', up:'phoenix', tier:1,
+    { id:'salamander', size:'s', name:'サラマンダー', en:'Salamander', cost:4, role:'caster', elem:'fire', line:'精', up:'phoenix', tier:1,
       hpT:3, atkT:0, spd:4,
       actions:[
         {key:'ember', name:'火の粉', kind:'dmg', range:'any1', dtype:'magic', power:4, fx:'ember', burn:1},
@@ -187,7 +187,7 @@ var CB = (function () {
       passives:['emberheart'],
       flavor:'炎は燃やすためだけの力ではない。焼かれた土からしか芽は出ない。' },
 
-    { id:'yeti', name:'イエティ', en:'Yeti', cost:5, role:'melee', elem:'ice', line:'精', up:'jotunn', tier:1,
+    { id:'yeti', size:'l', name:'イエティ', en:'Yeti', cost:5, role:'melee', elem:'ice', line:'精', up:'jotunn', tier:1,
       hpT:6, atkT:5, spd:2,
       actions:[
         {key:'smash', name:'氷塊叩き', kind:'dmg', range:'melee', dtype:'phys', fx:'iceclub', slow:2},
@@ -196,7 +196,7 @@ var CB = (function () {
       passives:['frostskin','frostair'],
       flavor:'その足跡が見つかった翌朝、村の井戸は必ず凍っている。' },
 
-    { id:'bard', name:'吟遊詩人', en:'Bard', cost:5, role:'support', elem:'wind', line:'人',
+    { id:'bard', size:'s', name:'吟遊詩人', en:'Bard', cost:5, role:'support', elem:'wind', line:'人',
       hpT:3, atkT:1, spd:5,
       actions:[{key:'chord', name:'不協和音', kind:'dmg', range:'all', dtype:'magic', power:2, fx:'discord'}],
       passives:['warsong'],

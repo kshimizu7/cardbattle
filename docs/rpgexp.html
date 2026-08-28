@@ -482,6 +482,7 @@ const DUNGEONS = {
   /* ============ 1. 人がいない、罠と敵だらけ ============ */
   beast: {
     id: 'beast',
+    size: 'm',        /* 入口をくぐれる大きさの上限 */
     name: '喰らいの洞',
     sub: '人の手が入っていない自然洞',
     danger: 1,
@@ -510,6 +511,7 @@ const DUNGEONS = {
   /* ============ 2. かつて人が住んでいた、罠が多い ============ */
   mine: {
     id: 'mine',
+    size: 's',        /* 入口をくぐれる大きさの上限 */
     name: '黙した坑道',
     sub: '住人の絶えた鉱山',
     danger: 2,
@@ -539,6 +541,7 @@ const DUNGEONS = {
   /* ============ 3. 宝が巧妙に隠され、冒険者も多い ============ */
   maze: {
     id: 'maze',
+    size: 'm',        /* 入口をくぐれる大きさの上限 */
     name: '欲深き迷路',
     sub: '財宝が眠ると伝わる人工迷宮',
     danger: 3,
@@ -567,6 +570,7 @@ const DUNGEONS = {
   /* ============ 4. 竜と取り巻きが遺物を護る神域 ============ */
   shrine: {
     id: 'shrine',
+    size: 'l',        /* 入口をくぐれる大きさの上限 */
     name: '護りの神域',
     sub: '竜が遺物を護る聖域',
     danger: 4,
@@ -591,6 +595,63 @@ const DUNGEONS = {
     },
     tags: ['holy', 'relic', 'ward', 'dragon'],
     mix: { trap: 2, enemy: 3, loot: 2, human: 1 }
+  },
+  /* ============ 5. 竜たちが死にに来る谷。大きな者が主役になる ============ */
+  grave: {
+    id: 'grave',
+    size: 'l',        /* 入口をくぐれる大きさの上限 */
+    name: '竜の墓所',
+    sub: '竜が死にに来ると伝わる谷',
+    danger: 4,
+    open:
+      '山の裏側に、口を開けたままの谷がある。竜は死期を悟るとここへ来る——と、'
+      + '古い羊飼いは言う。谷底には確かに骨がある。それも、家ほどの大きさの。'
+      + '入口は崩れた岩門で、大きな者でも身を屈めずに入れる。',
+    hush:
+      'ここは墓であって巣ではない。棲みついているのは、骨に群がる腐肉喰らいと、'
+      + '弔いを続ける古い眷属たち。だから敵意は薄く、しかし触れれば容赦がない。'
+      + '罠は仕掛けではなく、崩れかけた足場と、骨の下に溜まった瘴気。'
+      + '奥にいるのは、まだ死にきっていない一頭である。',
+    V: {
+      place: '{墓所|谷|骨の平地}',
+      trace: '{風化した鱗|抜け落ちた牙|折れた翼の骨}',
+      who2:  '{弔いに来た者|鱗を狙った盗人|骨を数えに来た学者}',
+      lord:  '{まだ死にきっていない一頭|最後の一頭|古い眷属}',
+      smell: '{乾いた骨の匂い|冷えた灰の匂い|かすかな硫黄}',
+      sound: '{風が骨を鳴らす音|遠い羽ばたき|自分たちの足音}',
+      light: '{松明の輪|谷の口から差す光}'
+    },
+    tags: ['dragon', 'nature', 'relic', 'wild'],
+    mix: { trap: 2, enemy: 4, loot: 3, human: 1 }
+  },
+
+  /* ============ 6. 底の見えない縦坑。足場が広い ============ */
+  pit: {
+    id: 'pit',
+    size: 'l',        /* 入口をくぐれる大きさの上限 */
+    name: '地の大穴',
+    sub: '底の見えない縦坑',
+    danger: 3,
+    open:
+      '野の真ん中に、いつからか穴が開いている。投げ込んだ石の音が返ってこない。'
+      + '縁に沿って広い棚が幾重にも巡り、そこを歩けば奥まで下りられるという。'
+      + '下りた者のうち、半分は戻ってきた。もう半分は、まだ下にいる。',
+    hush:
+      '穴は自然にできたものではなく、何かが地の底から掘り上がってきた跡である。'
+      + 'だから壁は削られ、棚は足場として整っている——誰かが使うために。'
+      + '危ないのは敵よりも高さで、落ちれば戻れない。'
+      + '奥にいるのは、掘り上がってきたものの最後の一体。',
+    V: {
+      place: '{大穴|縦坑|棚のめぐる穴}',
+      trace: '{削られた壁の爪跡|落ちた縄梯子|下から積み上がった土}',
+      who2:  '{下りた者|縄を結んだ誰か|戻らなかった半分}',
+      lord:  '{掘り上がってきたもの|底のもの|最後の一体}',
+      smell: '{土の匂い|下から昇る生ぬるい風|鉄気}',
+      sound: '{石の落ちる音|返らない反響|遠い地鳴り}',
+      light: '{松明の輪|上から届くわずかな光}'
+    },
+    tags: ['nature', 'wild', 'trap', 'loot'],
+    mix: { trap: 3, enemy: 3, loot: 3, human: 1 }
   }
 };
 
@@ -1722,7 +1783,12 @@ const STYLES = {
   maze:   { roomSize:'cramped',  corLen:'compact',   corWidth:'narrow',
             layout:'forking',  shapes:['square','irregular'],rough:'medium', loops:'many', landmark:false },
   shrine: { roomSize:'spacious', corLen:'normal',    corWidth:'wide',
-            layout:'balanced', shapes:['square','round'],    rough:'none',   loops:'few',  landmark:true }
+            layout:'balanced', shapes:['square','round'],    rough:'none',   loops:'few',  landmark:true },
+  /* 大きな者が入れる場所は、部屋も通路も広い */
+  grave:  { roomSize:'spacious', corLen:'normal',    corWidth:'wide',
+            layout:'winding',  shapes:['irregular','round'], rough:'heavy',  loops:'few',  landmark:true },
+  pit:    { roomSize:'spacious', corLen:'compact',   corWidth:'wide',
+            layout:'balanced', shapes:['round','square'],    rough:'medium', loops:'many', landmark:true }
 };
 
 /* ---------- 部屋の名前（真名） ---------- */
@@ -3210,7 +3276,10 @@ var FOES = {
   beast:  { small: ['werewolf','ogre','harpy'],   big: ['troll','yeti','werewolf'] },
   mine:   { small: ['ogre','golem','shaman'],     big: ['golem','troll','ogre'] },
   maze:   { small: ['rogue','assassin','harpy'],  big: ['assassin','valkyrie','rogue'] },
-  shrine: { small: ['shieldguard','knight','priest'], big: ['dragon','paladin','knight'] }
+  shrine: { small: ['shieldguard','knight','priest'], big: ['dragon','paladin','knight'] },
+  /* 大きな者が入れる場所には、大きなものが棲んでいる */
+  grave:  { small: ['harpy','werewolf','ogre'],      big: ['dragon','troll','ogre'] },
+  pit:    { small: ['ogre','golem','harpy'],         big: ['troll','golem','yeti'] }
 };
 var SLOTS6 = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]];
 function foeTeam(kind){

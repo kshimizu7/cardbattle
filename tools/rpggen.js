@@ -60,7 +60,12 @@ const STYLES = {
   maze:   { roomSize:'cramped',  corLen:'compact',   corWidth:'narrow',
             layout:'forking',  shapes:['square','irregular'],rough:'medium', loops:'many', landmark:false },
   shrine: { roomSize:'spacious', corLen:'normal',    corWidth:'wide',
-            layout:'balanced', shapes:['square','round'],    rough:'none',   loops:'few',  landmark:true }
+            layout:'balanced', shapes:['square','round'],    rough:'none',   loops:'few',  landmark:true },
+  /* 大きな者が入れる場所は、部屋も通路も広い */
+  grave:  { roomSize:'spacious', corLen:'normal',    corWidth:'wide',
+            layout:'winding',  shapes:['irregular','round'], rough:'heavy',  loops:'few',  landmark:true },
+  pit:    { roomSize:'spacious', corLen:'compact',   corWidth:'wide',
+            layout:'balanced', shapes:['round','square'],    rough:'medium', loops:'many', landmark:true }
 };
 
 /* ---------- 部屋の名前（真名） ---------- */

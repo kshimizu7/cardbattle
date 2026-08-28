@@ -789,14 +789,32 @@
     for (var i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
     return (h >>> 0) % 2147483647;
   }
+  /* size … その入口をくぐれる大きさの上限（s=小 / m=中 / l=大）。
+     大きな者は、狭い口をくぐれない。中の主は、その場所で育ったか、封じられた者たちである。 */
   var RPGQUESTS = [
-    { id: 'q_beast', name: '喰らいの洞の主', dun: 'beast', rooms: 'few', coin: 30,
+    { id: 'q_beast', name: '喰らいの洞の主', dun: 'beast', rooms: 'few', coin: 30, size: 'm',
       lead: '村の北の洞に、家畜と人を襲う主が居着いた。洞の最奥まで進み、討ち果たせ。' },
-    { id: 'q_mine', name: '黙した坑道の奥', dun: 'mine', rooms: 'some', coin: 50,
+    { id: 'q_mine', name: '黙した坑道の奥', dun: 'mine', rooms: 'some', coin: 50, size: 's',
       lead: '音の絶えた坑道の奥で、いまも何かが掘り続けている。正体を確かめ、討て。' },
-    { id: 'q_maze', name: '欲深き迷路の先客', dun: 'maze', rooms: 'some', coin: 60,
-      lead: '財宝目当ての一団が迷路に消えて久しい。奥に巣食う主を討ち、生きて戻れ。' }
+    { id: 'q_maze', name: '欲深き迷路の先客', dun: 'maze', rooms: 'some', coin: 60, size: 'm',
+      lead: '財宝目当ての一団が迷路に消えて久しい。奥に巣食う主を討ち、生きて戻れ。' },
+    { id: 'q_pit', name: '地の大穴の底のもの', dun: 'pit', rooms: 'some', coin: 80, size: 'l',
+      lead: '野に開いた穴の底から、何かが掘り上がってきている。棚を下り、底のものを討て。' },
+    { id: 'q_grave', name: '竜の墓所の最後の一頭', dun: 'grave', rooms: 'some', coin: 110, size: 'l',
+      lead: '骨の谷に、まだ死にきっていない一頭がいる。弔いを終わらせてやれ。' }
   ];
+  /* 大きさ。小＝人の背丈まで／中＝人より大きい獣／大＝門をくぐれない体躯 */
+  var SIZE_N = { s: 1, m: 2, l: 3 };
+  var SIZE_LABEL = { s: '小', m: '中', l: '大' };
+  var SIZE_GATE = { s: '狭い。小さな者しか通れない', m: '人より大きな獣までなら通れる', l: '大きな者も通れる' };
+  function cardSize(id) { var d = E.BY_ID[id]; return (d && d.size) || 's'; }
+  /* その依頼に、体が大きすぎて入れない者がいるか */
+  function tooBigFor(q) {
+    var cap = SIZE_N[q.size || 'l'];
+    return (SAVE.rpg().team || []).filter(function (t) {
+      return SIZE_N[cardSize(t.id)] > cap;
+    }).map(function (t) { return E.BY_ID[t.id].name; });
+  }
   /* 隊列が整っているか。重すぎる／少なすぎる隊列では出立できない */
   function teamTrouble() {
     var t = SAVE.rpg().team || [];
@@ -824,10 +842,15 @@
       RPGQUESTS.map(function (q) {
         var c = r.clears[q.id] || 0;
         var pay = c ? Math.max(5, Math.round(q.coin / 3)) : q.coin;
-        return '<div class="opt poolopt" data-quest="' + q.id + '">' +
+        var big = tooBigFor(q);
+        return '<div class="opt poolopt' + (big.length ? ' toobig' : '') + '" data-quest="' + q.id + '">' +
           '<span class="pn">📜 ' + q.name + ' <b>報酬 硬貨' + pay + '枚</b>' +
           (c ? ' <b style="color:var(--ok)">✓達成×' + c + '</b>' : '') + '</span>' +
           '<span class="pd">' + q.lead +
+          '<br><span style="opacity:.8">入口は' + SIZE_GATE[q.size || 'l'] +
+            '（' + SIZE_LABEL[q.size || 'l'] + 'まで）</span>' +
+          (big.length ? '<br><span style="color:var(--warn)">※ ' + big.join('・') +
+            ' は、この口をくぐれない</span>' : '') +
           (c ? '<br><span style="opacity:.75">※一度果たした依頼。報酬は目減りするが、地形は同じ。敵と関門は戻っている</span>' : '') +
           '</span></div>';
       }).join('') +
@@ -838,7 +861,8 @@
     m.onclick = function (e) { if (e.target === m) { m.remove(); renderTown(); } };
     m.querySelector('#rpgqx').onclick = function () { m.remove(); renderTown(); };
     [].forEach.call(m.querySelectorAll('[data-quest]'), function (b) {
-      if (bad) { b.style.opacity = '.5'; return; }
+      var q0 = RPGQUESTS.filter(function (x) { return x.id === b.dataset.quest; })[0];
+      if (bad || (q0 && tooBigFor(q0).length)) { b.style.opacity = '.5'; return; }
       b.onclick = function () {
         var q = RPGQUESTS.filter(function (x) { return x.id === b.dataset.quest; })[0];
         m.remove(); openRPGQuest(q);
@@ -886,7 +910,9 @@
   /* 入口の情景画を、探索画面に渡す */
   window.RPGART = function (key) {
     var A = window.VOT_ART || {};
-    return A[key] || '';
+    /* 新しい場所の絵ができるまでは、近い場所の絵を借りる */
+    var LEND = { grave: 'shrine', pit: 'mine' };
+    return A[key] || A[LEND[key]] || '';
   };
 
   window.RPGSTATS = function (ids) {
@@ -1335,7 +1361,8 @@
     var r = SAVE.rpg();
     var team = r.team.slice();
     var cost = teamCost(team);
-    townNote(box, '枠を選んでから、下の面々を押すと入れ替わります。同じ人をもう一度押すと外れます。');
+    townNote(box, '枠を選んでから、下の面々を押すと入れ替わります。同じ人をもう一度押すと外れます。<br>' +
+      '<b>大</b>の者は、狭い入口をくぐれません（どの依頼に行けるかは依頼板に出ます）。');
     [0, 1].forEach(function (row) {
       var lab = document.createElement('div');
       lab.className = 'rowlab'; lab.textContent = row ? '後 衛' : '前 衛';
@@ -1350,6 +1377,7 @@
         if (t) {
           var d = E.BY_ID[t.id], m = townMember(t.id);
           cell.innerHTML = '<span class="cst">' + d.cost + '</span>' +
+            '<span class="csz sz' + (d.size || 's') + '">' + SIZE_LABEL[d.size || 's'] + '</span>' +
             '<span class="cn">' + d.name + '</span>' +
             '<span class="cc">' + m.hp + '/' + m.mx + '</span>';
         } else cell.innerHTML = '<span class="cn">——</span><span class="cc">空き</span>';
@@ -1388,7 +1416,7 @@
       var d = E.BY_ID[id];
       var b = document.createElement('button');
       b.className = 'bx' + (inTeam ? ' on' : '');
-      b.innerHTML = d.name + '<b>' + d.cost + '</b>';
+      b.innerHTML = d.name + '<i class="sz' + (d.size || 's') + '">' + SIZE_LABEL[d.size || 's'] + '</i><b>' + d.cost + '</b>';
       b.onclick = function () {
         if (!INN_SLOT) { townToast('先に、上の枠を選んでください'); return; }
         var rr = SAVE.rpg(), tm = rr.team.slice();
@@ -1408,7 +1436,7 @@
     townNote(box, '<b>宿に流れ着いた者</b>　' + (hire.length ? '雇えば、ずっと仲間になります' : 'いまは誰もいない'));
     hire.forEach(function (id) {
       var d = E.BY_ID[id], p = hirePrice(id);
-      townRow(box, d.name + '　<em>重さ ' + d.cost + '</em>',
+      townRow(box, d.name + '　<em>重さ ' + d.cost + '／体 ' + SIZE_LABEL[d.size || 's'] + '</em>',
         d.flavor || (E.RANGE_TEXT[d.actions[0].range] || ''), p, townCoin() >= p, function () {
           if (!townPay(p)) return;
           var rr = SAVE.rpg();

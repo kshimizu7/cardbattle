@@ -1172,7 +1172,10 @@ var FOES = {
   beast:  { small: ['werewolf','ogre','harpy'],   big: ['troll','yeti','werewolf'] },
   mine:   { small: ['ogre','golem','shaman'],     big: ['golem','troll','ogre'] },
   maze:   { small: ['rogue','assassin','harpy'],  big: ['assassin','valkyrie','rogue'] },
-  shrine: { small: ['shieldguard','knight','priest'], big: ['dragon','paladin','knight'] }
+  shrine: { small: ['shieldguard','knight','priest'], big: ['dragon','paladin','knight'] },
+  /* 大きな者が入れる場所には、大きなものが棲んでいる */
+  grave:  { small: ['harpy','werewolf','ogre'],      big: ['dragon','troll','ogre'] },
+  pit:    { small: ['ogre','golem','harpy'],         big: ['troll','golem','yeti'] }
 };
 var SLOTS6 = [[0,0],[0,1],[0,2],[1,0],[1,1],[1,2]];
 function foeTeam(kind){
