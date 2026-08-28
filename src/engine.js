@@ -187,7 +187,18 @@ var CB = (function () {
       passives:['emberheart'],
       flavor:'炎は燃やすためだけの力ではない。焼かれた土からしか芽は出ない。' },
 
-    { id:'yeti', size:'l', name:'イエティ', en:'Yeti', cost:5, role:'melee', elem:'ice', line:'精', up:'jotunn', tier:1,
+    /* 氷の精霊。イエティ（獣に近すぎた）に代わって精霊の席に座る。
+       希薄な姿なので体は「小」。顕現した姿がヨトゥン */
+    { id:'frost', size:'s', name:'フリム', en:'Hrim', cost:4, role:'caster', elem:'ice', line:'精', up:'jotunn', tier:1,
+      hpT:3, atkT:1, spd:4,
+      actions:[
+        {key:'rime',  name:'霜を編む',     kind:'dmg', range:'any1', dtype:'magic', power:4, fx:'ember', slow:1},
+        {key:'chill', name:'凍てつく吐息', kind:'dmg', range:'row',  dtype:'magic', power:3, fx:'ember', slow:2, cd:2}
+      ],
+      passives:['frostair'],
+      flavor:'姿はない。息のかかったところだけが、白く固まっていく。' },
+
+    { id:'yeti', size:'l', retired:true, name:'イエティ', en:'Yeti', cost:5, role:'melee', elem:'ice', line:'精', up:'jotunn', tier:1,
       hpT:6, atkT:5, spd:2,
       actions:[
         {key:'smash', name:'氷塊叩き', kind:'dmg', range:'melee', dtype:'phys', fx:'iceclub', slow:2},
@@ -1201,7 +1212,7 @@ var CB = (function () {
     { id:'phoenix', name:'フェニックス', en:'Phoenix', line:'神', tier:2, base:'salamander',
       art:{ body:'wisp', head:'flame', wep:'wings', deco:'embers' }, elem:'fire',
       tech:'業火の玉座', flavor:'灰になるたび、前より熱くなって還ってくる。' },
-    { id:'jotunn', name:'ヨトゥン', en:'Jötunn', line:'神', tier:2, base:'yeti',
+    { id:'jotunn', name:'ヨトゥン', en:'Jötunn', line:'神', tier:2, base:'frost',
       art:{ body:'bulk', head:'horns', wep:'axe', deco:'flakes' }, elem:'ice',
       tech:'永久凍土', flavor:'霜の巨人。ひと息で季節が変わる。' },
     { id:'odin', name:'オーディン', en:'Odin', line:'神', tier:2, base:'valkyrie',
@@ -1297,7 +1308,12 @@ var CB = (function () {
   function maxUnits() { var P = POOLS[activePool]; return P && P.units ? P.units[1] : MAX_UNITS; }
   function getPool() { return activePool; }
   function poolIds() {
-    return activePool === 'full' ? ROSTER.map(function (d) { return d.id; }) : POOLS[activePool].ids.slice();
+    /* retired … 札は残してあるが、いまは出さないカード。戻したくなったら retired を外すだけ */
+    if (activePool === 'full')
+      return ROSTER.filter(function (d) { return !d.retired; }).map(function (d) { return d.id; });
+    return POOLS[activePool].ids.filter(function (id) {
+      var d = BY_ID[id]; return d && !d.retired;
+    });
   }
   function inPool(id) { return poolIds().indexOf(id) >= 0; }
   function handSize() {
@@ -1311,7 +1327,7 @@ var CB = (function () {
     knight:50, berserker:50, spearman:50, shieldguard:50, ogre:50, troll:50,
     golem:50, werewolf:50, paladin:50, archer:50, rogue:50, assassin:50,
     harpy:50, valkyrie:50, mage:50, archmage:50, dragon:50, shaman:50,
-    priest:50, highpriest:50, salamander:50, yeti:50, bard:50
+    priest:50, highpriest:50, salamander:50, yeti:50, frost:50, bard:50
   };
   // スターター15枚だけで戦ったときの実測勝率（AIの編成評価に使用）
   var RATING_STARTER = {

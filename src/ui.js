@@ -1163,7 +1163,7 @@
   function hireList() {
     var r = SAVE.rpg();
     if (r.hire && r.hire.day === r.day && r.hire.ids) return r.hire.ids.filter(function (id) { return !r.allies[id]; });
-    var pool = E.ROSTER.map(function (c) { return c.id; }).filter(function (id) { return !r.allies[id]; });
+    var pool = E.poolIds().filter(function (id) { return !r.allies[id]; });
     var ids = [];
     for (var i = 0; i < 2 && pool.length; i++) ids.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
     SAVE.rpgSet({ hire: { day: r.day, ids: ids } });
@@ -1193,16 +1193,21 @@
     });
     innPane();
   }
-  function innPane() {
+  function innPane(flash) {
     [].forEach.call(app.querySelectorAll('.tabs button'), function (b) {
       b.className = b.dataset.tab === INN_TAB ? 'on' : '';
     });
     var box = $('#innpane');
+    box.className = 'pane' + (INN_TAB === 'gear' ? ' gearpane' : '');
     box.innerHTML = '';
     var c = $('#inncoin'); if (c) c.textContent = SAVE.rpg().coin;
     if (INN_TAB === 'rest') innRest(box);
     else if (INN_TAB === 'gear') innGear(box);
     else innTeam(box);
+    if (flash) {
+      var g = box.querySelector('.gtotal');
+      if (g) { g.classList.add('flash'); setTimeout(function () { g.classList.remove('flash'); }, 700); }
+    }
   }
 
   /* 休む */
@@ -1230,103 +1235,152 @@
     });
   }
 
-  /* 装い */
+  /* 装い ── ひと画面で完結させる。
+     上：一行の顔ぶれ → その者の合計 → 4つの枠（2×2）
+     下：選んだ枠に入る品だけを並べ、押せば即座に上の枠が変わる。
+     ページ自体は動かさない。動くのは品の一覧の中だけ。 */
+  var INN_GSLOT = 'weapon';
+  var GSLOTS = ['weapon', 'armor', 't1', 't2'];
+  function statLine(s, sign) {
+    var out = [];
+    if (s.atk) out.push('<i class="' + (s.atk > 0 ? 'up' : 'dn') + '">攻 ' + (s.atk > 0 ? '+' : '') + s.atk + '</i>');
+    if (s.hp)  out.push('<i class="' + (s.hp  > 0 ? 'up' : 'dn') + '">HP ' + (s.hp  > 0 ? '+' : '') + s.hp  + '</i>');
+    if (s.spd) out.push('<i class="' + (s.spd > 0 ? 'up' : 'dn') + '">速 ' + (s.spd > 0 ? '+' : '') + s.spd + '</i>');
+    return out.join('') || (sign ? '' : '<i class="nil">変わらない</i>');
+  }
   function innGear(box) {
-    var r = SAVE.rpg();
-    var team = r.team;
-    if (INN_AT == null) {
-      var loose = (r.gear.bag || []).length;
-      townNote(box, '誰の装いを整えますか。' + (loose ? '<b>手つかずの品 ' + loose + '</b>' : '荷は空です'));
-      team.forEach(function (t, i) {
-        var m = townMember(t.id);
-        var worn = ['weapon', 'armor', 't1', 't2'].map(function (sl) {
-          return m.eq[sl] ? gearName(m.eq[sl]) : '—';
-        }).join('・');
-        var b = [];
-        if (m.bonus.atk) b.push('攻 ' + (m.bonus.atk > 0 ? '+' : '') + m.bonus.atk);
-        if (m.bonus.hp) b.push('HP ' + (m.bonus.hp > 0 ? '+' : '') + m.bonus.hp);
-        if (m.bonus.spd) b.push('速 ' + (m.bonus.spd > 0 ? '+' : '') + m.bonus.spd);
-        var el = document.createElement('button');
-        el.className = 'mem';
-        el.innerHTML = '<span class="av">' + (t.row ? '🏹' : '⚔') + '</span>' +
-          '<span class="nm">' + m.name + '</span>' +
-          '<span class="bo">' + (b.join('／') || '身ひとつ') + '</span>' +
-          '<span class="sub">' + worn + '</span>';
-        el.onclick = function () { INN_AT = i; innPane(); };
-        box.appendChild(el);
-      });
-      if (loose) {
-        var give = document.createElement('button');
-        give.className = 'btn primary';
-        give.style.cssText = 'width:100%;margin-top:8px;padding:11px';
-        give.textContent = '手つかずの品を配る';
-        give.onclick = function () { autoEquip(); innPane(); };
-        box.appendChild(give);
-        townNote(box, '正体の知れている品だけを、いちばん得をする相手に配ります。');
-      }
-      return;
-    }
+    var r = SAVE.rpg(), team = r.team;
+    if (INN_AT == null || INN_AT >= team.length) INN_AT = 0;
+    if (GSLOTS.indexOf(INN_GSLOT) < 0) INN_GSLOT = 'weapon';
     var t = team[INN_AT], m = townMember(t.id);
-    var back = document.createElement('button');
-    back.className = 'btn ghost'; back.style.cssText = 'width:100%;margin-bottom:8px';
-    back.textContent = '← 一行へ';
-    back.onclick = function () { INN_AT = null; innPane(); };
-    box.appendChild(back);
-    townNote(box, '<b>' + m.name + '</b>　いま ' + m.hp + ' / ' + m.mx);
-    ['weapon', 'armor', 't1', 't2'].forEach(function (sl) {
+    var bag = r.gear.bag || [];
+    var wrap = document.createElement('div');
+    wrap.className = 'gearwrap';
+
+    /* ① 一行の顔ぶれ。いつでも見えていて、押せばその場で切り替わる */
+    var strip = document.createElement('div');
+    strip.className = 'gmembers';
+    team.forEach(function (tt, i) {
+      var mm = townMember(tt.id);
+      var free = GSLOTS.filter(function (sl) { return !mm.eq[sl]; }).length;
+      var canFill = bag.some(function (it) {
+        return it.k === 'trinket' ? (!mm.eq.t1 || !mm.eq.t2) : !mm.eq[it.k];
+      });
+      var b = document.createElement('button');
+      b.className = 'gm' + (i === INN_AT ? ' on' : '');
+      b.innerHTML = '<span class="gm-n">' + mm.name + '</span>' +
+        '<span class="gm-s">' + (4 - free) + '/4</span>' +
+        (canFill ? '<span class="gm-dot"></span>' : '');
+      b.onclick = function () { INN_AT = i; innPane(); };
+      strip.appendChild(b);
+    });
+    wrap.appendChild(strip);
+
+    /* ② その者のいまの合計 */
+    var tot = document.createElement('div');
+    tot.className = 'gtotal';
+    tot.innerHTML = '<span class="gt-n">' + m.name + '</span>' +
+      '<span class="gt-hp">HP ' + m.hp + '/' + m.mx + '</span>' +
+      '<span class="gt-b">' + (statLine(m.bonus, 1) || '<i class="nil">身ひとつ</i>') + '</span>';
+    wrap.appendChild(tot);
+
+    /* ③ 4つの枠。押して選ぶ。選んだ枠の品が下に並ぶ */
+    var grid = document.createElement('div');
+    grid.className = 'gslots';
+    GSLOTS.forEach(function (sl) {
       var it = m.eq[sl];
-      var row = document.createElement('div');
       var locked = it && it.idd && it.curse;
-      row.className = 'slot' + (locked ? ' lock' : '');
-      row.innerHTML = '<span class="k">' + SLOTNAME[sl] + '</span>' +
-        '<span class="v' + (it ? '' : ' empty') + '">' + (it ? gearName(it) : '—— 空いている') + '</span>' +
-        (it ? '<button class="x">' + (locked ? '呪' : '外す') + '</button>' : '<span></span>');
-      box.appendChild(row);
-      if (it && !locked) row.querySelector('.x').onclick = function () {
-        var rr = SAVE.rpg();
-        var e = rr.gear.eq[t.id] || {};
-        rr.gear.bag.push(e[sl]); delete e[sl];
+      var c = document.createElement('button');
+      c.className = 'gslot' + (sl === INN_GSLOT ? ' on' : '') + (locked ? ' curse' : '') + (it ? '' : ' empty');
+      c.innerHTML = '<span class="gs-k">' + SLOTNAME[sl] + (locked ? ' <b>呪</b>' : '') + '</span>' +
+        '<span class="gs-v">' + (it ? gearName(it) : '——') + '</span>' +
+        '<span class="gs-d">' + (it ? statLine(gearStats(it), 1) : '<i class="nil">空いている</i>') + '</span>';
+      c.onclick = function () { INN_GSLOT = sl; innPane(); };
+      grid.appendChild(c);
+    });
+    wrap.appendChild(grid);
+
+    /* ④ 選んだ枠に入る品だけ。ここだけが動く */
+    var cur = m.eq[INN_GSLOT];
+    var curLocked = cur && cur.idd && cur.curse;
+    var kind = INN_GSLOT === 'weapon' ? 'weapon' : INN_GSLOT === 'armor' ? 'armor' : 'trinket';
+    var curS = cur ? gearStats(cur) : { atk: 0, hp: 0, spd: 0 };
+    var list = bag.map(function (it, i) { return { it: it, i: i }; })
+      .filter(function (x) { return x.it.k === kind; })
+      .map(function (x) {
+        var s = x.it.idd ? gearStats(x.it) : null;
+        x.d = s ? { atk: s.atk - curS.atk, hp: s.hp - curS.hp, spd: s.spd - curS.spd } : null;
+        x.score = s ? (s.atk * 2 + s.hp * 0.6 + s.spd * 1.2) : -1;
+        return x;
+      })
+      .sort(function (a, b) { return b.score - a.score; });
+
+    var head = document.createElement('div');
+    head.className = 'glisthead';
+    head.innerHTML = '<span>' + SLOTNAME[INN_GSLOT] + 'に入る品　<b>' + list.length + '</b></span>';
+    if (cur) {
+      var off = document.createElement('button');
+      off.className = 'goff' + (curLocked ? ' dis' : '');
+      off.textContent = curLocked ? '呪われて外せない' : 'いまの品を外す';
+      if (!curLocked) off.onclick = function () {
+        var rr = SAVE.rpg(), e = rr.gear.eq[t.id] || {};
+        rr.gear.bag.push(e[INN_GSLOT]); delete e[INN_GSLOT];
         rr.gear.eq[t.id] = e;
         SAVE.rpgSet({ gear: rr.gear });
-        innPane();
+        townToast(m.name + ' が外した');
+        innPane(1);
       };
-      if (locked) {
-        var w = document.createElement('div');
-        w.className = 'slot lock';
-        w.innerHTML = '<span class="k"></span><span class="v" style="font-size:11.5px">' +
-          CURSES[it.curse].t + '　神殿で ' + UNCURSE_FEE + ' 枚</span><span></span>';
-        box.appendChild(w);
-      }
-    });
-    var bag = (r.gear.bag || []);
-    var fits = bag.map(function (it, i) { return { it: it, i: i }; }).filter(function (x) {
-      return x.it.k === 'trinket' ? (!m.eq.t1 || !m.eq.t2) : !m.eq[x.it.k];
-    });
-    townNote(box, fits.length ? '<b>持たせる</b>　差分は、いまの装いとの比べ' : '<b>持たせる</b>　いま渡せる品はない');
-    fits.forEach(function (x) {
-      var sl = x.it.k === 'trinket' ? (m.eq.t1 ? 't2' : 't1') : x.it.k;
-      var d = x.it.idd ? gearStats(x.it) : null;
-      var note = d ? [d.atk ? '攻撃 ' + (d.atk > 0 ? '+' : '') + d.atk : '',
-                      d.hp ? 'HP ' + (d.hp > 0 ? '+' : '') + d.hp : '',
-                      d.spd ? '素早さ ' + (d.spd > 0 ? '+' : '') + d.spd : '',
-                      x.it.curse ? '呪：' + CURSES[x.it.curse].t : ''].filter(Boolean).join('／')
-                   : '正体は分からない';
-      var row = document.createElement('button');
-      row.className = 'slot';
-      row.innerHTML = '<span class="k">' + SLOTNAME[sl] + '</span><span class="v">' + gearName(x.it) + '</span>' +
-        '<span class="d' + (d && (d.atk < 0 || d.hp < 0 || d.spd < 0 || x.it.curse) ? ' minus' : '') + '">' + note + '</span>';
-      row.onclick = function () {
-        var rr = SAVE.rpg();
-        var e = rr.gear.eq[t.id] || {};
+      head.appendChild(off);
+    }
+    wrap.appendChild(head);
+
+    var lb = document.createElement('div');
+    lb.className = 'glist';
+    if (curLocked) {
+      var w = document.createElement('p');
+      w.className = 'gnote bad';
+      w.innerHTML = CURSES[cur.curse].t + '<br>神殿で <b>' + UNCURSE_FEE + '</b> 枚を払えば、呪いだけが解ける。';
+      lb.appendChild(w);
+    } else if (!list.length) {
+      var n0 = document.createElement('p');
+      n0.className = 'gnote';
+      n0.textContent = 'この枠に入る品は、いま荷にない。';
+      lb.appendChild(n0);
+    }
+    list.forEach(function (x) {
+      var b = document.createElement('button');
+      b.className = 'gitem' + (curLocked ? ' dis' : '');
+      var right = x.d ? statLine(x.d) : '<i class="q">？</i>';
+      b.innerHTML = '<span class="gi-n">' + gearName(x.it) + '</span>' +
+        '<span class="gi-d">' + right + '</span>' +
+        '<span class="gi-s">' + (x.it.idd ? gearLine(x.it) : '正体は分からない。つければ知れる') + '</span>';
+      if (!curLocked) b.onclick = function () {
+        var rr = SAVE.rpg(), e = rr.gear.eq[t.id] || {};
         var item = rr.gear.bag.splice(x.i, 1)[0];
-        item.idd = 1;                       /* 身につければ、正体は知れる */
-        e[sl] = item; rr.gear.eq[t.id] = e;
+        if (e[INN_GSLOT]) rr.gear.bag.push(e[INN_GSLOT]);      /* いまの品は荷へ戻す */
+        item.idd = 1;
+        e[INN_GSLOT] = item; rr.gear.eq[t.id] = e;
         SAVE.rpgSet({ gear: rr.gear });
-        if (item.curse) townToast(gearName(item) + ' ── 呪われていた');
-        innPane();
+        townToast(item.curse ? gearName(item) + ' ── 呪われていた' : m.name + ' が ' + gearName(item) + ' を身につけた');
+        innPane(1);
       };
-      box.appendChild(row);
+      lb.appendChild(b);
     });
+    wrap.appendChild(lb);
+
+    /* ⑤ まとめて配る（正体の知れた品だけ） */
+    var loose = bag.filter(function (it) { return it.idd && !it.curse; }).length;
+    if (loose) {
+      var foot = document.createElement('div');
+      foot.className = 'gfoot';
+      var g = document.createElement('button');
+      g.className = 'gauto';
+      g.textContent = '手つかずの品を、まとめて配る（' + loose + '）';
+      g.onclick = function () { autoEquip(); innPane(1); };
+      foot.appendChild(g);
+      wrap.appendChild(foot);
+    }
+    box.appendChild(wrap);
   }
   /* 手つかずの品を、いちばん得をする相手に配る（正体の知れたものだけ） */
   function autoEquip() {
@@ -2100,7 +2154,10 @@
       return atkInfo(d).val;
     }
     function poolIds() {
-      return (tab === 'full') ? E.ROSTER.map(function (x) { return x.id; }) : E.POOLS[tab].ids.slice();
+      /* 休ませたカードは図鑑にも出さない（データは残っているので、いつでも戻せる） */
+      var live = function (id) { var d = E.BY_ID[id]; return d && !d.retired; };
+      return (tab === 'full') ? E.ROSTER.filter(function (x) { return !x.retired; }).map(function (x) { return x.id; })
+                              : E.POOLS[tab].ids.filter(live);
     }
 
     function draw() {
@@ -2195,7 +2252,8 @@
         '<div class="gtabs">' +
           '<button class="gtab' + (tab === 'tutorial' ? ' on' : '') + '" data-tab="tutorial">🌱 入門 ' + E.POOLS.tutorial.ids.length + '</button>' +
           '<button class="gtab' + (tab === 'starter' ? ' on' : '') + '" data-tab="starter">🎓 スターター ' + E.POOLS.starter.ids.length + '</button>' +
-          '<button class="gtab' + (tab === 'full' ? ' on' : '') + '" data-tab="full">🏆 ' + E.POOLS.full.name + ' ' + E.ROSTER.length + '</button>' +
+          '<button class="gtab' + (tab === 'full' ? ' on' : '') + '" data-tab="full">🏆 ' + E.POOLS.full.name + ' ' +
+            E.ROSTER.filter(function (x) { return !x.retired; }).length + '</button>' +
         '</div>' +
         '<div class="gsorts">' + SORTS.map(function (o) {
           return '<button class="gsort' + (sort === o.k ? ' on' : '') + '" data-sort="' + o.k + '">' + o.n + '</button>';

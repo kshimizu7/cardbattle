@@ -388,6 +388,7 @@ var CBART = (function () {
     phantom:     { body:'human', head:'hood',      wep:'bow',        deco:'wings' },
     salamander:  { body:'wisp',  head:'flame',     wep:'orb',        deco:'embers' },
     yeti:        { body:'bulk',  head:'horns',     wep:'claw',       deco:'flakes' },
+    frost:       { body:'robe',  head:'veil',      wep:'staff',      deco:'flakes' },
     /* --- イメージ枠（図鑑にだけ出る） --- */
     paladinking: { body:'human', head:'crown',     wep:'greatsword', deco:'rays' },
     grandsage:   { body:'robe',  head:'crown',     wep:'orb',        deco:'runes' },
