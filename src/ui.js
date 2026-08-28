@@ -1143,7 +1143,7 @@
     $('#t_shop').onclick = showShop;
     $('#t_ident').onclick = showIdent;
     $('#t_temple').onclick = showTemple;
-    $('#t_inn').onclick = function () { INN_TAB = 'rest'; INN_AT = null; INN_SLOT = null; renderInn(); };
+    $('#t_inn').onclick = function () { INN_TAB = 'rest'; INN_AT = null; INN_SLOT = null; INN_GSLOT = 'weapon'; renderInn(); };
     $('#t_home').onclick = renderHome;
   }
 
@@ -1189,7 +1189,11 @@
       '</div>';
     $('#innx').onclick = renderTown;
     [].forEach.call(app.querySelectorAll('.tabs button'), function (b) {
-      b.onclick = function () { INN_TAB = b.dataset.tab; INN_AT = null; INN_SLOT = null; innPane(); };
+      b.onclick = function () {
+        INN_TAB = b.dataset.tab; INN_AT = null; INN_SLOT = null;
+        if (INN_TAB === 'gear') INN_GSLOT = bestGearSlot(0);
+        innPane();
+      };
     });
     innPane();
   }
@@ -1248,6 +1252,36 @@
     if (s.spd) out.push('<i class="' + (s.spd > 0 ? 'up' : 'dn') + '">速 ' + (s.spd > 0 ? '+' : '') + s.spd + '</i>');
     return out.join('') || (sign ? '' : '<i class="nil">変わらない</i>');
   }
+  /* その者の枠ごとに、荷から入れられる品が何点あるか */
+  function slotCounts(at) {
+    var r = SAVE.rpg(), t = (r.team || [])[at];
+    var out = { weapon: 0, armor: 0, t1: 0, t2: 0 };
+    if (!t) return out;
+    var m = townMember(t.id);
+    (r.gear.bag || []).forEach(function (it) {
+      if (it.k === 'trinket') { out.t1++; out.t2++; }
+      else out[it.k]++;
+    });
+    /* 呪われて外せない枠には、入れられない */
+    GSLOTS.forEach(function (sl) {
+      var cur = m.eq[sl];
+      if (cur && cur.idd && cur.curse) out[sl] = 0;
+    });
+    return out;
+  }
+  /* 荷にある品が入る枠を最初に開く。無ければ武器 */
+  function bestGearSlot(at) {
+    var r = SAVE.rpg(), t = (r.team || [])[at || 0];
+    if (!t) return 'weapon';
+    var c = slotCounts(at || 0), m = townMember(t.id);
+    var best = null;
+    GSLOTS.forEach(function (sl) {
+      if (!c[sl]) return;
+      var score = c[sl] + (m.eq[sl] ? 0 : 10);      /* 空いている枠を優先 */
+      if (!best || score > best.score) best = { sl: sl, score: score };
+    });
+    return best ? best.sl : 'weapon';
+  }
   function innGear(box) {
     var r = SAVE.rpg(), team = r.team;
     if (INN_AT == null || INN_AT >= team.length) INN_AT = 0;
@@ -1287,12 +1321,14 @@
     /* ③ 4つの枠。押して選ぶ。選んだ枠の品が下に並ぶ */
     var grid = document.createElement('div');
     grid.className = 'gslots';
+    var cnt = slotCounts(INN_AT);
     GSLOTS.forEach(function (sl) {
       var it = m.eq[sl];
       var locked = it && it.idd && it.curse;
       var c = document.createElement('button');
       c.className = 'gslot' + (sl === INN_GSLOT ? ' on' : '') + (locked ? ' curse' : '') + (it ? '' : ' empty');
-      c.innerHTML = '<span class="gs-k">' + SLOTNAME[sl] + (locked ? ' <b>呪</b>' : '') + '</span>' +
+      c.innerHTML = '<span class="gs-k">' + SLOTNAME[sl] + (locked ? ' <b>呪</b>' : '') +
+          (cnt[sl] ? '<em class="gs-c">' + cnt[sl] + '</em>' : '') + '</span>' +
         '<span class="gs-v">' + (it ? gearName(it) : '——') + '</span>' +
         '<span class="gs-d">' + (it ? statLine(gearStats(it), 1) : '<i class="nil">空いている</i>') + '</span>';
       c.onclick = function () { INN_GSLOT = sl; innPane(); };
@@ -1344,7 +1380,10 @@
     } else if (!list.length) {
       var n0 = document.createElement('p');
       n0.className = 'gnote';
-      n0.textContent = 'この枠に入る品は、いま荷にない。';
+      var other = GSLOTS.filter(function (sl) { return sl !== INN_GSLOT && cnt[sl]; })
+        .map(function (sl) { return SLOTNAME[sl] + ' ' + cnt[sl]; });
+      n0.innerHTML = 'この枠に入る品は、いま荷にない。' +
+        (other.length ? '<br><b>' + other.join('／') + '</b> なら荷にある（上の枠を押すと出ます）' : '');
       lb.appendChild(n0);
     }
     list.forEach(function (x) {
@@ -1561,15 +1600,17 @@
       var stock = shopStock();
       townNote(box, '<b>今ある品</b>　次にもぐって戻れば、顔ぶれは変わる');
       stock.forEach(function (it) {
-        var sold = (r.gear.bag || []).some(function (x) { return x.u === it.u; });
         var p = shopPrice(it);
-        townRow(box, gearName(it), sold ? 'もう売れてしまった' : gearLine(it),
-          p, !sold && townCoin() >= p && (r.gear.bag || []).length < 12, function () {
+        var full = (r.gear.bag || []).length >= 12;
+        townRow(box, gearName(it), full ? '荷がいっぱいだ' : gearLine(it),
+          p, !full && townCoin() >= p, function () {
             if (!townPay(p)) return;
             var rr = SAVE.rpg();
             rr.gear.bag.push(JSON.parse(JSON.stringify(it)));
-            SAVE.rpgSet({ gear: rr.gear });
-            townToast(gearName(it) + ' を買った');
+            /* 買われた品は棚から下ろす（買ったのに残っている、を防ぐ） */
+            rr.stock = { day: rr.day, items: (rr.stock.items || []).filter(function (x) { return x.u !== it.u; }) };
+            SAVE.rpgSet({ gear: rr.gear, stock: rr.stock });
+            townToast(gearName(it) + ' を買った。宿の「装い」で持たせられる');
             redraw();
           });
       });

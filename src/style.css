@@ -2026,6 +2026,8 @@ body.shake{animation:shk2 .56s}
 .innscr .gslot.curse{border-color:#5a2f38;background:#1a1014}
 .innscr .gs-k{font-size:10.5px;color:#7f8caa;letter-spacing:.1em}
 .innscr .gs-k b{color:#ff9a9a;font-size:10px}
+.innscr .gs-c{font-style:normal;font-size:10px;color:#1a1305;background:var(--gold);
+  border-radius:999px;padding:0 5px;margin-left:5px;font-weight:700}
 .innscr .gs-v{font-size:13.5px;font-weight:700;color:#e9e0c8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .innscr .gslot.empty .gs-v{color:#5f6d8c;font-weight:400}
 .innscr .gs-d{display:flex;gap:4px;flex-wrap:wrap}
