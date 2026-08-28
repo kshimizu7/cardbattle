@@ -153,16 +153,16 @@ var CB = (function () {
     /* 幼竜 … 竜の前の姿。まだ小さく、狭い場所にも入っていける。
        闘技場に出る竜はこの姿だけ（竜と古代竜は、いまは敵として現れる） */
     { id:'whelp', size:'m', name:'幼竜', en:'Dragon Whelp', cost:4, role:'melee', elem:'fire', line:'竜', up:'dragon', tier:1,
-      hpT:4, atkT:3, spd:5,
+      hpT:6, atkT:4, spd:5,
       actions:[
-        {key:'bite',  name:'噛みつき', kind:'dmg', range:'melee', dtype:'phys', fx:'slash'},
-        {key:'spark', name:'火の粉',   kind:'dmg', range:'any1', dtype:'magic', power:3, fx:'ember', cd:2}
+        {key:'bite',  name:'噛みつき',   kind:'dmg', range:'melee', dtype:'phys', fx:'slash'},
+        {key:'spark', name:'熾火の息', kind:'dmg', range:'row', dtype:'magic', power:4, fx:'ember', cd:2, startCd:1}
       ],
-      passives:['flight'],
-      flavor:'まだ空は飛べない。だが、跳べば屋根には届く。' },
+      passives:['dragonscale'],
+      flavor:'まだ空は飛べない。だが、その鱗はもう刃を弾く。' },
 
     { id:'dragon', size:'l', noDeck:true, name:'竜', en:'Dragon', cost:6, role:'melee', elem:'fire', line:'竜', base:'whelp', up:'ancientdragon', tier:2,
-      hpT:6, atkT:5, spd:3,
+      hpT:7, atkT:5, spd:3,
       actions:[
         {key:'talon',  name:'竜爪', kind:'dmg', range:'melee', dtype:'phys', fx:'dclaw'},
         {key:'breath', name:'業火のブレス', kind:'dmg', range:'row', dtype:'magic', power:7, fx:'breath', cd:2, startCd:1}
