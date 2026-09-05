@@ -54,7 +54,8 @@ def bg_mask(rgb, tol=13.0, edge=0.04):
         sizes = ndimage.sum(core, lbl, range(1, n+1))
         big = [i+1 for i, v in enumerate(sizes) if v > core.size * 0.004]
         core = np.isin(lbl, big)
-    core = ndimage.binary_dilation(core, np.ones((3,3)))
+    # 少しだけ内側へ削る。人物のまわりに元の背景が輪として残らないように
+    core = ndimage.binary_erosion(core, np.ones((5,5)))
     m = ~core
     lbl, n = ndimage.label(m)
     keep = set(np.unique(np.concatenate([lbl[0], lbl[-1], lbl[:,0], lbl[:,-1]])))
