@@ -8,6 +8,7 @@ art_src/ の絵を、ゲームで使う形に整える。
       batch1.png = knight, warrior, berserker, spearman, shieldguard, paladin
   左上から右へ、次の段へ、の順に切り分ける。列数は体数から決める（6体なら3列2段）
 
+・背景を tools/bgpalette.py で決めた色に塗り替える（26体ぶんの色を先に設計してある）
 ・人物を検出して、上に12%・下に8%の余白がつくように縮めて置き直す
   （生成AIは枠いっぱいに描く癖があり、盤面で頭が切れるため）
 ・空いた余白は、左右の端から拾った背景色を上下に伸ばして継ぐ
@@ -16,6 +17,12 @@ art_src/ の絵を、ゲームで使う形に整える。
 import os, sys, glob, io
 from PIL import Image
 import numpy as np
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    from bgpaint import repaint          # 背景をこちらで決めた色に塗り替える
+    from bgpalette import PALETTE
+except Exception:
+    repaint, PALETTE = None, {}
 
 TOP, BOT, SIZE, Q = 0.12, 0.08, 1024, 82
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -46,9 +53,13 @@ def bar(c0, c1, W, H):
     col = (c0[None, :] * (1-t) + c1[None, :] * t)
     return Image.fromarray(np.repeat(col[:, None, :], W, axis=1).astype(np.uint8), 'RGB')
 
-def prep(src):
+def prep(src, cid=None):
     im = src if isinstance(src, Image.Image) else Image.open(src)
     im = im.convert('RGB')
+    # 背景を、台帳で決めた色に塗り替える。
+    # 言葉で指定しても生成側は守らないので、ここで機械的に揃える
+    if repaint and cid in PALETTE:
+        im, _ = repaint(im, cid)
     if im.size[0] != im.size[1]:
         s = min(im.size); im = im.crop(((im.size[0]-s)//2, (im.size[1]-s)//2,
                                         (im.size[0]-s)//2+s, (im.size[1]-s)//2+s))
@@ -122,7 +133,7 @@ def main():
     if not jobs:
         print('art_src に画像がありません'); return
     for cid, srcimg in jobs:
-        out = prep(srcimg)
+        out = prep(srcimg, cid)
         p = os.path.join(DST, cid + '.webp')
         out.save(p, 'WEBP', quality=Q, method=6)
         t, b = figure_rows(out)
