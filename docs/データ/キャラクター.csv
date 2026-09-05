@@ -1,0 +1,56 @@
+﻿id,日本語名,英語名,段,体格,体格_en,種族,種族_en,理,理_en,前の段,次の段,系譜,状態,備考
+knight,騎士,Knight,1,小,Small,人,Human,秩序,Order,,paladin,knight,実装済,
+warrior,戦士,Warrior,1,小,Small,人,Human,秩序,Order,,berserker,warrior,実装済,
+berserker,狂戦士,Berserker,2,小,Small,人,Human,秩序,Order,warrior,warfiend,warrior,実装済,
+spearman,槍兵,Spearman,,小,Small,人,Human,秩序,Order,,,spearman,実装済,段を持たない単体（上位は構想）
+shieldguard,護衛兵,Shield Guardian,1,小,Small,人,Human,秩序,Order,,royalguard,shieldguard,実装済,
+ogre,オーク,Ork,,中,Medium,獣,Beast,生命,Life,,,ogre,実装済,段を持たない単体
+troll,トロール,Troll,,大,Large,獣,Beast,生命,Life,,,troll,実装済,段を持たない単体
+golem,ゴーレム,Golem,1,中,Medium,無生物,Construct,その他,Other,,ancient,golem,実装済,
+werewolf,人狼,Werewolf,,小,Small,獣,Beast,生命,Life,,,werewolf,実装済,段を持たない単体
+paladin,聖騎士,Paladin,2,小,Small,人,Human,秩序,Order,knight,paladinking,knight,実装済,
+archer,弓兵,Archer,1,小,Small,人,Human,秩序,Order,,phantom,archer,実装済,
+rogue,盗賊,Thief,1,小,Small,人,Human,秩序,Order,,assassin,rogue,実装済,
+assassin,暗殺者,Assassin,2,小,Small,人,Human,秩序,Order,rogue,shadowblade,rogue,実装済,
+harpy,ハーピー,Harpy,,中,Medium,獣,Beast,生命,Life,,,harpy,実装済,段を持たない単体
+valkyrie,ヴァルキリー,Valkyrie,1,小,Small,神獣,Divine,生命,Life,,odin,valkyrie,実装済,出自は神獣。獣の皮ではなく軽鎧を着る
+mage,魔法使い,Mage,1,小,Small,人,Human,秩序,Order,,archmage,mage,実装済,
+archmage,大魔法使い,Archmage,2,小,Small,人,Human,秩序,Order,mage,grandsage,mage,実装済,
+whelp,幼竜,Dragon Whelp,1,中,Medium,竜,Dragon,生命,Life,,dragon,whelp,実装済,
+dragon,竜,Dragon,2,大,Large,竜,Dragon,生命,Life,whelp,ancientdragon,whelp,敵専用,手札には来ない。敵としてのみ現れる
+shaman,呪術師,Dark Mage,1,小,Small,邪,Profane,秩序,Order,,necromancer,shaman,実装済,系統は邪悪系だが、理は秩序 Order
+priest,僧侶,Priest,1,小,Small,人,Human,秩序,Order,,highpriest,priest,実装済,
+highpriest,高僧,High Priest,2,小,Small,人,Human,秩序,Order,priest,saint,priest,実装済,
+salamander,サラマンダー,Salamander,1,小,Small,精霊,Spirit,精神,Spirit,,phoenix,salamander,実装済,
+frost,フリム,Hrim,1,小,Small,精霊,Spirit,精神,Spirit,,jotunn,frost,実装済,
+yeti,イエティ,Yeti,1,大,Large,精霊,Spirit,精神,Spirit,,jotunn,yeti,引退,引退。データは残してある（戻したくなったら戻せる）
+bard,吟遊詩人,Bard,1,小,Small,人,Human,秩序,Order,,skald,bard,実装済,
+paladinking,聖騎士王,Paladin King,3,小,Small,人,Human,秩序,Order,paladin,,knight,次段（絵と名のみ）,
+grandsage,大賢者,Grand Sage,3,小,Small,人,Human,秩序,Order,archmage,,mage,次段（絵と名のみ）,
+saint,聖者,Saint,3,小,Small,人,Human,秩序,Order,highpriest,,priest,次段（絵と名のみ）,
+phantom,幻弓士,Phantom Archer,2,小,Small,人,Human,秩序,Order,archer,divinearcher,archer,次段（絵と名のみ）,
+divinearcher,神弓士,Divine Archer,3,小,Small,人,Human,秩序,Order,phantom,,archer,次段（絵と名のみ）,
+royalguard,王宮護衛,Royal Guard,2,小,Small,人,Human,秩序,Order,shieldguard,kingshield,shieldguard,次段（絵と名のみ）,
+kingshield,王の盾,King's Shield,3,小,Small,人,Human,秩序,Order,royalguard,,shieldguard,次段（絵と名のみ）,
+ancient,古代兵,Ancient Guardian,2,大,Large,無生物,Construct,その他,Other,golem,colossus,golem,次段（絵と名のみ）,
+colossus,古代巨神,Ancient Colossus,3,大,Large,無生物,Construct,その他,Other,ancient,,golem,次段（絵と名のみ）,
+ancientdragon,古代竜,Ancient Dragon,3,大,Large,竜,Dragon,生命,Life,dragon,,whelp,次段（絵と名のみ）,
+warfiend,戦鬼,Warfiend,3,小,Small,人,Human,秩序,Order,berserker,,warrior,次段（絵と名のみ）,
+shadowblade,闇の刃,Shadowblade,3,小,Small,人,Human,秩序,Order,assassin,,rogue,次段（絵と名のみ）,
+skald,武勲詩人,Skald,2,小,Small,人,Human,秩序,Order,bard,bragi,bard,次段（絵と名のみ）,
+bragi,ブラギ,Bragi,3,小,Small,神獣,Divine,秩序,Order,skald,,bard,次段（絵と名のみ）,出自は人、系統は神獣系
+necromancer,死霊術師,Necromancer,2,小,Small,邪,Profane,秩序,Order,shaman,lich,shaman,次段（絵と名のみ）,系統は邪悪系だが、理は秩序 Order
+lich,リッチ,Lich,3,小,Small,邪,Profane,秩序,Order,necromancer,,shaman,次段（絵と名のみ）,系統は邪悪系だが、理は秩序 Order
+phoenix,フェニックス,Phoenix,2,大,Large,神獣,Divine,精神,Spirit,salamander,,salamander,次段（絵と名のみ）,出自は精霊、系統は神獣系
+jotunn,ヨトゥン,Jötunn,2,大,Large,神獣,Divine,精神,Spirit,frost,,frost,次段（絵と名のみ）,出自は精霊、系統は神獣系
+odin,オーディン,Odin,2,中,Medium,神獣,Divine,生命,Life,valkyrie,,valkyrie,次段（絵と名のみ）,出自は神獣
+spearmaster,槍術士,Spearmaster,2,小,Small,人,Human,秩序,Order,spearman,dragonslayer,spearman,構想（未実装）,
+dragonslayer,竜殺し,Dragonslayer,3,小,Small,人,Human,秩序,Order,spearmaster,,spearman,構想（未実装）,
+sylph,シルフ,Sylph,1,小,Small,精霊,Spirit,精神,Spirit,,aiolos,sylph,構想（未実装）,
+aiolos,アイオロス,Aiolos,2,大,Large,神獣,Divine,精神,Spirit,sylph,,sylph,構想（未実装）,
+undine,ウンディーネ,Undine,1,小,Small,精霊,Spirit,精神,Spirit,,leviathan,undine,構想（未実装）,
+leviathan,リヴァイアサン,Leviathan,2,大,Large,神獣,Divine,精神,Spirit,undine,,undine,構想（未実装）,
+impundulu,インプンドゥル,Impundulu,1,小,Small,精霊,Spirit,精神,Spirit,,thor,impundulu,構想（未実装）,
+thor,トール,Thor,2,大,Large,神獣,Divine,精神,Spirit,impundulu,,impundulu,構想（未実装）,
+dryad,ドライアド,Dryad,1,小,Small,精霊,Spirit,精神,Spirit,,ent,dryad,構想（未実装）,
+ent,エント,Ent,2,大,Large,神獣,Divine,精神,Spirit,dryad,,dryad,構想（未実装）,

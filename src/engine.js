@@ -83,13 +83,13 @@ var CB = (function () {
       passives:['regen3'],
       flavor:'斬っても裂いても、次の瞬間には塞がっている。' },
 
-    { id:'golem', size:'l', name:'ゴーレム', en:'Golem', cost:5, role:'tank', elem:'earth', line:'物', up:'ancient', tier:1,
+    { id:'golem', size:'m', name:'ゴーレム', en:'Golem', cost:5, role:'tank', elem:'earth', line:'物', up:'ancient', tier:1,
       hpT:6, atkT:5, spd:1,
       actions:[{key:'crush', name:'岩石打', kind:'dmg', range:'melee', dtype:'phys', fx:'rock'}],
       passives:['ironwall','nonliving'],
       flavor:'魔術で命を与えられた岩。痛みも治癒も知らない。' },
 
-    { id:'werewolf', size:'m', name:'人狼', en:'Werewolf', cost:4, role:'melee', elem:'blood', line:'獣',
+    { id:'werewolf', size:'s', name:'人狼', en:'Werewolf', cost:4, role:'melee', elem:'blood', line:'獣',
       hpT:5, atkT:5, spd:6,
       actions:[{key:'rend', name:'裂爪', kind:'dmg', range:'melee', dtype:'phys', fx:'claw'}],
       passives:['moonfury'],
@@ -126,7 +126,7 @@ var CB = (function () {
       passives:['flight'],
       flavor:'その金切り声を聞いた者は、足がもつれる。' },
 
-    { id:'valkyrie', size:'m', name:'ヴァルキリー', en:'Valkyrie', cost:5, role:'ranged', elem:'holy', line:'神', up:'odin', tier:1,
+    { id:'valkyrie', size:'s', name:'ヴァルキリー', en:'Valkyrie', cost:5, role:'ranged', elem:'holy', line:'神', up:'odin', tier:1,
       hpT:5, atkT:5, spd:6,
       actions:[{key:'dive', name:'天翔ける槍', kind:'dmg', range:'any1', dtype:'phys', fx:'spear'}],
       passives:['flight','triumph'],

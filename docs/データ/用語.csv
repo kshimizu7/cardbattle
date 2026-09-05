@@ -1,0 +1,41 @@
+﻿区分,id,日本語,英語,説明
+理,order,秩序,Order,三つの原理のひとつ。文明と規律。極まれば支配になる
+理,life,生命,Life,三つの原理のひとつ。生きる力。極まれば捕食と破壊になる
+理,spirit,精神,Spirit,三つの原理のひとつ。調和。極まれば個を消してしまう
+理,other,その他,Other,三原理のどれにも属さない。いまはゴーレム系のみ
+系統,人,人系,Human,万能。突出した欠点も長所もない
+系統,獣,獣系,Beast,はっきりした欠点と、その分だけ大きい長所をセットで持つ
+系統,神,神獣系,Divine,倒れても終わらない。復活・蘇生・再行動のどれかを持つ
+系統,物,無生物系,Construct,回復がいっさい効かない。代わりに固定ダメージ軽減が大きい
+系統,竜,竜系,Dragon,全員が竜鱗を持ち、広範囲のブレスを扱う
+系統,邪,邪悪系,Profane,相手の不幸が自分の得になる。吸血・呪詛・弱体化
+系統,精,精霊系,Spirit,実体を持たず場に干渉する。属性魔法とオーラ
+体格,s,小,Small,どの迷宮にも入れる
+体格,m,中,Medium,小の迷宮には入れない
+体格,l,大,Large,大の迷宮にしか入れない
+段,1,一の段,Tier 1,はじめの姿
+段,2,二の段,Tier 2,次の姿
+段,3,三の段,Tier 3,極まった姿
+属性,steel,鋼,Steel,
+属性,fire,炎,Fire,
+属性,ice,氷,Ice,
+属性,wind,風,Wind,
+属性,holy,聖,Holy,
+属性,arcane,秘,Arcane,
+属性,shadow,影,Shadow,
+属性,blood,血,Blood,
+属性,earth,地,Earth,
+役割,melee,前衛,Melee,
+役割,tank,盾役,Tank,
+役割,ranged,射手,Ranged,
+役割,caster,術者,Caster,
+役割,support,支え手,Support,
+装備枠,weapon,武器,Weapon,いまのゲームの枠。1人1枠
+装備枠,armor,防具,Armor,いまのゲームの枠。1人1枠
+装備枠,t1,装身具1,Accessory 1,いまのゲームの枠
+装備枠,t2,装身具2,Accessory 2,いまのゲームの枠
+状態,live,実装済,Implemented,闘技場で使える
+状態,enemy,敵専用,Enemy only,手札には来ない。敵としてのみ現れる
+状態,retired,引退,Retired,データは残すが出さない（イエティ）
+状態,teaser,次段（絵と名のみ）,Teaser,図鑑の「段」に名前だけ出る。能力は未実装
+状態,plan,構想（未実装）,Planned,この台帳にだけある

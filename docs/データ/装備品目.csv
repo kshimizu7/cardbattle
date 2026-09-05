@@ -1,0 +1,17 @@
+﻿id,分類,日本語名,英語名,等級,効き目,備考
+club,大槌,木の棍棒,Wooden Club,1,攻撃+1,
+sword,剣,鉄の剣,Iron Sword,1,攻撃+1,
+axe,大槌,戦斧,Battle Axe,2,攻撃+2／素早さ-1,斧の分類を作るなら、そちらへ
+long,剣,鋼の長剣,Steel Longsword,2,攻撃+2,
+silver,剣,銀の刃,Silver Blade,3,攻撃+3／素早さ+1,短剣寄りにも読める
+fang,剣,竜牙の剣,Dragonfang Sword,4,攻撃+4,
+leather,軽鎧,革の胴,Leather Vest,1,HP+3,
+chain,軽鎧,鎖帷子,Chain Mail,2,HP+5,鎧に寄せてもよい
+plate,鎧,鋼の胸当て,Steel Cuirass,3,HP+8／素早さ-1,
+mith,鎧,聖銀の鎧,Mithril Armor,4,HP+11,
+ring,（未分類）,銅の環,Copper Ring,1,素早さ+1,指輪。印章／護符/霊核のどれにも入らない
+charm,護符,木彫りの護符,Wooden Charm,1,HP+2,
+pow,（未分類）,力の指輪,Ring of Might,2,攻撃+1,指輪。分類なし
+boots,（未分類）,俊足の靴,Swift Boots,2,素早さ+2,靴。分類なし
+life,護符,生命の護符,Charm of Life,3,HP+5,
+sign,印章,古びた聖印,Old Holy Sign,3,攻撃+1／HP+3,

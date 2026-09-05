@@ -1,0 +1,16 @@
+﻿id,区分,区分_en,日本語名,英語名
+sword,武器,Weapon,剣,Sword
+dagger,武器,Weapon,短剣,Dagger
+maul,武器,Weapon,大槌,Maul
+bow,武器,Weapon,弓,Bow
+spear,武器,Weapon,槍,Spear
+staff,武器,Weapon,杖,Staff
+claw,武器,Weapon,鉤爪,Claw
+lute,武器,Weapon,楽器,Instrument
+plate,防具,Armor,鎧,Plate Armor
+light,防具,Armor,軽鎧,Light Armor
+robe,防具,Armor,ローブ,Robe
+hide,防具,Armor,獣の皮,Beast Hide
+sigil,装身具,Accessory,印章,Sigil
+talisman,装身具,Accessory,護符,Talisman
+core,装身具,Accessory,霊核,Spirit Core
