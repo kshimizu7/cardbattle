@@ -410,8 +410,20 @@ var CBART = (function () {
 
   var cache = {};
 
+  /* 描き下ろしの絵があれば、そちらを使う。無い者は今までどおり線画。
+     （build.js が art/char/<id>.webp を window.VOT_CHAR に詰める） */
+  function painted(defId) {
+    var W = (typeof window !== 'undefined') && window.VOT_CHAR;
+    if (!W || !W[defId]) return null;
+    return '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
+      '<g class="p-fig"><image href="' + W[defId] + '" x="0" y="0" width="100" height="100" ' +
+      'preserveAspectRatio="xMidYMid slice"/></g></svg>';
+  }
+
   function portrait(defId, elem) {
     if (cache[defId]) return cache[defId];
+    var pic = painted(defId);
+    if (pic) { cache[defId] = pic; return pic; }
     var a = ART[defId] || { body:'human', head:'bare', wep:'sword', deco:'rays' };
     var p = PAL[elem] || PAL.steel;
     var B = bodyOf(a.body);
