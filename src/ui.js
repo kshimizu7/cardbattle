@@ -2774,7 +2774,6 @@
     var pw = atkLive(u);
     var spd = E.getSpd(u, st), sdir = spd > u.def.spd ? 1 : spd < u.def.spd ? -1 : 0;
     var arrow = function (d) { return d > 0 ? '<i class="up">▲</i>' : d < 0 ? '<i class="dn">▼</i>' : ''; };
-    var rm = RANGE_MARK[pw.range];
     var kd = ART.kindOf ? ART.kindOf(u.defId) : { wep: 'sword', body: 'human' };
     /* 息づかい。HPが減るほど荒くなる。無生物は息をしない。
        全員の呼吸が揃うと人形の群れに見えるので、開始をひとりずつずらす */
@@ -2783,14 +2782,15 @@
     return '<div class="unit s' + u.side + (u.alive ? '' : ' dead') + bh + '" data-uid="' + u.uid + '" data-side="' + u.side +
       '" data-wep="' + kd.wep + '" data-body="' + kd.body + '">' +
       '<div class="pic" style="--bo:-' + bo + 's">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-      '<div class="spb' + (sdir > 0 ? ' up' : sdir < 0 ? ' dn' : '') + '">⚡' + spd + arrow(sdir) + '</div>' +
-      '<div class="atb ' + pw.kind + (pw.dir > 0 ? ' up' : pw.dir < 0 ? ' dn' : '') + '">' +
-        pw.icon + pw.val + arrow(pw.dir) + '</div>' +
-      (rm ? '<div class="rngb" title="' + rm.name + '">' + rm.mark + '</div>' : '') +
+      /* 数字だけを出し、意味は囲みの形と色で示す（翼＝素早さ／斬撃＝攻撃力）。
+         射程は戦闘中に変わらない情報なので盤面には出さない。長押しで詳細に出る */
+      '<div class="spb' + (sdir > 0 ? ' up' : sdir < 0 ? ' dn' : '') + '" title="素早さ">' + spd + arrow(sdir) + '</div>' +
+      '<div class="atb ' + pw.kind + (pw.dir > 0 ? ' up' : pw.dir < 0 ? ' dn' : '') + '" title="' + pw.label + '">' +
+        pw.val + arrow(pw.dir) + '</div>' +
       cdTag +
       '<div class="fx-tags bad">' + badTags + '</div>' +
       '<div class="fx-tags good">' + goodTags + '</div>' +
-      '<div class="nm">' + u.def.name + '</div>' +
+      '<div class="nm' + (u.def.name.length >= 6 ? ' long' : '') + '">' + u.def.name + '</div>' +
       '<div class="hpb"><div class="hpf' + cls + '" style="width:' + pct + '%"></div></div>' +
       '<div class="hpn">' + Math.max(0, u.hp) + '/' + u.maxHp + '</div></div>';
   }
@@ -2871,6 +2871,9 @@
     app.classList.toggle('compact', !!S.compact);
     var land = isLandscape();
     app.classList.toggle('land', land);
+    /* ひとり用（CPU戦）は、自分を右に置く。操作パネルが右にあり、手と目の動きが短くなる。
+       ふたり対戦は、どちらも「自分」なので左右を入れ替えない */
+    app.classList.toggle('solo', S.mode === 'cpu');
     /* いまどちらのプレイヤーが行動しているかを、陣営バー全体を光らせて示す */
     var act = E.currentActor(st);
     app.classList.toggle('turn0', !!act && act.side === 0);
@@ -4386,6 +4389,7 @@
     if (S.screen !== 'battle') return;
     var land = isLandscape();
     app.classList.toggle('land', land);
+    app.classList.toggle('solo', S.mode === 'cpu');
     app.classList.toggle('lp-side', land);
   }
   function onOrient() {
