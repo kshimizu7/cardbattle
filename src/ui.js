@@ -2776,9 +2776,13 @@
     var arrow = function (d) { return d > 0 ? '<i class="up">▲</i>' : d < 0 ? '<i class="dn">▼</i>' : ''; };
     var rm = RANGE_MARK[pw.range];
     var kd = ART.kindOf ? ART.kindOf(u.defId) : { wep: 'sword', body: 'human' };
-    return '<div class="unit s' + u.side + (u.alive ? '' : ' dead') + '" data-uid="' + u.uid + '" data-side="' + u.side +
+    /* 息づかい。HPが減るほど荒くなる。無生物は息をしない。
+       全員の呼吸が揃うと人形の群れに見えるので、開始をひとりずつずらす */
+    var bh = u.def.line === '物' ? ' nolife' : (pct <= 25 ? ' bh-low' : pct <= 55 ? ' bh-mid' : '');
+    var bo = ((u.uid * 37) % 40) / 10;
+    return '<div class="unit s' + u.side + (u.alive ? '' : ' dead') + bh + '" data-uid="' + u.uid + '" data-side="' + u.side +
       '" data-wep="' + kd.wep + '" data-body="' + kd.body + '">' +
-      '<div class="pic">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
+      '<div class="pic" style="--bo:-' + bo + 's">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
       '<div class="spb' + (sdir > 0 ? ' up' : sdir < 0 ? ' dn' : '') + '">⚡' + spd + arrow(sdir) + '</div>' +
       '<div class="atb ' + pw.kind + (pw.dir > 0 ? ' up' : pw.dir < 0 ? ' dn' : '') + '">' +
         pw.icon + pw.val + arrow(pw.dir) + '</div>' +

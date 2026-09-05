@@ -1,0 +1,8 @@
+# art_src に置いたシートを、どう切り分けるかの表。
+# 左上から右へ、次の段へ、の順。
+
+batch1.png = knight, warrior, berserker, spearman, shieldguard, paladin
+batch2.png = archer, rogue, assassin, mage, archmage, priest
+batch3.png = highpriest, bard, shaman, salamander, frost, golem
+batch4.png = ogre, troll, werewolf, harpy, valkyrie, whelp
+batch5.png = dragon, yeti

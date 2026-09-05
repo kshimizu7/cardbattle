@@ -24,3 +24,7 @@ _sa.tar.gz
 standalone/
 _rpg2.tar.gz
 _rpg3.tar.gz
+
+# 受け渡し用の一時ファイル
+*.tgz
+__pycache__/
