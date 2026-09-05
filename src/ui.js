@@ -3220,7 +3220,7 @@
     band.style.top = (t - pad) + 'px';
     band.style.width = (r - l + pad * 2) + 'px';
     band.style.height = (b - t + pad * 2) + 'px';
-    band.innerHTML = '<span class="cn">' + label + 'に必中</span>';
+    band.innerHTML = label ? '<span class="cn">' + label + 'に必中</span>' : '';
     band.onclick = function (ev) { ev.stopPropagation(); if (S.sound) SFX.play('select'); onTap(); };
     field.appendChild(band);
   }
@@ -3309,8 +3309,10 @@
     if (o.group != null) el.classList.add('tg-g' + o.group);
     if (o.heal) el.classList.add('tg-heal');
     var b = document.createElement('div');
-    b.className = 'tmark';
-    b.innerHTML = '<span class="lb">' + o.label + '</span>' +
+    b.className = 'tmark' + (o.label ? '' : ' nolab');
+    /* 字は「数字が出ないとき」だけ添える。
+       数字（-3／+5）と枠の色・形で意味が伝わるなら、字は足さない */
+    b.innerHTML = (o.label ? '<span class="lb">' + o.label + '</span>' : '') +
       (o.val != null ? '<span class="vl' + (o.heal ? ' heal' : '') + '">' + (o.heal ? '+' : '-') + o.val + '</span>' : '');
     el.appendChild(b);
     if (o.onTap) el.onclick = o.onTap;
@@ -3374,12 +3376,12 @@
       var go = function () { doAction(u, a.key, cur.auto || { type: 'auto' }); };
       var rnd = (a.range === 'random');
       fixed.forEach(function (pr) {
-        markUnit(pr[0], { mode: 'fixed', label: rnd ? 'ランダム' : '命中', val: estimate(pr[0], pr[1]), onTap: go });
+        markUnit(pr[0], { mode: 'fixed', label: rnd ? 'ランダム' : '', val: estimate(pr[0], pr[1]), onTap: go });
       });
       /* 2体以上に必ず当たるときは、1体ずつ枠を出さずに“ぶち抜き”で囲む */
       if (fixed.length >= 2) {
         drawFixedBand(fixed.map(function (pr) { return pr[0]; }),
-                      (rnd ? 'ランダム ' : '') + fixed.length + '体', go);
+                      rnd ? 'ランダム ' + fixed.length + '体' : '', go);
       }
       return { mode: 'fixed', count: fixed.length, random: rnd, hits: a.hits || 1, go: go };
     }
@@ -3387,10 +3389,10 @@
       var al = E.aliveUnits(st, u.side);
       var goA = function () { doAction(u, a.key, cur.auto || { type: 'auto' }); };
       al.forEach(function (v) {
-        markUnit(v, { mode: 'fixed', heal: true, label: a.kind === 'heal' ? '回復' : '効果',
+        markUnit(v, { mode: 'fixed', heal: true, label: a.kind === 'heal' ? '' : '効果',
                       val: a.kind === 'heal' ? healAmt(v) : null, onTap: goA });
       });
-      if (al.length >= 2) drawFixedBand(al, '味方' + al.length + '体', goA, true);
+      if (al.length >= 2) drawFixedBand(al, '', goA, true);
       return { mode: 'fixed', count: al.length, heal: true, go: goA };
     }
     if (a.kind === 'guard') {
@@ -3420,7 +3422,7 @@
         var heal = (a.kind === 'heal' || a.kind === 'revive');
         markUnit(v, {
           mode: 'pick', heal: heal,
-          label: heal ? (a.kind === 'revive' ? '蘇生' : '回復') : 'タップ',
+          label: (heal && a.kind === 'revive') ? '蘇生' : '',
           val: a.kind === 'heal' ? healAmt(v) : (a.kind === 'revive' ? null : estimate(v, 1)),
           onTap: function () { doAction(u, a.key, t); }
         });
@@ -3439,7 +3441,7 @@
       cells.forEach(function (v) {
         var d = estimate(v, 1);
         if (typeof d === 'number') tot += Math.min(d, v.hp);
-        markUnit(v, { mode: cellMode, label: '命中', val: d, onTap: goG });
+        markUnit(v, { mode: cellMode, label: '', val: d, onTap: goG });
       });
       drawRangeMarkers(u, cur, gi);
       return { mode: 'groupsel', count: cells.length, gi: gi,

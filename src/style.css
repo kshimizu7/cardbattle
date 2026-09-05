@@ -2206,3 +2206,18 @@ body.shake{animation:shk2 .56s}
   #app.land.solo .unit.s1 .pic svg{transform:none}
   #app.land.solo .unit.s0 .pic svg{transform:scaleX(-1)}
 }
+
+/* =========================================================
+   v84: 盤面から字を減らす
+   ・「命中」「○体に必中」「タップ」を消し、枠の見た目だけで伝える
+     － 実線の赤い枠＋斜線 ＝ もう当たることが決まっている
+     － 破線の金の枠（ゆっくり明滅） ＝ あなたが選ぶ番
+   ・字が無いときは、数字を枠の真ん中に置く
+   ========================================================= */
+.tmark.nolab{padding-top:0}
+.tmark.nolab .vl{top:50%;transform:translate(-50%,-50%)}
+/* 「選ぶ番だ」は、字ではなく枠の明滅で伝える */
+.unit.tg-pick{animation:pickblink 1.15s ease-in-out infinite}
+@keyframes pickblink{0%,100%{filter:brightness(1)}50%{filter:brightness(1.28)}}
+.field .rband.fixed:empty{border-width:3px}
+@media (prefers-reduced-motion:reduce){ .unit.tg-pick{animation:none} }
