@@ -2786,10 +2786,119 @@
     });
     S.gen = (S.gen || 0) + 1;
     S.screen = 'battle'; syncBgm();
+    S.intro = true;
     renderBattle();
-    SFX.play('start');
-    banner('BATTLE START', 'font-size:22px');
-    wait(1100, function () { SFX.play('round'); banner('ROUND 1'); wait(900, step); });
+    playIntro(function () {
+      SFX.play('start');
+      banner('BATTLE START', 'font-size:22px');
+      wait(1100, function () { SFX.play('round'); banner('ROUND 1'); wait(900, step); });
+    });
+  }
+
+  /* =========================================================
+     v97: 開幕の紹介（案2）
+     一体ずつ中央でカードが裏から表へ回転し、全身と名前を見せてから、
+     盤面の自分の位置へ縮みながら飛んでいく。味方（前衛→後衛）→敵（前衛→後衛）。
+     向きは盤面と同じ（自陣は左向き）なので、収まったあとに裏返らない。
+     画面のタップか「スキップ」で残りを飛ばす。
+     ========================================================= */
+  var INTRO = { appear: 180, flip: 360, hold: 600, fly: 360, gap: 60 };   /* 一体あたり約1.6秒。戦闘速度 x2/x4 でそのぶん速く */
+  function playIntro(done) {
+    var st = S.st, gen = S.gen;
+    var units = [];
+    [0, 1].forEach(function (side) {
+      [0, 1].forEach(function (row) {
+        for (var c = 0; c < 3; c++) st.players[side].units.forEach(function (v) {
+          if (v.alive && v.row === row && v.col === c) units.push(v);
+        });
+      });
+    });
+    var ov = document.createElement('div');
+    ov.className = 'introov';
+    ov.innerHTML = '<button class="btn ghost introskip" type="button">スキップ ▶</button>';
+    app.appendChild(ov);
+    app.classList.add('intro');
+    $$('.unit[data-uid]').forEach(function (e) { e.classList.remove('arrived'); });
+    var over = false, timers = [], anims = [];
+    var isp = function () { return Math.max(1, S.speed || 1); };   /* 通常の技より速さの補正を弱く（x1 のとき等倍） */
+    function later(ms, fn) { timers.push(setTimeout(fn, ms / isp())); }
+    function finish() {
+      if (over) return; over = true;
+      timers.forEach(clearTimeout);
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      $$('.introcard,.introfly', app).forEach(function (e) { e.remove(); });
+      ov.remove();
+      $$('.unit[data-uid]').forEach(function (e) { e.classList.add('arrived'); });
+      app.classList.remove('intro');
+      S.intro = false;
+      if (S.gen !== gen || S.screen !== 'battle') return;
+      renderActions();
+      done();
+    }
+    ov.addEventListener('click', function (ev) { ev.stopPropagation(); finish(); });
+    function relRect(el) {   /* 画面座標（カードと飛ぶ絵は position:fixed） */
+      var r = el.getBoundingClientRect();
+      return { x: r.left, y: r.top, w: r.width, h: r.height };
+    }
+    function isMirrored(el) {
+      var t = el && getComputedStyle(el).transform;
+      return !!(t && /^matrix\(-1,/.test(t));
+    }
+    var i = 0;
+    function next() {
+      if (over) return;
+      if (i >= units.length) { later(260, finish); return; }
+      var u = units[i++];
+      var cell = $('.unit[data-uid="' + u.uid + '"]');
+      if (!cell) { next(); return; }
+      var lay = $('.pic .lay', cell);
+      var flip = isMirrored(lay);
+      var card = document.createElement('div');
+      card.className = 'introcard';
+      card.innerHTML = '<div class="face back"></div>' +
+        '<div class="face front"><div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
+        '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i></div></div>';
+      app.appendChild(card);
+      var base = 'translate(-50%,-50%)';
+      var a1 = card.animate([{ transform: base + ' rotateY(180deg) scale(.7)', opacity: 0 },
+                             { transform: base + ' rotateY(180deg) scale(1)', opacity: 1 }],
+                            { duration: INTRO.appear / isp(), fill: 'forwards' });
+      anims.push(a1);
+      a1.onfinish = function () {
+        if (over) return;
+        if (S.sound) SFX.play('select');
+        var a2 = card.animate([{ transform: base + ' rotateY(180deg) scale(1)' },
+                               { transform: base + ' rotateY(0deg) scale(1.02)' }],
+                              { duration: INTRO.flip / isp(), easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
+        anims.push(a2);
+        a2.onfinish = function () {
+          later(INTRO.hold, function () {
+            if (over) return;
+            var art = $('.art', card);
+            var from = relRect(art), to = relRect($('.pic', cell));
+            var fly = document.createElement('div');
+            fly.className = 'introfly';
+            fly.style.cssText = 'left:' + from.x + 'px;top:' + from.y + 'px;width:' + from.w + 'px;height:' + from.h + 'px';
+            fly.innerHTML = '<div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>';
+            app.appendChild(fly);
+            card.style.visibility = 'hidden';
+            var a3 = fly.animate([{ transform: 'translate(0,0) scale(1,1)' },
+                                  { transform: 'translate(' + (to.x - from.x) + 'px,' + (to.y - from.y) + 'px) scale(' +
+                                    (to.w / from.w) + ',' + (to.h / from.h) + ')' }],
+                                 { duration: INTRO.fly / isp(), easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'forwards' });
+            anims.push(a3);
+            a3.onfinish = function () {
+              if (over) return;
+              cell.classList.add('arrived');
+              var a4 = fly.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140 / isp(), fill: 'forwards' });
+              anims.push(a4);
+              a4.onfinish = function () { fly.remove(); card.remove(); later(INTRO.gap, next); };
+            };
+          });
+        };
+      };
+    }
+    next();
   }
 
   function isAI(side) { return S.mode === 'cpu' && side === 1; }
@@ -3078,6 +3187,8 @@
     }
     if (st.phase === 'ended') { panel.innerHTML = ''; return; }
     var u = E.currentActor(st);
+    /* v97: 開幕の紹介の最中は、手番の枠もダメージ予告も出さない */
+    if (S.intro) { panel.innerHTML = shell('', st); bindBattleBar(); return; }
     if (!u) {
       panel.innerHTML = shell('<div class="acts waiting"><div class="waitmsg">ラウンド終了処理中…</div></div>', st);
       bindBattleBar(); bindAutoBtns(null);
