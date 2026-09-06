@@ -30,9 +30,19 @@ def gear(cid):
 def block(cid, n):
     a=ART[cid]; c=CH[cid]; race=c['種族']
     out=['──【%d】%s（%s）──'%(n,a['日本語名'],cid)]
-    out.append('系統：%s（%s）　／　体格：%s　／　段：%s%s　／　性別：%s'%(LINE[race],LINE_NOTE[race],c['体格'],TIER.get(a['段'],a['段']),ladder(cid),a['性別']))
+    lad=ladder(cid) if a['段'] in ('1','2','3') else ''
+    out.append('系統：%s（%s）　／　体格：%s　／　段：%s%s　／　性別：%s'%(LINE[race],LINE_NOTE[race],c['体格'],TIER.get(a['段'],a['段']),lad,(a['性別'] if a['性別'] not in ('','－','-') else '指定なし（獣として描く）')))
     out.append('体の向き：%s　／　カメラ：%s'%(DIR.get(a['向き'],a['向き']),a['カメラ']))
-    out.append('持てるもの：%s　※これ以外は描かない'%gear(cid))
+    if a['向き'] in ('浅い斜め20','斜め35','半身55') and '顔はない' not in a['姿'] and '目も口もなく' not in a['姿']:
+        out.append('顔の向き：体と同じ向き。**両目が見える**（奥の目は小さくてよい）。顔だけ真横にしない')
+    if race in ('人','邪') or a['性別'] in ('男','女'):
+        out.append('頭身：5.5。頭の高さ（髪の上端からあご先まで）は全身の 1/5.5。枠1024で全身を約950に描くなら頭は約170。'
+                   '頭が小さく細長い体（8頭身以上）は使えない')
+    else:
+        out.append('頭身：人の比率にこだわらない。個別指定の体格と骨格を優先する。ただし細長く引き伸ばさない')
+    g=gear(cid)
+    if '盾' in a['象徴形'] and '盾' not in g: g+='、盾'
+    out.append('持てるもの：%s　※これ以外は描かない'%g)
     out.append('象徴形：%s'%a['象徴形'])
     if a['服の傷み'] and a['服の傷み']!='－': out.append('服や布の傷み具合：%s'%a['服の傷み'])
     out.append('内側のごちゃつき：%s'%a['内側の密度'])
