@@ -2463,3 +2463,11 @@ body.shake{animation:shk2 .56s}
   .detailbox.v95 .dinfo{grid-column:2;grid-row:1;min-height:0}
   .detailbox.v95 .dbody{grid-column:2;grid-row:2;padding:4px 0;min-height:0}
 }
+
+/* =========================================================
+   v96: 絵を大きくしたら、名前・体力バーの上に絵が乗ることがあった（ゴーレム）。
+   絵の層（.pic）を一番下に固定し、字と板は必ずその上に
+   ========================================================= */
+.unit .pic{z-index:1}
+.unit .nm,.unit .hpb,.unit .hpn,.unit .fx-tags,.unit .cdb{z-index:3}
+.unit .spb,.unit .atb{z-index:4}
