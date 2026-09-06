@@ -329,8 +329,39 @@
     document.body.appendChild(m);
   }
 
-  function detailHTML(d) {
+  /* 状態の札の名前と、積む順番（左上＝悪い、右上＝良い） */
+  var STATUS_JP = { weaken:'弱', slow:'鈍', curse:'呪', burn:'燃', guard:'守', ward:'障', might:'力', haste:'速' };
+  var BAD_ORDER = ['weaken', 'slow', 'curse', 'burn'];
+  var GOOD_ORDER = ['guard', 'ward', 'might', 'haste'];
+  function statusTagsHTML(u, st) {
+    var out = '';
+    BAD_ORDER.concat(GOOD_ORDER).forEach(function (k) {
+      var v = E.statusVal(u, k); if (v <= 0) return;
+      var rs = 0; u.statuses.forEach(function (x) { if (x.key === k && x.rounds > rs) rs = x.rounds; });
+      var bad = BAD_ORDER.indexOf(k) >= 0;
+      out += '<span class="tg ' + (bad ? 'bad' : 'good') + ' ' + k + '">' + (STATUS_JP[k] || k) + v +
+        (rs ? ' あと' + rs + 'R' : '') + '</span>';
+    });
+    var aur = E.auraFor(u, st);
+    if (aur.physReduce) out += '<span class="tg good">被物理-' + aur.physReduce + '</span>';
+    if (aur.magicReduce) out += '<span class="tg good">被魔法-' + aur.magicReduce + '</span>';
+    return out;
+  }
+  /* いまの値を出す能力の行。ピップは基本の段の数で、色は現在の割合まで */
+  function liveRow(label, numHTML, pipsOn, pipsMax, color, dir) {
+    var p = '';
+    for (var i = 1; i <= STAT_MAX; i++)
+      p += '<span class="pip' + (i <= pipsOn ? ' on' : i <= pipsMax ? ' lost' : '') + '"></span>';
+    return '<div class="strow z' + (dir > 0 ? ' up' : dir < 0 ? ' dn' : '') + '"><span class="lb">' + label + '</span>' +
+      '<span class="nv">' + numHTML + '</span>' +
+      '<span class="pips" style="color:' + color + '">' + p + '</span></div>';
+  }
+
+  /* v95: 図鑑と戦闘中の詳細で同じ骨組み。live={u:ユニット, st:状態} を渡すと「いまの値」になる
+     上から 絵（何も重ねない）→ 名前（右端に補足）→ 系統・段（・コスト）→ 能力 →（状態の札）→ 技 */
+  function detailHTML(d, live) {
     var ai = atkInfo(d);
+    var u = live && live.u, st = live && live.st;
     var acts = d.actions.map(function (a, ai2) {
       var t = '';
       if (a.kind === 'dmg') t = 'ダメージ ' + (a.power != null ? a.power : d.atk) + '　範囲：' + E.RANGE_TEXT[a.range];
@@ -347,11 +378,19 @@
       if (a.slow) t += '　＋対象の素早さ-' + a.slow;
       if (a.weaken) t += '　＋対象の攻撃-' + a.weaken + '(2R)';
       if (a.curse) t += '　＋呪詛' + a.curse + '(3R継続ダメージ)';
-      if (a.burn) t += '　＋燃焼' + a.burn + '(2R継続ダメージ)';
+      if (a.burn) t += '　＋燃焼' + a.burn + '(3R継続ダメージ)';
       if (a.drain) t += '　＋与ダメの半分を吸収';
       if (a.backRatio != null) t += '　後方へは' + Math.round(a.backRatio * 100) + '%';
+      var state = '';
+      if (u) {
+        if (u.cd[a.key] > 0) state = '<span class="astate cd">あと' + u.cd[a.key] + 'R</span>';
+        else if (a.uses != null) state = u.uses[a.key] > 0
+          ? '<span class="astate use">残り' + u.uses[a.key] + '回</span>'
+          : '<span class="astate off">使用済</span>';
+      }
       return '<div class="abox" data-play="' + ai2 + '"><div class="an">▸ ' + a.name +
-        (lim.length ? '<span class="badge">' + lim.join(' / ') + '</span>' : '') + '</div><div class="ad">' + t + '</div></div>';
+        (lim.length ? '<span class="badge">' + lim.join(' / ') + '</span>' : '') + state +
+        '</div><div class="ad">' + t + '</div></div>';
     }).join('');
     var pas = d.passives.map(function (k) {
       var p = E.PASSIVES[k];
@@ -359,31 +398,54 @@
     }).join('');
     var ln = lineOf(d), L = LINES[ln];
     var wep = (ART.ART && ART.ART[d.id] ? ART.ART[d.id].wep : null) || 'sword';
-    return '<div class="bigcard' + (d.base ? ' upper' : '') + '">' +
+    var right = '';
+    if (u) right = sideName(u.side) + '・' + (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
+      (u.alive ? '' : '<b style="color:var(--bad)">　戦闘不能</b>');
+    var atkColor = ai.kind === 'heal' ? '#7de8a4' : ai.kind === 'mag' ? '#c98cff' : '#ffb36b';
+    var meta, tags = '';
+    if (u) {
+      var pw = atkLive(u), spd = E.getSpd(u, st), sdir = spd > d.spd ? 1 : spd < d.spd ? -1 : 0;
+      var hpOn = u.maxHp > 0 ? Math.round(d.hpT * Math.max(0, u.hp) / u.maxHp) : 0;
+      var arrow = function (dir, base) { return dir ? '<u>' + (dir > 0 ? '▲' : '▼') + ' 基本' + base + '</u>' : ''; };
+      meta = liveRow('体力', Math.max(0, u.hp) + '<u>/' + u.maxHp + '</u>', hpOn, d.hpT, '#7de8a4', 0) +
+             liveRow(ai.label, pw.val + arrow(pw.dir, pw.base), ai.tier, ai.tier, atkColor, pw.dir) +
+             liveRow('素早', spd + arrow(sdir, d.spd), d.spd, d.spd, '#7fd0ff', sdir);
+      var tg = statusTagsHTML(u, st);
+      if (tg) tags = '<div class="dtags">' + tg + '</div>';
+    } else {
+      meta = statRow('体力', d.hp, d.hpT, '#7de8a4') +
+             statRow(ai.label, ai.val, ai.tier, atkColor) +
+             statRow('素早', d.spd, d.spd, '#7fd0ff');
+    }
+    return '<div class="bigcard v95' + (d.base ? ' upper' : '') + '">' +
       '<div class="dhead">' +
         '<div class="art" data-play="0">' +
-          '<div class="unit" data-wep="' + wep + '"><div class="pic">' +
-            portraitTop(d.id, d.elem) + '</div></div>' +
-          '<div class="ovbox">' +
-            '<div class="hd"><h3>' + d.name + '</h3><em>' + d.en + '</em></div>' +
-            '<div class="chiprow">' +
-              '<button class="lnchip" data-line="' + ln + '" style="--lc:' + L.c + '">' +
-                '<i class="lg">' + ln + '</i>' + L.name + '<span class="ic">i</span></button>' +
-              tierStripHTML(d) +
-              (isFinite(E.costCap()) ? '<span class="costchip">コスト <b>' + d.cost + '</b></span>' : '') +
-            '</div>' +
-          '</div>' +
+          '<div class="unit" data-wep="' + wep + '"><div class="pic">' + ART.portrait(d.id, d.elem) + '</div></div>' +
         '</div>' +
-        '<div class="dmeta">' +
-          statRow('体力', d.hp, d.hpT, '#7de8a4') +
-          statRow(ai.label, ai.val, ai.tier,
-            ai.kind === 'heal' ? '#7de8a4' : ai.kind === 'mag' ? '#c98cff' : '#ffb36b') +
-          statRow('素早', d.spd, d.spd, '#7fd0ff') +
+        '<div class="dinfo">' +
+        '<div class="dname"><h3>' + d.name + '</h3><em>' + d.en + '</em><span class="dright">' + right + '</span></div>' +
+        '<div class="chiprow">' +
+          '<button class="lnchip" data-line="' + ln + '" style="--lc:' + L.c + '">' +
+            '<i class="lg">' + ln + '</i>' + L.name + '<span class="ic">i</span></button>' +
+          tierStripHTML(d) +
+          (!u && isFinite(E.costCap()) ? '<span class="costchip">コスト <b>' + d.cost + '</b></span>' : '') +
+        '</div>' +
+        '<div class="dmeta">' + meta + '</div>' + tags +
         '</div>' +
       '</div>' +
       '<div class="dbody">' + acts + pas +
         '<div class="flav">' + d.flavor + '</div></div>' +
       '<button class="morechip">▼ あと<b class="mc"></b>件</button></div>';
+  }
+
+  /* 詳細の外枠：カード ＋ 最下段の「◀ 閉じる ▶」。スワイプでもめくれる */
+  function cardModalHTML(cardHTML, n) {
+    return '<div class="box detailbox v95"><div class="cardwrap">' + cardHTML + '</div>' +
+      '<div class="dnav">' +
+        (n > 1 ? '<button class="navb" data-nav="-1" aria-label="前">◀</button>' : '') +
+        '<button class="btn ghost dclose" id="dclose">閉じる</button>' +
+        (n > 1 ? '<button class="navb" data-nav="1" aria-label="次">▶</button>' : '') +
+      '</div></div>';
   }
 
   /** 立ち絵は上そろえで切り抜く。横長に潰れても頭が切れない */
@@ -606,22 +668,11 @@
     if (list.indexOf(id) < 0) list.unshift(id);
     var idx = list.indexOf(id);
     var m = document.createElement('div');
-    m.className = 'modal';
+    m.className = 'modal dmodal';
     function draw() {
       var cid = list[idx];
-      m.innerHTML = '<div class="box detailbox">' +
-        '<div class="cardwrap">' + detailHTML(E.BY_ID[cid]) + '</div>' +
-        (list.length > 1
-          ? '<span class="navpos small">' + (idx + 1) + ' / ' + list.length + '</span>'
-          : '') +
-        '<button class="btn ghost" id="dclose" style="width:100%;margin-top:8px">閉じる</button></div>';
-      /* v93: 前後の矢印は中段（体力・攻撃・素早）の左右端に置く。1行ぶんの節約 */
-      if (list.length > 1) {
-        var dm = $('.dmeta', m);
-        if (dm) dm.insertAdjacentHTML('beforeend',
-          '<button class="navside l" data-nav="-1" aria-label="前のカード">◀</button>' +
-          '<button class="navside r" data-nav="1" aria-label="次のカード">▶</button>');
-      }
+      m.innerHTML = cardModalHTML(detailHTML(E.BY_ID[cid]), list.length);
+      var dr = $('.dright', m); if (dr && list.length > 1) dr.textContent = (idx + 1) + ' / ' + list.length;
       $$('[data-nav]', m).forEach(function (b) {
         b.onclick = function (ev) {
           ev.stopPropagation();
@@ -713,24 +764,10 @@
     var idx = 0;
     list.forEach(function (v, i) { if (v.uid === unit.uid) idx = i; });
     var m = document.createElement('div');
-    m.className = 'modal';
+    m.className = 'modal dmodal';
     function draw() {
       var u = list[idx];
-      m.innerHTML = '<div class="box detailbox">' +
-        liveStatHTML(u) +
-        '<div class="cardwrap">' + detailHTML(u.def) + '</div>' +
-        '<div class="navrow big merged">' +
-          '<button class="navb wide" data-nav="-1">◀ 前のキャラ</button>' +
-          '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +
-          '<button class="navb wide" data-nav="1">次のキャラ ▶</button></div>' +
-        '<button class="btn ghost" id="uclose" style="width:100%;margin-top:8px">閉じる</button></div>';
-      /* v93: 前後の矢印は中段（体力・攻撃・素早）の左右端に置く。1行ぶんの節約 */
-      if (list.length > 1) {
-        var dm = $('.dmeta', m);
-        if (dm) dm.insertAdjacentHTML('beforeend',
-          '<button class="navside l" data-nav="-1" aria-label="前のカード">◀</button>' +
-          '<button class="navside r" data-nav="1" aria-label="次のカード">▶</button>');
-      }
+      m.innerHTML = cardModalHTML(detailHTML(u.def, { u: u, st: st }), list.length);
       $$('[data-nav]', m).forEach(function (b) {
         b.onclick = function (ev) {
           ev.stopPropagation();
@@ -739,7 +776,7 @@
           draw();
         };
       });
-      $('#uclose', m).onclick = function () { m.remove(); };
+      $('#dclose', m).onclick = function () { m.remove(); };
       bindDetailChips(m);
       bindDetailCard(m, u.def);
     }
@@ -783,6 +820,10 @@
       el.addEventListener('mouseleave', cancel);
     });
   }
+  /* v95: 絵が本物の画像になったので、長押しでブラウザの画像メニューが出ないようにする */
+  document.addEventListener('contextmenu', function (e) {
+    if (e.target && e.target.closest && e.target.closest('.unit,.lay,.art,.tk,.mini')) e.preventDefault();
+  });
   function bindInspect() {
     bindLongPress('.unit[data-uid]', function (el) {
       var u = E.findUid(S.st, el.dataset.uid);
@@ -2770,18 +2811,20 @@
     var pct = Math.max(0, u.hp / u.maxHp * 100);
     var cls = pct <= 25 ? ' low' : pct <= 55 ? ' mid' : '';
     // 悪い効果（右上・赤系）／良い効果（右下・緑系）／待機（左・黄の丸）に分離
+    /* v95: 左上＝悪い状態（弱→鈍→呪→燃）、右上＝良い状態（溜→守→障→力→速）。上から順に積む */
     var badTags = '', goodTags = '';
-    [['slow', '鈍'], ['weaken', '弱'], ['curse', '呪'], ['burn', '燃']].forEach(function (x) {
-      var v = E.statusVal(u, x[0]);
-      if (v > 0) badTags += '<span class="tg bad ' + x[0] + '">' + x[1] + v + '</span>';
-    });
-    [['ward', '障'], ['guard', '守'], ['might', '力'], ['haste', '速']].forEach(function (x) {
-      var v = E.statusVal(u, x[0]);
-      if (v > 0) goodTags += '<span class="tg good ' + x[0] + '">' + x[1] + v + '</span>';
+    BAD_ORDER.forEach(function (k) {
+      var v = E.statusVal(u, k);
+      if (v > 0) badTags += '<span class="tg bad ' + k + '">' + STATUS_JP[k] + v + '</span>';
     });
     var cd = 0;
     for (var k2 in u.cd) if (u.cd[k2] > cd) cd = u.cd[k2];
-    var cdTag = (cd > 0 && u.alive) ? '<div class="cdb">溜<b>' + cd + '</b></div>' : '';
+    if (cd > 0 && u.alive) goodTags += '<span class="tg cd">溜' + cd + '</span>';
+    GOOD_ORDER.forEach(function (k) {
+      var v = E.statusVal(u, k);
+      if (v > 0) goodTags += '<span class="tg good ' + k + '">' + STATUS_JP[k] + v + '</span>';
+    });
+    var cdTag = '';
     var pw = atkLive(u);
     var spd = E.getSpd(u, st), sdir = spd > u.def.spd ? 1 : spd < u.def.spd ? -1 : 0;
     var arrow = function (d) { return d > 0 ? '<i class="up">▲</i>' : d < 0 ? '<i class="dn">▼</i>' : ''; };

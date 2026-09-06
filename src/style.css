@@ -2404,3 +2404,62 @@ body.shake{animation:shk2 .56s}
 @media (orientation: landscape){
   #app.land .panelbar .b-auto1,#app.land .panelbar .b-autoall{display:none}
 }
+
+/* =========================================================
+   v95: 図鑑と戦闘中の詳細を同じ骨組みに／盤面の切り出し／札の並び／長押しメニュー抑止
+   ========================================================= */
+/* --- 長押しでブラウザの画像メニューを出さない --- */
+.lay .cut{pointer-events:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.unit,.lay,.art{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+
+/* --- 盤面の切り出し。図鑑・詳細（.art の中）には掛けない --- */
+.field .unit .pic .lay.v-top .cut{top:1%;height:146%;width:140%;left:-20%;object-position:50% 0}
+.field .unit .pic .lay.v-big .cut{top:-6%;height:118%;width:122%;left:-11%;object-position:50% 40%}
+
+/* --- 札：溜も右上の列に、同じ形で（金） --- */
+.unit .cdb{display:none}
+.tg.cd{color:#ffe08a;border-color:#a8811f;background:rgba(30,22,4,.88)}
+.dtags .tg{font-size:10px;padding:1px 5px}
+
+/* --- 詳細カード：画面いっぱい・固定の骨組み --- */
+.modal.dmodal{padding:0;align-items:stretch;justify-content:stretch}
+.modal.dmodal .box.detailbox.v95{max-width:none;width:100%;max-height:none;height:100svh;height:100dvh;
+  border-radius:0;border:0;padding:6px 8px calc(6px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;overflow:hidden}
+.detailbox.v95 .cardwrap{flex:1 1 auto;min-height:0;display:flex}
+.detailbox.v95 .cardwrap > .bigcard{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;width:100%}
+.detailbox.v95 .dhead{flex:0 0 auto;display:block;position:relative;border:0}
+.detailbox.v95 .dhead .art{aspect-ratio:auto;height:44svh;height:44dvh;max-height:none;min-height:120px;
+  border-radius:12px 12px 0 0;overflow:hidden;position:relative}
+.detailbox.v95 .dhead .art::after,.detailbox.v95 .dhead .art::before{display:none}
+.detailbox.v95 .dhead .art .lay .cut{left:2%;width:96%;top:2%;height:96%}
+.detailbox.v95 .dname{display:flex;align-items:baseline;gap:7px;padding:7px 11px 0}
+.detailbox.v95 .dname h3{font-size:19px;font-weight:900;line-height:1.1}
+.detailbox.v95 .dname em{font-style:normal;font-size:12px;font-weight:800;color:#9fb0d0;letter-spacing:.05em}
+.detailbox.v95 .dname .dright{margin-left:auto;font-size:10.5px;font-weight:800;color:var(--dim);white-space:nowrap}
+.detailbox.v95 .chiprow{display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:5px 11px 0}
+.detailbox.v95 .dhead .dmeta{padding:6px 11px 2px;position:static;background:none}
+.detailbox.v95 .dtags{display:flex;gap:4px;flex-wrap:wrap;padding:0 11px 4px}
+.detailbox.v95 .dbody{flex:1 1 auto;min-height:56px;overflow-y:auto}
+.detailbox.v95 .strow.z.up .nv{color:#7de8a4} .detailbox.v95 .strow.z.dn .nv{color:#ff8a9b}
+.detailbox.v95 .strow.z .nv u{text-decoration:none;font-size:9px;color:var(--dim);margin-left:3px;font-weight:800}
+.detailbox.v95 .strow.z.up .nv u{color:#7de8a4} .detailbox.v95 .strow.z.dn .nv u{color:#ff8a9b}
+.detailbox.v95 .pips .pip.lost{background:#1a2031;border-color:#2a3348}
+.detailbox.v95 .an .astate{margin-left:auto;font-size:10px;font-weight:900;padding:1px 6px;border-radius:999px}
+.detailbox.v95 .an .astate.cd{color:#ffe08a;border:1px solid #a8811f;background:rgba(30,22,4,.88)}
+.detailbox.v95 .an .astate.use{color:#bcd2ff;border:1px solid #5c78ad}
+.detailbox.v95 .an .astate.off{color:#8492b0;border:1px solid #3a4560}
+.detailbox.v95 .navside{display:none}
+.dnav{display:flex;gap:8px;padding:8px 0 0;flex:0 0 auto;align-items:stretch}
+.dnav .navb{width:60px;font-size:16px;font-weight:900;padding:0;border-radius:11px}
+.dnav .dclose{flex:1 1 auto;padding:10px;margin:0}
+/* 横持ち：左＝絵、右＝名前→段→能力→技。絵に何も重ねない */
+@media (orientation: landscape){
+  .modal.dmodal .box.detailbox.v95{padding:6px 10px}
+  .detailbox.v95 .cardwrap > .bigcard{display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr);align-items:stretch}
+  .detailbox.v95 .dhead{display:contents}
+  .detailbox.v95 .dhead .art{grid-column:1;grid-row:1 / span 2;height:100%;aspect-ratio:auto;min-height:0;border-radius:12px 0 0 12px}
+  .detailbox.v95 .dinfo{grid-column:2;grid-row:1;min-height:0}
+  .detailbox.v95 .dbody{grid-column:2;grid-row:2;padding:4px 0;min-height:0}
+}

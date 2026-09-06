@@ -436,7 +436,8 @@ var CBART = (function () {
     setFrameVars();
     var bg = ((typeof window !== 'undefined') && window.VOT_BG && window.VOT_BG[defId]) ||
              { top: '#2b303c', bot: '#222630', glow: '#3d4457' };
-    return '<div class="lay t' + tierOf(defId) + '" style="--g1:' + bg.top + ';--g2:' + bg.bot + ';--gl:' + bg.glow + '">' +
+    var view = ((typeof window !== 'undefined') && window.VOT_VIEW && window.VOT_VIEW[defId]) || 'top';
+    return '<div class="lay t' + tierOf(defId) + ' v-' + view + '" style="--g1:' + bg.top + ';--g2:' + bg.bot + ';--gl:' + bg.glow + '">' +
       '<div class="fr"></div>' +
       '<img class="p-fig cut" src="' + W[defId] + '" alt="" draggable="false">' +
       '</div>';
