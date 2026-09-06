@@ -47,6 +47,7 @@ def bg_mask(rgb, tol=13.0, edge=0.04):
     thr = max(2.2, np.percentile(std, 55))
     core = std > thr
     core = ndimage.binary_closing(core, np.ones((k*2+1, k*2+1)))
+    raw = core.copy()                       # 穴埋め前の「模様のある塊」
     core = ndimage.binary_fill_holes(core)
     # 小さなごみ（にじみの粒）は人物から外す
     lbl, n = ndimage.label(core)
@@ -56,14 +57,44 @@ def bg_mask(rgb, tol=13.0, edge=0.04):
         core = np.isin(lbl, big)
     # 少しだけ内側へ削る。人物のまわりに元の背景が輪として残らないように
     core = ndimage.binary_erosion(core, np.ones((5,5)))
+    # 穴埋め（fill_holes）で人物に取り込んでしまった「背景の島」を、核から外す。
+    # 弓と弦のあいだ、浮遊する環の内側などが、ここで人物側に飲み込まれていた。
+    #
+    # ただし「背景と似た色の服」を誤って外さないように、判定は厳しくする。
+    # 本物の背景は、その行の背景色と**どの行でも**ぴたりと一致する（同じ縦の
+    # グラデーションに乗っている）。服はたまたま色が近くても、行ごとにずれる。
+    e0 = max(3, int(W*edge))
+    _rowbg = np.median(np.concatenate([lab[:, :e0], lab[:, -e0:]], axis=1), axis=1)
+    dist = np.linalg.norm(lab - _rowbg[:, None, :], axis=-1)
+    holes = ndimage.binary_fill_holes(raw) & ~ndimage.binary_dilation(raw, np.ones((3,3)))
+    hl, hn = ndimage.label(holes)
+    isles = np.zeros_like(holes)
+    for i in range(1, hn+1):
+        sel = hl == i
+        if sel.sum() < holes.size * 0.0008: continue
+        if np.percentile(dist[sel], 85) < 8.0:      # どの行でもぴたりと一致する
+            isles |= sel
+    core = core & ~isles
     m = ~core
+    e = max(3, int(W*edge))
+    side = np.concatenate([lab[:, :e], lab[:, -e:]], axis=1)
+    rowbg = np.median(side, axis=1)                       # 各行の背景色
+
     lbl, n = ndimage.label(m)
     keep = set(np.unique(np.concatenate([lbl[0], lbl[-1], lbl[:,0], lbl[:,-1]])))
     keep.discard(0)
+    # 外周とつながっていなくても、背景と同じ色をしている塊は背景とみなす。
+    # 弓の弦の内側、浮遊する環の内側など、人物に囲まれた背景がここに当たる。
+    # これを拾わないと、そこだけ元の色が島のように残る。
+    if n:
+        dist = np.linalg.norm(lab - rowbg[:, None, :], axis=-1)
+        med = ndimage.labeled_comprehension(dist, lbl, np.arange(1, n+1),
+                                            np.median, float, 999.0)
+        sizes = ndimage.sum(m, lbl, np.arange(1, n+1))
+        for i in range(n):
+            if (i+1) not in keep and med[i] < tol and sizes[i] > 40:
+                keep.add(i+1)
     m = np.isin(lbl, list(keep))
-    e = max(3, int(W*edge))
-    side = np.concatenate([lab[:, :e], lab[:, -e:]], axis=1)
-    rowbg = np.median(side, axis=1)
     return m, rowbg
 
 def repaint(img, name, glow=True):
