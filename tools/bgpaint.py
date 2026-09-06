@@ -77,14 +77,18 @@ def bg_mask(rgb, tol=13.0, edge=0.04):
     # グラデーションに乗っている）。服はたまたま色が近くても、行ごとにずれる。
     e0 = max(3, int(W*edge))
     _rowbg = np.median(np.concatenate([lab[:, :e0], lab[:, -e0:]], axis=1), axis=1)
-    dist = np.linalg.norm(lab - _rowbg[:, None, :], axis=-1)
+    # 判定は「色み（色相と鮮やかさ）」で行う。明るさは問わない。
+    # 光の筋のあいだ、羽根のあいだのような小さな隙間は、明るさは変わっていても
+    # 色みは背景のままなので、これで拾える。服は色みが違うので拾わない。
+    chro = np.linalg.norm(lab[..., 1:] - _rowbg[:, None, 1:], axis=-1)
+    dl = np.abs(lab[..., 0] - _rowbg[:, None, 0])
     holes = ndimage.binary_fill_holes(raw) & ~ndimage.binary_dilation(raw, np.ones((3,3)))
     hl, hn = ndimage.label(holes)
     isles = np.zeros_like(holes)
     for i in range(1, hn+1):
         sel = hl == i
-        if sel.sum() < holes.size * 0.0008: continue
-        if np.percentile(dist[sel], 85) < 8.0:      # どの行でもぴたりと一致する
+        if sel.sum() < holes.size * 0.00012: continue
+        if np.percentile(chro[sel], 80) < 7.0 and np.median(dl[sel]) < 34.0:
             isles |= sel
     core = core & ~isles
     m = ~core
@@ -111,9 +115,15 @@ def bg_mask(rgb, tol=13.0, edge=0.04):
     # 人物のまわりに残った元の背景を、色を確かめながら1段ずつ削り取る。
     # 「いま背景と決まっている場所のとなり」で、かつ「その行の背景色と一致する」
     # 画素だけを背景に加える。細い弦やぼろ布は色が違うので、削られない。
+    # 判定は「色み（色相と鮮やかさ）が背景と同じ」＋「なめらか」。
+    # 明るさは問わない。人物の後ろの光や影は、明るさだけが違って色みは背景のままなので、
+    # これで拾える。服は色みが違うので拾わない。
+    chroma = np.linalg.norm(lab[..., 1:] - rowbg[:, None, 1:], axis=-1)
+    dLraw = np.abs(lab[..., 0] - rowbg[:, None, 0])
+    gate = (chroma < 7.0) & (dLraw < 34.0) & (std < thr * 1.2)
     step = np.ones((3, 3), bool)
-    for _ in range(7):
-        cand = ndimage.binary_dilation(m, step) & ~m & (dist < 11.0)
+    for _ in range(30):
+        cand = ndimage.binary_dilation(m, step) & ~m & gate
         if not cand.any(): break
         m = m | cand
     return m, rowbg
