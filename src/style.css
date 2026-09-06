@@ -2258,3 +2258,36 @@ body.shake{animation:shk2 .56s}
 @media (orientation: landscape){
   .unit .hpb,.unit .hpn{left:46px;right:44px}
 }
+
+/* =========================================================
+   v92: キャラ絵を「層」で重ねる
+   地（系譜の色のグラデーション）→ 段の枠 → 切り抜き → 縁の光
+   ・絵はマゼンタを抜いた切り抜き（art/cut）。背景は絵に焼き込まない
+   ・枠は横長でも縦長でも縁に沿うよう、容器の縦横に合わせて引き伸ばす
+   ・敵側は層ごと左右反転（枠も地も左右対称なので、絵だけが裏返る）
+   ========================================================= */
+.lay{position:relative;width:100%;height:100%;overflow:hidden;
+  background:
+    radial-gradient(ellipse 40% 48% at 50% 54%, var(--gl,#3d4457) 0%, rgba(0,0,0,0) 72%),
+    linear-gradient(180deg, var(--g1,#2b303c), var(--g2,#222630))}
+.lay .fr{position:absolute;inset:-3.5%;background:center/100% 100% no-repeat;pointer-events:none;z-index:1}
+.lay.t1 .fr{background-image:var(--fr1)}
+.lay.t2 .fr{background-image:var(--fr2)}
+.lay.t3 .fr{background-image:var(--fr3)}
+.lay .cut{position:absolute;left:3%;top:5%;width:94%;height:89%;z-index:2;
+  object-fit:contain;object-position:50% 100%;display:block;
+  filter:drop-shadow(0 0 1.2px rgba(255,245,225,.55)) drop-shadow(0 1px 2px rgba(0,0,0,.45));
+  transform-origin:50% 96%;-webkit-user-drag:none}
+/* 敵側の反転（層ごと） */
+.unit.s1 .pic .lay{transform:scaleX(-1)}
+/* 行動モーション：線画の .p-fig と同じ動きを、切り抜きにも */
+.unit .pic .lay .p-fig{transition:transform .21s cubic-bezier(.2,.75,.3,1)}
+.unit.mo-chg .pic .lay .p-fig{transform:var(--fchg,rotate(-5deg))}
+.unit.mo-stk .pic .lay .p-fig{transform:var(--fstk,rotate(7deg));transition:transform .085s cubic-bezier(.35,0,.1,1)}
+.unit.mo-cast .pic .lay .p-fig{transform:translateY(-2px)}
+.unit[data-body="bulk"] .pic .lay .p-fig{transition-duration:.27s}
+.unit[data-body="beast"] .pic .lay .p-fig{transition-duration:.16s}
+@media (prefers-reduced-motion:reduce){ .unit .pic .lay .p-fig{transition:none} }
+/* 倒れた者：層ごと灰色に（.unit.dead に filter が掛かるので追加なし） */
+/* 図鑑・一覧・MVP・順番表の小さな容器でも、層が容器いっぱいに収まる */
+.mvp .pic .lay,.ordrow .pic .lay,.rc-u .pic .lay,.rc-crow .pic .lay,.mini .lay,.art .lay{width:100%;height:100%}

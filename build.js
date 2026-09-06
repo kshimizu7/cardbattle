@@ -8,9 +8,10 @@ const VERSION = process.env.CBVER || '21';
 require('child_process').execSync('node ' + __dirname + '/tools/rpgexp.js', { stdio: 'inherit' });
 const ART_FILES = { title: 'title_vot', beast: 'entry_beast', mine: 'entry_mine',
                     maze: 'entry_maze', shrine: 'entry_shrine' };
-/* 描き下ろしのキャラ絵。art/char/<id>.webp を置くだけで差し替わる。
-   置いていない者は、いままでの線画のまま */
-const CHARDIR = __dirname + '/art/char';
+/* 描き下ろしのキャラ絵。art/cut/<id>.webp（マゼンタを抜いた切り抜き、RGBA）を置くだけで差し替わる。
+   置いていない者は、いままでの線画のまま。
+   v92: 背景込みの art/char から、切り抜きの art/cut に切り替え（地・枠・縁の光はCSSで重ねる） */
+const CHARDIR = __dirname + '/art/cut';
 const CHARJS = (function () {
   let files = [];
   try { files = fs.readdirSync(CHARDIR).filter(f => /\.webp$/i.test(f)); } catch (e) { return 'window.VOT_CHAR = {};'; }
@@ -21,6 +22,13 @@ const CHARJS = (function () {
     files.map(f => f.replace(/\.webp$/i, '')).join('・') + '）');
   return 'window.VOT_CHAR = {' + body + '};';
 })();
+
+/* v92: 段の枠（3段）と、系譜ごとの背景色 */
+const UIJS = 'window.VOT_UI = {' + [1, 2, 3].map(t =>
+  '"frame' + t + '":"data:image/webp;base64,' +
+  fs.readFileSync(__dirname + '/art/ui/frame_t' + t + '.webp').toString('base64') + '"'
+).join(',') + '};\n' +
+  'window.VOT_BG = ' + fs.readFileSync(__dirname + '/art/bg_colours.json', 'utf8') + ';';
 
 const ARTJS = 'window.VOT_ART = {' + Object.keys(ART_FILES).map(k =>
   JSON.stringify(k) + ':"data:image/webp;base64,' +
@@ -73,6 +81,7 @@ ${R('art.js')}
 </script>
 <script>
 ${CHARJS}
+${UIJS}
 ${ARTJS}
 </script>
 <script>

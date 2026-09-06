@@ -411,13 +411,35 @@ var CBART = (function () {
   var cache = {};
 
   /* 描き下ろしの絵があれば、そちらを使う。無い者は今までどおり線画。
-     （build.js が art/char/<id>.webp を window.VOT_CHAR に詰める） */
+     （build.js が art/cut/<id>.webp を window.VOT_CHAR に、段の枠を window.VOT_UI に、
+       系譜ごとの背景色を window.VOT_BG に詰める）
+     v92: 絵は「マゼンタを抜いた切り抜き」。地・段の枠・縁の光はここで重ねる。
+       地（CSSのグラデーション）→ 段の枠 → 切り抜き（縁の光つき）の順。
+       敵の反転や呼吸・攻撃モーションは、.lay と .p-fig に CSS から掛かる */
+  var frameVarsSet = false;
+  function setFrameVars() {
+    if (frameVarsSet || typeof document === 'undefined') return;
+    var U = window.VOT_UI; if (!U) return;
+    var st = document.documentElement.style;
+    for (var t = 1; t <= 3; t++) if (U['frame' + t]) st.setProperty('--fr' + t, 'url("' + U['frame' + t] + '")');
+    frameVarsSet = true;
+  }
+  function tierOf(defId) {
+    var E = (typeof CB !== 'undefined') ? CB : null;
+    var d = E && ((E.BY_ID && E.BY_ID[defId]) || (E.TEASER_BY_ID && E.TEASER_BY_ID[defId]));
+    var t = d && d.tier;
+    return (t === 2 || t === 3) ? t : 1;
+  }
   function painted(defId) {
     var W = (typeof window !== 'undefined') && window.VOT_CHAR;
     if (!W || !W[defId]) return null;
-    return '<svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">' +
-      '<g class="p-fig"><image href="' + W[defId] + '" x="0" y="0" width="100" height="100" ' +
-      'preserveAspectRatio="xMidYMid slice"/></g></svg>';
+    setFrameVars();
+    var bg = ((typeof window !== 'undefined') && window.VOT_BG && window.VOT_BG[defId]) ||
+             { top: '#2b303c', bot: '#222630', glow: '#3d4457' };
+    return '<div class="lay t' + tierOf(defId) + '" style="--g1:' + bg.top + ';--g2:' + bg.bot + ';--gl:' + bg.glow + '">' +
+      '<div class="fr"></div>' +
+      '<img class="p-fig cut" src="' + W[defId] + '" alt="" draggable="false">' +
+      '</div>';
   }
 
   function portrait(defId, elem) {

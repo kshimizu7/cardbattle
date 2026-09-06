@@ -1,0 +1,157 @@
+{
+ "ancientdragon": {
+  "top": "#393948",
+  "bot": "#282736",
+  "glow": "#585880"
+ },
+ "archer": {
+  "top": "#453039",
+  "bot": "#331f27",
+  "glow": "#79455c"
+ },
+ "archmage": {
+  "top": "#59757c",
+  "bot": "#456168",
+  "glow": "#76c7d8"
+ },
+ "assassin": {
+  "top": "#2a3022",
+  "bot": "#1a1f11",
+  "glow": "#3d4c28"
+ },
+ "bard": {
+  "top": "#3c2c1e",
+  "bot": "#2a1b0c",
+  "glow": "#66411c"
+ },
+ "berserker": {
+  "top": "#876a5f",
+  "bot": "#72574c",
+  "glow": "#f2ab8e"
+ },
+ "dragon": {
+  "top": "#393948",
+  "bot": "#282736",
+  "glow": "#585880"
+ },
+ "frost": {
+  "top": "#392a2c",
+  "bot": "#28191c",
+  "glow": "#623c42"
+ },
+ "golem": {
+  "top": "#385657",
+  "bot": "#264344",
+  "glow": "#359093"
+ },
+ "grandsage": {
+  "top": "#59757c",
+  "bot": "#456168",
+  "glow": "#76c7d8"
+ },
+ "harpy": {
+  "top": "#213037",
+  "bot": "#101f26",
+  "glow": "#1c4c5e"
+ },
+ "highpriest": {
+  "top": "#534a39",
+  "bot": "#403828",
+  "glow": "#8c774b"
+ },
+ "knight": {
+  "top": "#546d60",
+  "bot": "#41594d",
+  "glow": "#76b999"
+ },
+ "mage": {
+  "top": "#59757c",
+  "bot": "#456168",
+  "glow": "#76c7d8"
+ },
+ "ogre": {
+  "top": "#656e80",
+  "bot": "#515a6c",
+  "glow": "#9db7e7"
+ },
+ "paladin": {
+  "top": "#546d60",
+  "bot": "#41594d",
+  "glow": "#76b999"
+ },
+ "paladinking": {
+  "top": "#546d60",
+  "bot": "#41594d",
+  "glow": "#76b999"
+ },
+ "priest": {
+  "top": "#534a39",
+  "bot": "#403828",
+  "glow": "#8c774b"
+ },
+ "rogue": {
+  "top": "#2a3022",
+  "bot": "#1a1f11",
+  "glow": "#3d4c28"
+ },
+ "saint": {
+  "top": "#534a39",
+  "bot": "#403828",
+  "glow": "#8c774b"
+ },
+ "salamander": {
+  "top": "#4e4753",
+  "bot": "#3c3540",
+  "glow": "#83708f"
+ },
+ "shadowblade": {
+  "top": "#2a3022",
+  "bot": "#1a1f11",
+  "glow": "#3d4c28"
+ },
+ "shaman": {
+  "top": "#183630",
+  "bot": "#062420",
+  "glow": "#00574b"
+ },
+ "shieldguard": {
+  "top": "#6a4f4c",
+  "bot": "#563c3a",
+  "glow": "#be7973"
+ },
+ "spearman": {
+  "top": "#45535f",
+  "bot": "#32404c",
+  "glow": "#6088a8"
+ },
+ "troll": {
+  "top": "#6b6a57",
+  "bot": "#585644",
+  "glow": "#b3b080"
+ },
+ "valkyrie": {
+  "top": "#725f6e",
+  "bot": "#5e4b5a",
+  "glow": "#c896be"
+ },
+ "warfiend": {
+  "top": "#876a5f",
+  "bot": "#72574c",
+  "glow": "#f2ab8e"
+ },
+ "warrior": {
+  "top": "#876a5f",
+  "bot": "#72574c",
+  "glow": "#f2ab8e"
+ },
+ "werewolf": {
+  "top": "#3c4e3c",
+  "bot": "#2a3c2a",
+  "glow": "#518253"
+ },
+ "whelp": {
+  "top": "#393948",
+  "bot": "#282736",
+  "glow": "#585880"
+ }
+}
