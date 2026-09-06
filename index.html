@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="92">
+<meta name="app-version" content="93">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -2303,6 +2303,81 @@ body.shake{animation:shk2 .56s}
 /* 倒れた者：層ごと灰色に（.unit.dead に filter が掛かるので追加なし） */
 /* 図鑑・一覧・MVP・順番表の小さな容器でも、層が容器いっぱいに収まる */
 .mvp .pic .lay,.ordrow .pic .lay,.rc-u .pic .lay,.rc-crow .pic .lay,.mini .lay,.art .lay{width:100%;height:100%}
+
+/* =========================================================
+   v93: 盤面の詰め直し（実機で見て）
+   ・素早さ・攻撃力の板を小さく、同じ高さに。体力バーの幅を取り戻す
+   ・行動順は「陣営色の帯に名前」だけ。見出し行と「なぜこの順番？」は消す
+   ・分離帯を細く、下の説明行を消し、その分をキャラ枠の高さに回す
+   ・向き：縦持ちは自陣（下）が左向き・敵陣（上）が右向き。横持ちは右側の陣営が左向き
+   ・図鑑：前後の矢印を中段の左右へ、コストは段の横へ、絵を大きく
+   ========================================================= */
+/* 板：同じ高さ・同じ上余白。幅は数字ぶんだけ */
+.unit .spb,.unit .atb{height:22px;min-width:34px;font-size:11.5px;line-height:1}
+.unit .spb{padding:4px 3px 0 12px}
+.unit .atb{padding:4px 10px 0 3px}
+.unit .hpb,.unit .hpn{left:36px;right:35px;height:14px;bottom:3px}
+.unit .hpn{line-height:14px;font-size:10.5px}
+.unit .nm{bottom:18px}
+@media (orientation: portrait){
+  .unit .spb,.unit .atb{height:21px;min-width:32px;font-size:11px}
+  .unit .spb{padding:4px 3px 0 11px}
+  .unit .atb{padding:4px 9px 0 3px}
+  .unit .hpb,.unit .hpn{left:34px;right:33px;height:14px}
+  .unit .hpn{line-height:14px;font-size:10.5px}
+  .unit .nm{bottom:18px;font-size:10.5px}
+  /* 上下を削ったぶん、枠を高く */
+  .unit{aspect-ratio:1/0.96}
+  .warline{margin:5px 0 6px}
+  .warline .wl-mid{height:16px}
+  .warline .wl-edge{height:2px}
+  .warline .wl-tag,.warline .wl-arrow{display:none}
+}
+@media (orientation: landscape){
+  .unit .hpb,.unit .hpn{left:38px;right:37px}
+}
+/* 行動順：帯に名前 */
+.orderline{display:none}
+.turnbar{gap:3px;padding:4px 8px 5px}
+.tk{width:auto;flex:1 1 0;min-width:46px;height:22px;border-radius:5px;border-width:1.5px;
+  display:flex;align-items:center;justify-content:center;background:#0d1220}
+.tk.s0{background:linear-gradient(180deg,rgba(95,168,255,.42),rgba(95,168,255,.18))}
+.tk.s1{background:linear-gradient(180deg,rgba(255,107,125,.42),rgba(255,107,125,.18))}
+.tk .tn{font-size:9.5px;font-weight:900;letter-spacing:.02em;white-space:nowrap;overflow:hidden;
+  color:#f2f5ff;text-shadow:0 1px 2px rgba(0,0,0,.8);padding:0 2px}
+.tk .ord,.tk .sp{display:none}
+.tk.now{transform:none;outline:2px solid var(--gold);outline-offset:0}
+/* 下の説明行は出さない（枠の明滅と光るマスで伝わる） */
+.hint{display:none}
+/* 向き。基本（縦持ち）：自陣＝s0 が下で左向き、敵陣＝s1 が上で右向き */
+.unit.s1 .pic .lay{transform:none}
+.unit.s0 .pic .lay{transform:scaleX(-1)}
+@media (orientation: landscape){
+  /* 横持ち（ふたり）：s0 が左・s1 が右。右側だけ裏返す */
+  #app.land .unit.s0 .pic .lay{transform:none}
+  #app.land .unit.s1 .pic .lay{transform:scaleX(-1)}
+  /* 横持ち（ひとり）：自分＝s0 が右、敵＝s1 が左 */
+  #app.land.solo .unit.s1 .pic .lay{transform:none}
+  #app.land.solo .unit.s0 .pic .lay{transform:scaleX(-1)}
+}
+/* 図鑑 */
+.detailbox .art .cost{display:none}
+.costchip{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;
+  background:linear-gradient(180deg,#ffe9a8,#d9a92e);color:#2a2005;font-size:10px;font-weight:900;
+  letter-spacing:.06em;pointer-events:none}
+.costchip b{font-size:13px}
+.detailbox .dhead .art{aspect-ratio:1/1.02;max-height:46svh}
+.detailbox .dhead .art .lay .cut{left:0;width:100%;top:2%;height:96%}
+.detailbox .dhead .dmeta{position:relative;padding:6px 34px}
+.navside{position:absolute;top:50%;transform:translateY(-50%);width:26px;height:34px;
+  border-radius:8px;border:1px solid #2c3854;background:linear-gradient(180deg,#1b2338,#121829);
+  color:var(--gold);font-size:13px;font-weight:900;cursor:pointer;font-family:inherit;padding:0}
+.navside.l{left:5px} .navside.r{right:5px}
+.navside:active{transform:translateY(-50%) scale(.94)}
+.navpos.small{display:block;text-align:center;font-size:10.5px;color:var(--dim);margin-top:6px}
+@media (orientation: landscape){
+  .detailbox .dhead .art{aspect-ratio:auto;max-height:none}
+}
 
 </style>
 </head>
@@ -7141,13 +7216,13 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         '<div class="art" data-play="0">' +
           '<div class="unit" data-wep="' + wep + '"><div class="pic">' +
             portraitTop(d.id, d.elem) + '</div></div>' +
-          (isFinite(E.costCap()) ? '<div class="cost">' + d.cost + '</div>' : '') +
           '<div class="ovbox">' +
             '<div class="hd"><h3>' + d.name + '</h3><em>' + d.en + '</em></div>' +
             '<div class="chiprow">' +
               '<button class="lnchip" data-line="' + ln + '" style="--lc:' + L.c + '">' +
                 '<i class="lg">' + ln + '</i>' + L.name + '<span class="ic">i</span></button>' +
               tierStripHTML(d) +
+              (isFinite(E.costCap()) ? '<span class="costchip">コスト <b>' + d.cost + '</b></span>' : '') +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -7389,12 +7464,16 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       m.innerHTML = '<div class="box detailbox">' +
         '<div class="cardwrap">' + detailHTML(E.BY_ID[cid]) + '</div>' +
         (list.length > 1
-          ? '<div class="navrow big merged">' +
-            '<button class="navb wide" data-nav="-1">◀ 前のカード</button>' +
-            '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +
-            '<button class="navb wide" data-nav="1">次のカード ▶</button></div>'
+          ? '<span class="navpos small">' + (idx + 1) + ' / ' + list.length + '</span>'
           : '') +
         '<button class="btn ghost" id="dclose" style="width:100%;margin-top:8px">閉じる</button></div>';
+      /* v93: 前後の矢印は中段（体力・攻撃・素早）の左右端に置く。1行ぶんの節約 */
+      if (list.length > 1) {
+        var dm = $('.dmeta', m);
+        if (dm) dm.insertAdjacentHTML('beforeend',
+          '<button class="navside l" data-nav="-1" aria-label="前のカード">◀</button>' +
+          '<button class="navside r" data-nav="1" aria-label="次のカード">▶</button>');
+      }
       $$('[data-nav]', m).forEach(function (b) {
         b.onclick = function (ev) {
           ev.stopPropagation();
@@ -7497,6 +7576,13 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
           '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +
           '<button class="navb wide" data-nav="1">次のキャラ ▶</button></div>' +
         '<button class="btn ghost" id="uclose" style="width:100%;margin-top:8px">閉じる</button></div>';
+      /* v93: 前後の矢印は中段（体力・攻撃・素早）の左右端に置く。1行ぶんの節約 */
+      if (list.length > 1) {
+        var dm = $('.dmeta', m);
+        if (dm) dm.insertAdjacentHTML('beforeend',
+          '<button class="navside l" data-nav="-1" aria-label="前のカード">◀</button>' +
+          '<button class="navside r" data-nav="1" aria-label="次のカード">▶</button>');
+      }
       $$('[data-nav]', m).forEach(function (b) {
         b.onclick = function (ev) {
           ev.stopPropagation();
@@ -9610,21 +9696,15 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     var order = st.order.map(function (uid, i) {
       var u = E.findUid(st, uid);
       var c = 'tk s' + u.side + (i < st.turnIdx ? ' done' : '') + (!u.alive ? ' dead' : '') + (actor && u.uid === actor.uid ? ' now' : '');
+      /* v93: 似顔絵ではなく「陣営色の帯に名前」。4文字まで */
       return '<div class="' + c + '" data-order="' + uid + '" data-idx="' + i + '">' +
-        ART.portrait(u.defId, u.def.elem) +
-        '<span class="ord">' + (i + 1) + '</span>' +
-        '<span class="sp">⚡' + ((metaOf(st, uid) || {}).spd != null ? metaOf(st, uid).spd : E.getSpd(u, st)) + '</span></div>';
+        '<span class="tn">' + u.def.name.slice(0, 4) + '</span></div>';
     }).join('');
 
     var p2name = st.players[1].name, p1name = st.players[0].name;
     app.innerHTML =
       '<div class="hdr">' + battleBarHTML(st) + '</div>' +
-      '<div class="orderline">' +
-        '<span class="lb">行動順</span>' +
-        '<span class="lg"><i class="d0"></i>' + sideName(0) + '</span>' +
-        '<span class="lg"><i class="d1"></i>' + sideName(1) + '</span>' +
-        '<button class="ordbtn" id="ordq">なぜこの順番？</button>' +
-      '</div>' +
+      /* v93: 「行動順／自軍／敵軍／なぜこの順番？」の行は消し、帯だけにする（根拠はバー長押しで） */
       '<div class="turnbar" id="turnbar">' + order + '</div>' +
       '<div class="field">' +
         '<div class="side-tag s1"><span class="dot"></span>' + p2name + ' <span class="stats">' + sideStats(1) + '</span></div>' +

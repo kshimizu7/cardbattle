@@ -364,13 +364,13 @@
         '<div class="art" data-play="0">' +
           '<div class="unit" data-wep="' + wep + '"><div class="pic">' +
             portraitTop(d.id, d.elem) + '</div></div>' +
-          (isFinite(E.costCap()) ? '<div class="cost">' + d.cost + '</div>' : '') +
           '<div class="ovbox">' +
             '<div class="hd"><h3>' + d.name + '</h3><em>' + d.en + '</em></div>' +
             '<div class="chiprow">' +
               '<button class="lnchip" data-line="' + ln + '" style="--lc:' + L.c + '">' +
                 '<i class="lg">' + ln + '</i>' + L.name + '<span class="ic">i</span></button>' +
               tierStripHTML(d) +
+              (isFinite(E.costCap()) ? '<span class="costchip">コスト <b>' + d.cost + '</b></span>' : '') +
             '</div>' +
           '</div>' +
         '</div>' +
@@ -612,12 +612,16 @@
       m.innerHTML = '<div class="box detailbox">' +
         '<div class="cardwrap">' + detailHTML(E.BY_ID[cid]) + '</div>' +
         (list.length > 1
-          ? '<div class="navrow big merged">' +
-            '<button class="navb wide" data-nav="-1">◀ 前のカード</button>' +
-            '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +
-            '<button class="navb wide" data-nav="1">次のカード ▶</button></div>'
+          ? '<span class="navpos small">' + (idx + 1) + ' / ' + list.length + '</span>'
           : '') +
         '<button class="btn ghost" id="dclose" style="width:100%;margin-top:8px">閉じる</button></div>';
+      /* v93: 前後の矢印は中段（体力・攻撃・素早）の左右端に置く。1行ぶんの節約 */
+      if (list.length > 1) {
+        var dm = $('.dmeta', m);
+        if (dm) dm.insertAdjacentHTML('beforeend',
+          '<button class="navside l" data-nav="-1" aria-label="前のカード">◀</button>' +
+          '<button class="navside r" data-nav="1" aria-label="次のカード">▶</button>');
+      }
       $$('[data-nav]', m).forEach(function (b) {
         b.onclick = function (ev) {
           ev.stopPropagation();
@@ -720,6 +724,13 @@
           '<span class="navpos">' + (idx + 1) + ' / ' + list.length + '</span>' +
           '<button class="navb wide" data-nav="1">次のキャラ ▶</button></div>' +
         '<button class="btn ghost" id="uclose" style="width:100%;margin-top:8px">閉じる</button></div>';
+      /* v93: 前後の矢印は中段（体力・攻撃・素早）の左右端に置く。1行ぶんの節約 */
+      if (list.length > 1) {
+        var dm = $('.dmeta', m);
+        if (dm) dm.insertAdjacentHTML('beforeend',
+          '<button class="navside l" data-nav="-1" aria-label="前のカード">◀</button>' +
+          '<button class="navside r" data-nav="1" aria-label="次のカード">▶</button>');
+      }
       $$('[data-nav]', m).forEach(function (b) {
         b.onclick = function (ev) {
           ev.stopPropagation();
@@ -2833,21 +2844,15 @@
     var order = st.order.map(function (uid, i) {
       var u = E.findUid(st, uid);
       var c = 'tk s' + u.side + (i < st.turnIdx ? ' done' : '') + (!u.alive ? ' dead' : '') + (actor && u.uid === actor.uid ? ' now' : '');
+      /* v93: 似顔絵ではなく「陣営色の帯に名前」。4文字まで */
       return '<div class="' + c + '" data-order="' + uid + '" data-idx="' + i + '">' +
-        ART.portrait(u.defId, u.def.elem) +
-        '<span class="ord">' + (i + 1) + '</span>' +
-        '<span class="sp">⚡' + ((metaOf(st, uid) || {}).spd != null ? metaOf(st, uid).spd : E.getSpd(u, st)) + '</span></div>';
+        '<span class="tn">' + u.def.name.slice(0, 4) + '</span></div>';
     }).join('');
 
     var p2name = st.players[1].name, p1name = st.players[0].name;
     app.innerHTML =
       '<div class="hdr">' + battleBarHTML(st) + '</div>' +
-      '<div class="orderline">' +
-        '<span class="lb">行動順</span>' +
-        '<span class="lg"><i class="d0"></i>' + sideName(0) + '</span>' +
-        '<span class="lg"><i class="d1"></i>' + sideName(1) + '</span>' +
-        '<button class="ordbtn" id="ordq">なぜこの順番？</button>' +
-      '</div>' +
+      /* v93: 「行動順／自軍／敵軍／なぜこの順番？」の行は消し、帯だけにする（根拠はバー長押しで） */
       '<div class="turnbar" id="turnbar">' + order + '</div>' +
       '<div class="field">' +
         '<div class="side-tag s1"><span class="dot"></span>' + p2name + ' <span class="stats">' + sideStats(1) + '</span></div>' +
