@@ -156,7 +156,7 @@ var CB = (function () {
       hpT:6, atkT:4, spd:5,
       actions:[
         {key:'bite',  name:'噛みつき',   kind:'dmg', range:'melee', dtype:'phys', fx:'slash'},
-        {key:'spark', name:'熾火の息', kind:'dmg', range:'row', dtype:'magic', power:4, fx:'ember', cd:2, startCd:1}
+        {key:'spark', name:'熾火の息', kind:'dmg', range:'row', dtype:'magic', power:5, fx:'ember', cd:2, startCd:1}   /* v94: 4→5 */
       ],
       passives:['dragonscale'],
       flavor:'まだ空は飛べない。だが、その鱗はもう刃を弾く。' },
@@ -165,7 +165,7 @@ var CB = (function () {
       hpT:7, atkT:5, spd:3,
       actions:[
         {key:'talon',  name:'竜爪', kind:'dmg', range:'melee', dtype:'phys', fx:'dclaw'},
-        {key:'breath', name:'業火のブレス', kind:'dmg', range:'row', dtype:'magic', power:7, fx:'breath', cd:2, startCd:1}
+        {key:'breath', name:'業火のブレス', kind:'dmg', range:'row', dtype:'magic', power:8, fx:'breath', cd:2, startCd:1}   /* v94: 7→8 */
       ],
       passives:['dragonscale'],
       flavor:'炎を吐くには息を溜めねばならぬ。だがその一息が戦を決める。' },
@@ -189,7 +189,7 @@ var CB = (function () {
       hpT:6, atkT:2, spd:4,
       actions:[
         {key:'light',   name:'聖なる裁き', kind:'dmg', range:'pierce', dtype:'magic', power:5, fx:'holy', backRatio:0.6},
-        {key:'mass',    name:'大治癒', kind:'heal', range:'all_ally', value:7, fx:'heal', cd:2},
+        {key:'mass',    name:'大治癒', kind:'heal', range:'all_ally', value:5, fx:'heal', cd:2},   /* v94: 7→5（回復量が多すぎた） */
         {key:'martyr',  name:'殉教', kind:'revive', range:'dead_ally', fx:'revive', uses:1}
       ],
       passives:['longreach'],   /* 後衛からでも聖なる裁きを撃てる。大治癒を切る間を自分で選べる */

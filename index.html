@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="93">
+<meta name="app-version" content="94">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -2379,6 +2379,44 @@ body.shake{animation:shk2 .56s}
   .detailbox .dhead .art{aspect-ratio:auto;max-height:none}
 }
 
+/* =========================================================
+   v94: 操作パネルの行を消し、オートを上段へ。板をさらに細く。溜を読めるように
+   ========================================================= */
+/* 上段バー：⚡（1回オート）🤖（全部オート）を追加。× は少し離す */
+.hdr .b-quit,.panelbar .b-quit{margin-left:10px}
+.hdr .b-autoall.on-gold,.panelbar .b-autoall.on-gold{border-color:var(--gold);color:var(--gold);
+  box-shadow:0 0 8px rgba(242,198,92,.45)}
+.hdr .b-autoall b,.panelbar .b-autoall b{font-size:9px;margin-left:1px}
+/* 板：数字ぶんの幅だけ。体力バーを長く */
+.unit .spb,.unit .atb{min-width:27px}
+.unit .spb{padding:4px 2px 0 10px}
+.unit .atb{padding:4px 8px 0 2px}
+.unit .hpb,.unit .hpn{left:30px;right:29px}
+@media (orientation: portrait){
+  .unit .spb,.unit .atb{min-width:26px}
+  .unit .spb{padding:4px 2px 0 9px}
+  .unit .atb{padding:4px 8px 0 2px}
+  .unit .hpb,.unit .hpn{left:29px;right:28px}
+  /* 手番の行が無くなったぶん、枠を正方形まで */
+  .unit{aspect-ratio:1/1}
+}
+@media (orientation: portrait) and (max-height:730px){
+  .unit{aspect-ratio:1/0.92}
+}
+@media (orientation: landscape){
+  .unit .hpb,.unit .hpn{left:32px;right:31px}
+}
+/* 溜：金の縁の丸に、数字を大きく。右下の攻撃の板のすぐ上 */
+.unit .cdb{top:auto;bottom:24px;right:4px;left:auto;width:27px;height:27px;min-width:0;border-radius:50%;
+  background:rgba(6,9,17,.94);border:2px solid var(--gold);color:var(--gold);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  font-size:8px;font-weight:900;line-height:1;padding:0;box-shadow:0 0 6px rgba(0,0,0,.85);z-index:5}
+.unit .cdb b{font-size:13px;line-height:1;color:#fff}
+/* 横持ちは操作パネルの「行動順」にオートの2つがあるので、上段バーには出さない（× が押し出されるため） */
+@media (orientation: landscape){
+  #app.land .panelbar .b-auto1,#app.land .panelbar .b-autoall{display:none}
+}
+
 </style>
 </head>
 <body>
@@ -2544,7 +2582,7 @@ var CB = (function () {
       hpT:6, atkT:4, spd:5,
       actions:[
         {key:'bite',  name:'噛みつき',   kind:'dmg', range:'melee', dtype:'phys', fx:'slash'},
-        {key:'spark', name:'熾火の息', kind:'dmg', range:'row', dtype:'magic', power:4, fx:'ember', cd:2, startCd:1}
+        {key:'spark', name:'熾火の息', kind:'dmg', range:'row', dtype:'magic', power:5, fx:'ember', cd:2, startCd:1}   /* v94: 4→5 */
       ],
       passives:['dragonscale'],
       flavor:'まだ空は飛べない。だが、その鱗はもう刃を弾く。' },
@@ -2553,7 +2591,7 @@ var CB = (function () {
       hpT:7, atkT:5, spd:3,
       actions:[
         {key:'talon',  name:'竜爪', kind:'dmg', range:'melee', dtype:'phys', fx:'dclaw'},
-        {key:'breath', name:'業火のブレス', kind:'dmg', range:'row', dtype:'magic', power:7, fx:'breath', cd:2, startCd:1}
+        {key:'breath', name:'業火のブレス', kind:'dmg', range:'row', dtype:'magic', power:8, fx:'breath', cd:2, startCd:1}   /* v94: 7→8 */
       ],
       passives:['dragonscale'],
       flavor:'炎を吐くには息を溜めねばならぬ。だがその一息が戦を決める。' },
@@ -2577,7 +2615,7 @@ var CB = (function () {
       hpT:6, atkT:2, spd:4,
       actions:[
         {key:'light',   name:'聖なる裁き', kind:'dmg', range:'pierce', dtype:'magic', power:5, fx:'holy', backRatio:0.6},
-        {key:'mass',    name:'大治癒', kind:'heal', range:'all_ally', value:7, fx:'heal', cd:2},
+        {key:'mass',    name:'大治癒', kind:'heal', range:'all_ally', value:5, fx:'heal', cd:2},   /* v94: 7→5（回復量が多すぎた） */
         {key:'martyr',  name:'殉教', kind:'revive', range:'dead_ally', fx:'revive', uses:1}
       ],
       passives:['longreach'],   /* 後衛からでも聖なる裁きを撃てる。大治癒を切る間を自分で選べる */
@@ -9663,10 +9701,18 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
 
   /* 戦闘中の共通バー。縦持ちでは画面上段に、横持ちでは右パネルの上部に置く。
      同じ中身を2箇所に出すため、IDではなくクラスで拾う。 */
+  /* いま手番の陣営（ふたり対戦では押した人の陣営が切り替わる） */
+  function actorSide(st) {
+    var a = st && E.currentActor(st);
+    return a ? a.side : 0;
+  }
   function battleBarHTML(st) {
     return '<span class="t">R' + st.round +
         '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
       '<span class="sp" style="flex:1"></span>' +
+      /* v94: 操作パネルの行を消したので、そこにしか無かった「1回オート」「全部オート」をここに置く */
+      '<button class="btn small ghost ico b-auto1" data-auto="one" title="このターンだけAIに任せる">⚡</button>' +
+      autoAllBtnHTML(actorSide(st), 'btn small ghost ico b-autoall') +
       '<button class="btn small ghost ico b-fs" title="全画面">⛶</button>' +
       (S.compact
         ? '<button class="btn small ghost ico b-disp" title="表示設定">⚙</button>'
@@ -9837,7 +9883,8 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     return '<button class="' + cls + (on ? (cls.indexOf('autob') === 0 ? ' on' : ' on-gold') : '') + '"' +
       ' data-auto="all" data-side="' + side + '"' +
       ' title="' + (S.mode === 'pvp' ? 'プレイヤー' + (side + 1) : '自分') + 'の行動をすべてAIに任せる">' +
-      '🤖' + (cls.indexOf('autob') === 0 ? '<b>' + who + (on ? 'ON' : '全部') + '</b>' : who + '全部') + '</button>';
+      '🤖' + (cls.indexOf('b-autoall') >= 0 ? (on ? '<b>ON</b>' : '') :
+              cls.indexOf('autob') === 0 ? '<b>' + who + (on ? 'ON' : '全部') + '</b>' : who + '全部') + '</button>';
   }
 
   /** おまかせ2種の結線。待機中も押せる（自動の解除ができるように）。 */
@@ -9903,7 +9950,13 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       var o = opts.filter(function (x) { return x.action.key === a.key; })[0];
       var sub = '';
       if (a.kind === 'dmg') sub = '威力' + (a.power != null ? a.power : E.getAtk(u, st)) +
-        (a.hits ? '×' + a.hits + '回' : '') + '・' + E.RANGE_TEXT[a.range];
+        (a.hits ? '×' + a.hits + '回' : '') + '・' + E.RANGE_TEXT[a.range] +
+        (a.backRatio ? '（後方へは' + Math.round(a.backRatio * 100) + '%）' : '') +
+        /* v94: 弱体や特殊効果もここに書く（図鑑と同じ言葉で） */
+        (a.slow ? '・鈍' + a.slow + '（素早さ-' + a.slow + '・1R）' : '') +
+        (a.weaken ? '・弱' + a.weaken + '（攻撃-' + a.weaken + '・2R）' : '') +
+        (a.curse ? '・呪' + a.curse + '（毎R' + a.curse + '・3R）' : '') +
+        (a.burn ? '・燃' + a.burn + '（毎R' + a.burn + '・3R）' : '');
       else if (a.kind === 'heal') sub = '回復' + a.value + '・' + E.RANGE_TEXT[a.range];
       else if (a.kind === 'ward') sub = '味方の被魔法-' + a.value;
       else if (a.kind === 'revive') sub = '自己犠牲で味方を蘇生';
@@ -9923,13 +9976,9 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     if (guardOpt) btns += '<button class="act' + (S.selAct === 'guard' ? ' on' : '') + '" data-act="guard">' +
       (S.selAct === 'guard' ? '<span class="tapgo">▶</span>' : '') + '防御<small>攻撃できない・被ダメ-2</small></button>';
 
+    /* v94: 手番の者の行（似顔絵・詳細・1回・全部）は消した。
+       手番は盤面の金の枠で分かり、詳細は長押し、オートは上段バーに移した */
     panel.innerHTML = shell(
-      '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-      '<div class="who">' + u.def.name + '<small>' + (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
-      '　HP ' + u.hp + '/' + u.maxHp + '　⚡' + E.getSpd(u, st) + '</small></div>' +
-      '<button class="btn small ghost" id="info">詳細</button>' +
-      '<button class="btn small ghost" id="auto" data-auto="one" title="このターンだけAIに任せる">⚡1回</button>' +
-      autoAllBtnHTML(u.side, 'btn small ghost') + '</div>' +
       '<div class="acts">' + btns + '</div>' +
       '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>', st);
     bindBattleBar();
@@ -9950,7 +9999,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         S.selAct = k; renderActions();
       };
     });
-    $('#info').onclick = function () {
+    if ($('#info')) $('#info').onclick = function () {
       openDetail(u.defId, E.aliveUnits(st, u.side).map(function (v) { return v.defId; }));
     };
     function autoOnce() {

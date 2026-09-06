@@ -2811,10 +2811,18 @@
 
   /* 戦闘中の共通バー。縦持ちでは画面上段に、横持ちでは右パネルの上部に置く。
      同じ中身を2箇所に出すため、IDではなくクラスで拾う。 */
+  /* いま手番の陣営（ふたり対戦では押した人の陣営が切り替わる） */
+  function actorSide(st) {
+    var a = st && E.currentActor(st);
+    return a ? a.side : 0;
+  }
   function battleBarHTML(st) {
     return '<span class="t">R' + st.round +
         '<small style="color:var(--dim)">/' + E.MAX_ROUNDS + '</small></span>' +
       '<span class="sp" style="flex:1"></span>' +
+      /* v94: 操作パネルの行を消したので、そこにしか無かった「1回オート」「全部オート」をここに置く */
+      '<button class="btn small ghost ico b-auto1" data-auto="one" title="このターンだけAIに任せる">⚡</button>' +
+      autoAllBtnHTML(actorSide(st), 'btn small ghost ico b-autoall') +
       '<button class="btn small ghost ico b-fs" title="全画面">⛶</button>' +
       (S.compact
         ? '<button class="btn small ghost ico b-disp" title="表示設定">⚙</button>'
@@ -2985,7 +2993,8 @@
     return '<button class="' + cls + (on ? (cls.indexOf('autob') === 0 ? ' on' : ' on-gold') : '') + '"' +
       ' data-auto="all" data-side="' + side + '"' +
       ' title="' + (S.mode === 'pvp' ? 'プレイヤー' + (side + 1) : '自分') + 'の行動をすべてAIに任せる">' +
-      '🤖' + (cls.indexOf('autob') === 0 ? '<b>' + who + (on ? 'ON' : '全部') + '</b>' : who + '全部') + '</button>';
+      '🤖' + (cls.indexOf('b-autoall') >= 0 ? (on ? '<b>ON</b>' : '') :
+              cls.indexOf('autob') === 0 ? '<b>' + who + (on ? 'ON' : '全部') + '</b>' : who + '全部') + '</button>';
   }
 
   /** おまかせ2種の結線。待機中も押せる（自動の解除ができるように）。 */
@@ -3051,7 +3060,13 @@
       var o = opts.filter(function (x) { return x.action.key === a.key; })[0];
       var sub = '';
       if (a.kind === 'dmg') sub = '威力' + (a.power != null ? a.power : E.getAtk(u, st)) +
-        (a.hits ? '×' + a.hits + '回' : '') + '・' + E.RANGE_TEXT[a.range];
+        (a.hits ? '×' + a.hits + '回' : '') + '・' + E.RANGE_TEXT[a.range] +
+        (a.backRatio ? '（後方へは' + Math.round(a.backRatio * 100) + '%）' : '') +
+        /* v94: 弱体や特殊効果もここに書く（図鑑と同じ言葉で） */
+        (a.slow ? '・鈍' + a.slow + '（素早さ-' + a.slow + '・1R）' : '') +
+        (a.weaken ? '・弱' + a.weaken + '（攻撃-' + a.weaken + '・2R）' : '') +
+        (a.curse ? '・呪' + a.curse + '（毎R' + a.curse + '・3R）' : '') +
+        (a.burn ? '・燃' + a.burn + '（毎R' + a.burn + '・3R）' : '');
       else if (a.kind === 'heal') sub = '回復' + a.value + '・' + E.RANGE_TEXT[a.range];
       else if (a.kind === 'ward') sub = '味方の被魔法-' + a.value;
       else if (a.kind === 'revive') sub = '自己犠牲で味方を蘇生';
@@ -3071,13 +3086,9 @@
     if (guardOpt) btns += '<button class="act' + (S.selAct === 'guard' ? ' on' : '') + '" data-act="guard">' +
       (S.selAct === 'guard' ? '<span class="tapgo">▶</span>' : '') + '防御<small>攻撃できない・被ダメ-2</small></button>';
 
+    /* v94: 手番の者の行（似顔絵・詳細・1回・全部）は消した。
+       手番は盤面の金の枠で分かり、詳細は長押し、オートは上段バーに移した */
     panel.innerHTML = shell(
-      '<div class="actor-line"><div class="mini">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-      '<div class="who">' + u.def.name + '<small>' + (u.row === 0 ? '前衛' : '後衛') + (u.col === 0 ? '左' : u.col === 1 ? '中央' : '右') +
-      '　HP ' + u.hp + '/' + u.maxHp + '　⚡' + E.getSpd(u, st) + '</small></div>' +
-      '<button class="btn small ghost" id="info">詳細</button>' +
-      '<button class="btn small ghost" id="auto" data-auto="one" title="このターンだけAIに任せる">⚡1回</button>' +
-      autoAllBtnHTML(u.side, 'btn small ghost') + '</div>' +
       '<div class="acts">' + btns + '</div>' +
       '<div class="hint' + (S.hintSeen ? ' quiet' : '') + '" id="hint"></div>', st);
     bindBattleBar();
@@ -3098,7 +3109,7 @@
         S.selAct = k; renderActions();
       };
     });
-    $('#info').onclick = function () {
+    if ($('#info')) $('#info').onclick = function () {
       openDetail(u.defId, E.aliveUnits(st, u.side).map(function (v) { return v.defId; }));
     };
     function autoOnce() {
