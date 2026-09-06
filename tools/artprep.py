@@ -17,6 +17,7 @@ art_src/ の絵を、ゲームで使う形に整える。
 import os, sys, glob, io
 from PIL import Image
 import numpy as np
+from scipy import ndimage
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 try:
     from bgpaint import repaint          # 背景をこちらで決めた色に塗り替える
@@ -56,10 +57,6 @@ def bar(c0, c1, W, H):
 def prep(src, cid=None):
     im = src if isinstance(src, Image.Image) else Image.open(src)
     im = im.convert('RGB')
-    # 背景を、台帳で決めた色に塗り替える。
-    # 言葉で指定しても生成側は守らないので、ここで機械的に揃える
-    if repaint and cid in PALETTE:
-        im, _ = repaint(im, cid)
     if im.size[0] != im.size[1]:
         s = min(im.size); im = im.crop(((im.size[0]-s)//2, (im.size[1]-s)//2,
                                         (im.size[0]-s)//2+s, (im.size[1]-s)//2+s))
@@ -72,21 +69,27 @@ def prep(src, cid=None):
     r = im.resize((nw, nh), Image.LANCZOS)
     oy, ox = round(H*TOP - t*s), (W - nw)//2
 
-    out = Image.new('RGB', (W, H))
-    top_c, bot_c = edge_color(im, 0, max(2, t)), edge_color(im, b, max(2, H-b))
-    tb = bar(top_c*0.86, top_c, W, max(0, oy))            # 上へ行くほど少し暗く
-    if tb: out.paste(tb, (0, 0))
-    by = oy + nh
-    bb = bar(bot_c, bot_c*0.80, W, max(0, H-by))          # 下へ行くほど暗く
-    if bb: out.paste(bb, (0, by))
-    if ox > 0:                                            # 左右は、行ごとの背景色で埋める
-        a = np.asarray(r.convert('RGB')).astype(float)
-        lcol = np.median(a[:, :max(2, int(nw*0.03))], axis=1)     # 各行の左端の色
-        rcol = np.median(a[:, nw-max(2, int(nw*0.03)):], axis=1)  # 各行の右端の色
-        lbar = Image.fromarray(np.repeat(lcol[:, None, :], ox+1, axis=1).astype(np.uint8), 'RGB')
-        rbar = Image.fromarray(np.repeat(rcol[:, None, :], W-ox-nw+1, axis=1).astype(np.uint8), 'RGB')
-        out.paste(lbar, (0, oy)); out.paste(rbar, (ox+nw-1, oy))
-    out.paste(r, (ox, oy))
+    # 余白は「元の絵の端を外へ伸ばし、そのあとぼかす」ことで作る。
+    # 平らな色で埋めると継ぎ目に段差が出るし、行ごとの色を伸ばすと
+    # 人物が端まで来ている行で横向きの筋になる。伸ばしてぼかせば、どちらも起きない。
+    a = np.asarray(r.convert('RGB')).astype(np.float32)
+    canvas = np.zeros((H, W, 3), np.float32)
+    ys = np.clip(np.arange(H) - oy, 0, nh - 1)
+    xs = np.clip(np.arange(W) - ox, 0, nw - 1)
+    canvas[:, :, :] = a[ys[:, None], xs[None, :], :]     # 端を外へ伸ばす
+    pad = np.ones((H, W), np.float32)                    # 1=余白 / 0=元の絵
+    y0, y1 = max(0, oy), min(H, oy + nh)
+    x0, x1 = max(0, ox), min(W, ox + nw)
+    pad[y0:y1, x0:x1] = 0.0
+    if pad.any():
+        soft = ndimage.gaussian_filter(pad, 16.0)[..., None]
+        blur = np.stack([ndimage.gaussian_filter(canvas[..., c], 70.0) for c in range(3)], -1)
+        canvas = canvas * (1 - soft) + blur * soft
+    out = Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8), 'RGB')
+    # 背景を、台帳で決めた色に塗り替える。
+    # 余白を足したあとに行う。先に塗ると、継ぎ足した帯との境目に線が出る
+    if repaint and cid in PALETTE:
+        out, _ = repaint(out, cid)
     return out
 
 def read_sheets():

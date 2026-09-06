@@ -162,9 +162,13 @@ def repaint(img, name, glow=True):
     num = ndimage.gaussian_filter(lab[..., 0] * w, sig)
     den = ndimage.gaussian_filter(w, sig)
     base = num / np.maximum(den, 1e-6)
-    base = np.where(den > 0.02, base, rowbg[:, None, 0])
+    # 人物が横いっぱいに広がっている行では、まわりに背景の画素が少なく、
+    # 推定した面が暴れる。そこは「自信のなさ」に応じてズレを弱め、
+    # 横向きの筋が出ないようにする。
+    conf = np.clip(den / 0.08, 0, 1)
+    base = base * conf + rowbg[:, None, 0] * (1 - conf)
     # 面からの細かいズレだけを、新しい色へ移す（弦のような細い線がここに残る）
-    dL = np.clip(lab[..., 0] - base, -22, 22)
+    dL = np.clip(lab[..., 0] - base, -16, 16) * conf
     newlab = np.stack([np.clip(tgtL + dL, 2, 98),
                        np.full((H, W), ta), np.full((H, W), tb)], -1)
     grad = lab_to_srgb(newlab)
