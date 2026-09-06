@@ -28,6 +28,17 @@ def srgb_to_lab(a):
     f = np.where(xyz > 0.008856, np.cbrt(xyz), 7.787*xyz + 16/116.0)
     return np.stack([116*f[...,1]-16, 500*(f[...,0]-f[...,1]), 200*(f[...,1]-f[...,2])], -1)
 
+def lab_to_srgb(lab):
+    fy = (lab[...,0] + 16) / 116.0
+    fx = fy + lab[...,1] / 500.0
+    fz = fy - lab[...,2] / 200.0
+    def g(t): return np.where(t**3 > 0.008856, t**3, (t - 16/116.0) / 7.787)
+    xyz = np.stack([g(fx)*0.9505, g(fy)*1.0, g(fz)*1.089], -1)
+    M = np.array([[3.2406,-1.5372,-0.4986],[-0.9689,1.8758,0.0415],[0.0557,-0.2040,1.0570]])
+    c = np.clip(xyz @ M.T, 0, 1)
+    c = np.where(c <= 0.0031308, 12.92*c, 1.055*(c**(1/2.4)) - 0.055)
+    return np.clip(c, 0, 1) * 255.0
+
 def bg_mask(rgb, tol=13.0, edge=0.04):
     """背景とみなす画素。
 
@@ -55,8 +66,9 @@ def bg_mask(rgb, tol=13.0, edge=0.04):
         sizes = ndimage.sum(core, lbl, range(1, n+1))
         big = [i+1 for i, v in enumerate(sizes) if v > core.size * 0.004]
         core = np.isin(lbl, big)
-    # 少しだけ内側へ削る。人物のまわりに元の背景が輪として残らないように
-    core = ndimage.binary_erosion(core, np.ones((5,5)))
+    # ここで人物を一律に削ってはいけない。弓の弦、ぼろ布をつなぐ細い筋、
+    # 触角のような細い部分は、数ピクセルしかないので消し飛んでしまう。
+    # 人物のまわりに残る元の背景は、このあと「色で確かめながら」削り取る。
     # 穴埋め（fill_holes）で人物に取り込んでしまった「背景の島」を、核から外す。
     # 弓と弦のあいだ、浮遊する環の内側などが、ここで人物側に飲み込まれていた。
     #
@@ -95,25 +107,58 @@ def bg_mask(rgb, tol=13.0, edge=0.04):
             if (i+1) not in keep and med[i] < tol and sizes[i] > 40:
                 keep.add(i+1)
     m = np.isin(lbl, list(keep))
+
+    # 人物のまわりに残った元の背景を、色を確かめながら1段ずつ削り取る。
+    # 「いま背景と決まっている場所のとなり」で、かつ「その行の背景色と一致する」
+    # 画素だけを背景に加える。細い弦やぼろ布は色が違うので、削られない。
+    step = np.ones((3, 3), bool)
+    for _ in range(7):
+        cand = ndimage.binary_dilation(m, step) & ~m & (dist < 11.0)
+        if not cand.any(): break
+        m = m | cand
     return m, rowbg
 
 def repaint(img, name, glow=True):
+    """背景の色みだけを差し替える。明るさの起伏はそのまま残す。
+
+      背景を単色で塗りつぶすと、そこにあった弱い模様まで消える。
+      弓の弦のように、背景とほとんど同じ明るさの細い線は、これで消えてしまう。
+      そこで塗りつぶさず、**その行の背景色からのズレ（明暗）を保ったまま**、
+      色み（色相と鮮やかさ）だけを指定色に置き換える。
+      ・平らな背景 … ズレ0なので、指定色そのものになる
+      ・弦や薄い筋 … 少し明るいズレとして残り、指定色の中に線として見える
+      ・人物のまわりのにじみ … 少し暗いズレとして残り、影として自然に見える
+    """
     rgb = np.array(img.convert('RGB'))
     H, W, _ = rgb.shape
     m, rowbg = bg_mask(rgb)
+    lab = srgb_to_lab(rgb)
     L, C, h = PALETTE[name]
     # 上を少し明るく、下を少し暗く（共通指定の「ごく緩やかなグラデーション」）
     ys = np.linspace(0, 1, H)[:, None]
-    top, bot = L + 7, L - 9
-    grad = np.zeros((H, W, 3), np.float64)
-    for i in range(H):
-        grad[i, :, :] = lch_to_rgb(top + (bot-top)*ys[i,0], C, h)
-    if glow:  # 人物の後ろにごく淡い光。真っ平らにしないため
+    tgtL = (L + 7) + ((L - 9) - (L + 7)) * ys                    # (H,1)
+    ta = C * math.cos(math.radians(h))
+    tb = C * math.sin(math.radians(h))
+    if glow:   # 人物の後ろにごく淡い光。真っ平らにしないため
         yy, xx = np.mgrid[0:H, 0:W]
         r = np.sqrt(((xx-W*0.5)/(W*0.62))**2 + ((yy-H*0.42)/(H*0.72))**2)
-        g = np.clip(1.0 - r, 0, 1)**2
-        grad = np.clip(grad * (1.0 + 0.16*g[..., None]), 0, 255)
-    soft = ndimage.gaussian_filter(m.astype(np.float64), 1.6)[..., None]
+        tgtL = tgtL + 5.0 * np.clip(1.0 - r, 0, 1)**2
+    else:
+        tgtL = np.broadcast_to(tgtL, (H, W))
+    # もとの背景の「なめらかな面」を作る（背景の画素だけから、ぼかして推定する）。
+    # 行ごとの中央値だと、人物が端まで来ている行で値が壊れ、四角い染みになる。
+    sig = max(6.0, W * 0.035)
+    w = m.astype(np.float64)
+    num = ndimage.gaussian_filter(lab[..., 0] * w, sig)
+    den = ndimage.gaussian_filter(w, sig)
+    base = num / np.maximum(den, 1e-6)
+    base = np.where(den > 0.02, base, rowbg[:, None, 0])
+    # 面からの細かいズレだけを、新しい色へ移す（弦のような細い線がここに残る）
+    dL = np.clip(lab[..., 0] - base, -22, 22)
+    newlab = np.stack([np.clip(tgtL + dL, 2, 98),
+                       np.full((H, W), ta), np.full((H, W), tb)], -1)
+    grad = lab_to_srgb(newlab)
+    soft = ndimage.gaussian_filter(m.astype(np.float64), 1.4)[..., None]
     out = rgb.astype(np.float64)*(1-soft) + grad*soft
     return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8)), float(m.mean())
 

@@ -111,9 +111,12 @@ def split_sheet(path, ids):
     W, H = im.size
     cw, ch = W // cols, H // rows
     out = []
+    # 枠のあいだの仕切り線を拾わないよう、少し内側で切る。
+    # 拾ってしまうと、背景を塗り替えたあとに細い明るい線として残る
+    ix, iy = int(cw*0.015), int(ch*0.015)
     for i, cid in enumerate(ids):
         r, c = i // cols, i % cols
-        out.append((cid, im.crop((c*cw, r*ch, (c+1)*cw, (r+1)*ch))))
+        out.append((cid, im.crop((c*cw+ix, r*ch+iy, (c+1)*cw-ix, (r+1)*ch-iy))))
     return out
 
 def main():
