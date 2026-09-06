@@ -2504,3 +2504,32 @@ body.shake{animation:shk2 .56s}
 .introfly{position:fixed;z-index:62;border-radius:10px;overflow:hidden;transform-origin:0 0;pointer-events:none}
 .introfly .art{position:absolute;inset:0}
 @media (prefers-reduced-motion:reduce){ .introcard,.introfly{display:none} }
+
+/* =========================================================
+   v98: 開幕の紹介「六枚同時」＋ 飛びながら切り出しへ寄せる
+   ========================================================= */
+.introfly .art .lay .cut{left:3%;top:4%;width:94%;height:92%}   /* 出発は全身。数値は JS が動かす */
+.introsix{position:fixed;left:4%;right:4%;top:calc(6% + 40px);bottom:calc(10% + 40px);z-index:62;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px;pointer-events:none}
+#app.land .introsix{left:8%;right:36%;top:6%;bottom:12%;gap:6px}
+.introsix .sixtag{position:absolute;left:0;top:-30px;font-size:11px;font-weight:900;letter-spacing:.15em;padding:3px 9px;border-radius:999px;border:1px solid}
+.introsix.s0 .sixtag{color:var(--p1);border-color:var(--p1)} .introsix.s1 .sixtag{color:var(--p2);border-color:var(--p2)}
+.sixcard{position:relative;transform:rotateY(180deg);transform-style:preserve-3d;border-radius:10px}
+.sixcard .face{position:absolute;inset:0;border-radius:10px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  border:1.5px solid var(--gold);background:#0b0f1b;box-shadow:0 10px 24px rgba(0,0,0,.6)}
+.sixcard .back{transform:rotateY(180deg);
+  background:radial-gradient(circle at 50% 42%,rgba(242,198,92,.25),transparent 38%),
+             repeating-linear-gradient(45deg,#0e1424 0 6px,#111a2e 6px 12px)}
+.sixcard .back::before{content:"";position:absolute;inset:7px;border:1px solid rgba(242,198,92,.45);border-radius:8px}
+.sixcard .back::after{content:"Ⅲ";position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);font-size:34px;font-weight:900;color:var(--gold);opacity:.7}
+.sixcard .art{position:absolute;inset:0}
+.sixcard .art .lay{width:100%;height:100%;border-radius:10px}
+/* 縦長の札：顔が上から3割の位置に来るよう、上寄せで切り出す（体は見切れてよい） */
+.sixcard .art .lay .cut{left:0;top:0;width:100%;height:100%;object-fit:cover;object-position:50% 10%}
+.sixcard .art.flipL .lay{transform:scaleX(-1)}
+/* 名前は下端に帯を敷いて読ませる */
+.sixcard .nm{position:absolute;left:0;right:0;bottom:0;padding:22px 4px 7px;display:flex;flex-direction:column;align-items:center;gap:1px;
+  background:linear-gradient(transparent,rgba(6,9,17,.82) 45%,rgba(6,9,17,.95))}
+.sixcard .nm b{font-size:13px;font-weight:900;letter-spacing:.04em;text-shadow:0 1px 3px #000,0 0 8px #000;white-space:nowrap}
+.sixcard .nm i{font-style:normal;font-size:9px;font-weight:800;color:#9fb0d0;letter-spacing:.1em;white-space:nowrap}
+@media (prefers-reduced-motion:reduce){ .introsix{display:none} }

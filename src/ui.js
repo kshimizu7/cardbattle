@@ -20,6 +20,7 @@
     st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, bgm: true, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
     compact: false, sideBySide: false, hintSeen: false,
+    introMode: 'one',   /* 開幕の紹介：one＝一体ずつ／six＝六枚同時／none＝なし */
     /* 全自動は陣営ごとに持つ。PvPでは P1だけ・P2だけ・両方(観戦) を選べる */
     autoSides: [false, false]
   };
@@ -102,7 +103,7 @@
       SAVE.setSettings({ sound: S.sound, bgm: S.bgm, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
                          compact: S.compact, sideBySide: S.sideBySide,
-                         hintSeen: S.hintSeen });
+                         hintSeen: S.hintSeen, intro: S.introMode });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -117,6 +118,7 @@
       if (typeof g.compact === 'boolean') S.compact = g.compact;
       if (typeof g.sideBySide === 'boolean') S.sideBySide = g.sideBySide;
       if (typeof g.hintSeen === 'boolean') S.hintSeen = g.hintSeen;
+      if (g.intro === 'one' || g.intro === 'six' || g.intro === 'none') S.introMode = g.intro;
     } catch (e) {}
   }
 
@@ -1861,6 +1863,11 @@
             }).join('') +
           '</div></div>'
           : '') +
+        '<div class="opt-group"><div class="opt-label">開幕の紹介</div><div class="opt-row">' +
+          [['one', '🃏 一体ずつ'], ['six', '🎴 六枚同時'], ['none', '⏭ なし']].map(function (o) {
+            return '<div class="opt' + (S.introMode === o[0] ? ' on' : '') + '" data-intro="' + o[0] + '">' + o[1] + '</div>';
+          }).join('') +
+        '</div></div>' +
         '<div class="opt-group"><div class="opt-label">対戦モード</div><div class="opt-row">' +
           '<div class="opt' + (S.mode === 'pvp' ? ' on' : '') + '" data-mode="pvp">👥 ふたりで対戦<br><small style="font-weight:600;font-size:10px">1台を交代で</small></div>' +
           '<div class="opt' + (S.mode === 'cpu' ? ' on' : '') + '" data-mode="cpu">🤖 CPUと対戦<br><small style="font-weight:600;font-size:10px">ひとりで</small></div>' +
@@ -1902,6 +1909,7 @@
       '</div>';
     $$('[data-pool]').forEach(function (b) { b.onclick = function () { S.pool = b.dataset.pool; E.setPool(S.pool); rememberSettings(); renderTitle(); }; });
     $$('[data-deal]').forEach(function (b) { b.onclick = function () { S.deal = b.dataset.deal; E.setDealMode(S.deal); rememberSettings(); renderTitle(); }; });
+    $$('[data-intro]').forEach(function (b) { b.onclick = function () { S.introMode = b.dataset.intro; rememberSettings(); renderTitle(); }; });
     $$('[data-tgl]').forEach(function (b) { b.onclick = function () {
       var k = b.dataset.tgl;
       S[k] = !S[k];
@@ -2786,9 +2794,9 @@
     });
     S.gen = (S.gen || 0) + 1;
     S.screen = 'battle'; syncBgm();
-    S.intro = true;
+    S.intro = S.introMode !== 'none';
     renderBattle();
-    playIntro(function () {
+    (S.introMode === 'six' ? playIntroSix : S.introMode === 'none' ? function (f) { f(); } : playIntro)(function () {
       SFX.play('start');
       banner('BATTLE START', 'font-size:22px');
       wait(1100, function () { SFX.play('round'); banner('ROUND 1'); wait(900, step); });
@@ -2802,9 +2810,38 @@
      向きは盤面と同じ（自陣は左向き）なので、収まったあとに裏返らない。
      画面のタップか「スキップ」で残りを飛ばす。
      ========================================================= */
-  var INTRO = { appear: 180, flip: 360, hold: 600, fly: 360, gap: 60 };   /* 一体あたり約1.6秒。戦闘速度 x2/x4 でそのぶん速く */
-  function playIntro(done) {
-    var st = S.st, gen = S.gen;
+  var INTRO = { appear: 180, flip: 360, hold: 600, fly: 360, gap: 60 };
+  /* 盤面の切り出し（style.css の v95 と同じ数字）。飛びながらこの値へ寄せる */
+  var CROP = { full: { left: '3%', top: '4%', width: '94%', height: '92%' },
+               top:  { left: '-20%', top: '1%', width: '140%', height: '146%' },
+               big:  { left: '-11%', top: '-6%', width: '122%', height: '118%' } };
+  function cropOf(lay) {
+    return (lay && lay.classList.contains('v-big')) ? CROP.big : CROP.top;
+  }
+  /* fromEl の位置から cell の .pic へ、絵を飛ばす。切り出しも同時に寄せる */
+  function flyToCell(u, fromEl, cell, flip, dur, anims, onDone) {
+    var lay = $('.pic .lay', cell);
+    var from = fromEl.getBoundingClientRect(), to = $('.pic', cell).getBoundingClientRect();
+    var fly = document.createElement('div');
+    fly.className = 'introfly';
+    fly.style.cssText = 'left:' + from.left + 'px;top:' + from.top + 'px;width:' + from.width + 'px;height:' + from.height + 'px';
+    fly.innerHTML = '<div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>';
+    app.appendChild(fly);
+    var img = $('.cut', fly), target = cropOf(lay);
+    var a = fly.animate([{ transform: 'translate(0,0) scale(1,1)' },
+                         { transform: 'translate(' + (to.left - from.left) + 'px,' + (to.top - from.top) + 'px) scale(' +
+                           (to.width / from.width) + ',' + (to.height / from.height) + ')' }],
+                        { duration: dur, easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'forwards' });
+    var ai = img.animate([CROP.full, target], { duration: dur, easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'forwards' });
+    anims.push(a, ai);
+    a.onfinish = function () {
+      cell.classList.add('arrived');
+      var a2 = fly.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' });
+      anims.push(a2);
+      a2.onfinish = function () { fly.remove(); if (onDone) onDone(); };
+    };
+  }
+  function introUnits(st) {
     var units = [];
     [0, 1].forEach(function (side) {
       [0, 1].forEach(function (row) {
@@ -2813,6 +2850,15 @@
         });
       });
     });
+    return units;
+  }
+  function introMirrored(el) {
+    var t = el && getComputedStyle(el).transform;
+    return !!(t && /^matrix\(-1,/.test(t));
+  }   /* 一体あたり約1.6秒。戦闘速度 x2/x4 でそのぶん速く */
+  function playIntro(done) {
+    var st = S.st, gen = S.gen;
+    var units = introUnits(st);
     var ov = document.createElement('div');
     ov.className = 'introov';
     ov.innerHTML = '<button class="btn ghost introskip" type="button">スキップ ▶</button>';
@@ -2836,14 +2882,6 @@
       done();
     }
     ov.addEventListener('click', function (ev) { ev.stopPropagation(); finish(); });
-    function relRect(el) {   /* 画面座標（カードと飛ぶ絵は position:fixed） */
-      var r = el.getBoundingClientRect();
-      return { x: r.left, y: r.top, w: r.width, h: r.height };
-    }
-    function isMirrored(el) {
-      var t = el && getComputedStyle(el).transform;
-      return !!(t && /^matrix\(-1,/.test(t));
-    }
     var i = 0;
     function next() {
       if (over) return;
@@ -2852,7 +2890,7 @@
       var cell = $('.unit[data-uid="' + u.uid + '"]');
       if (!cell) { next(); return; }
       var lay = $('.pic .lay', cell);
-      var flip = isMirrored(lay);
+      var flip = introMirrored(lay);
       var card = document.createElement('div');
       card.className = 'introcard';
       card.innerHTML = '<div class="face back"></div>' +
@@ -2875,30 +2913,87 @@
           later(INTRO.hold, function () {
             if (over) return;
             var art = $('.art', card);
-            var from = relRect(art), to = relRect($('.pic', cell));
-            var fly = document.createElement('div');
-            fly.className = 'introfly';
-            fly.style.cssText = 'left:' + from.x + 'px;top:' + from.y + 'px;width:' + from.w + 'px;height:' + from.h + 'px';
-            fly.innerHTML = '<div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>';
-            app.appendChild(fly);
             card.style.visibility = 'hidden';
-            var a3 = fly.animate([{ transform: 'translate(0,0) scale(1,1)' },
-                                  { transform: 'translate(' + (to.x - from.x) + 'px,' + (to.y - from.y) + 'px) scale(' +
-                                    (to.w / from.w) + ',' + (to.h / from.h) + ')' }],
-                                 { duration: INTRO.fly / isp(), easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'forwards' });
-            anims.push(a3);
-            a3.onfinish = function () {
+            flyToCell(u, art, cell, flip, INTRO.fly / isp(), anims, function () {
               if (over) return;
-              cell.classList.add('arrived');
-              var a4 = fly.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 140 / isp(), fill: 'forwards' });
-              anims.push(a4);
-              a4.onfinish = function () { fly.remove(); card.remove(); later(INTRO.gap, next); };
-            };
+              card.remove(); later(INTRO.gap, next);
+            });
           });
         };
       };
     }
     next();
+  }
+
+  /* 開幕の紹介（六枚同時）：陣営ごとに縦長6枚を並べ、左上から右下へテンポよくめくる。
+     6枚そろったら止めて見せ、6枚同時に盤面の定位置へ飛ぶ。味方→敵 */
+  var INTRO6 = { stagger: 160, flip: 380, hold: 1300, fly: 520, between: 350 };
+  function playIntroSix(done) {
+    var st = S.st, gen = S.gen;
+    var isp = function () { return Math.max(1, S.speed || 1); };
+    var ov = document.createElement('div');
+    ov.className = 'introov';
+    ov.innerHTML = '<button class="btn ghost introskip" type="button">スキップ ▶</button>';
+    app.appendChild(ov);
+    app.classList.add('intro');
+    $$('.unit[data-uid]').forEach(function (e) { e.classList.remove('arrived'); });
+    var over = false, timers = [], anims = [];
+    function later(ms, fn) { timers.push(setTimeout(fn, ms / isp())); }
+    function finish() {
+      if (over) return; over = true;
+      timers.forEach(clearTimeout);
+      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
+      $$('.introsix,.introfly', app).forEach(function (e) { e.remove(); });
+      ov.remove();
+      $$('.unit[data-uid]').forEach(function (e) { e.classList.add('arrived'); });
+      app.classList.remove('intro');
+      S.intro = false;
+      if (S.gen !== gen || S.screen !== 'battle') return;
+      renderActions();
+      done();
+    }
+    ov.addEventListener('click', function (ev) { ev.stopPropagation(); finish(); });
+    function team(side) {
+      return introUnits(st).filter(function (v) { return v.side === side; });
+    }
+    function showSide(side, after) {
+      if (over) return;
+      var us = team(side);
+      var wrap = document.createElement('div');
+      wrap.className = 'introsix s' + side;
+      wrap.innerHTML = '<div class="sixtag">' + sideName(side) + '</div>' + us.map(function (u) {
+        var cell = $('.unit[data-uid="' + u.uid + '"]');
+        var flip = introMirrored($('.pic .lay', cell));
+        return '<div class="sixcard" data-uid="' + u.uid + '"><div class="face back"></div>' +
+          '<div class="face front"><div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
+          '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i></div></div></div>';
+      }).join('');
+      app.appendChild(wrap);
+      var cards = $$('.sixcard', wrap);
+      cards.forEach(function (c, i) {
+        later(80 + INTRO6.stagger * i, function () {
+          if (over) return;
+          if (S.sound) SFX.play('select');
+          anims.push(c.animate([{ transform: 'rotateY(180deg)' }, { transform: 'rotateY(0deg)' }],
+                               { duration: INTRO6.flip / isp(), easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' }));
+        });
+      });
+      var doneAt = 80 + INTRO6.stagger * (cards.length - 1) + INTRO6.flip + INTRO6.hold;
+      later(doneAt, function () {
+        if (over) return;
+        var left = cards.length;
+        cards.forEach(function (c) {
+          var u = E.findUid(st, c.dataset.uid), cell = $('.unit[data-uid="' + u.uid + '"]');
+          var art = $('.art', c), flip = art.classList.contains('flipL');
+          c.style.visibility = 'hidden';
+          flyToCell(u, art, cell, flip, INTRO6.fly / isp(), anims, function () {
+            if (over) return;
+            if (--left === 0) { wrap.remove(); later(INTRO6.between, after); }
+          });
+        });
+      });
+    }
+    showSide(0, function () { showSide(1, function () { later(200, finish); }); });
   }
 
   function isAI(side) { return S.mode === 'cpu' && side === 1; }
