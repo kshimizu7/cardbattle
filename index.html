@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="105">
+<meta name="app-version" content="106">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -2591,7 +2591,12 @@ body.shake{animation:shk2 .56s}
 
 /* ---------- v105：闘技場の設定画面（1画面に収める） ---------- */
 #screen-title.t2{padding:8px 14px calc(10px + var(--safe-b));gap:11px;justify-content:flex-start;
-  height:100%;overflow:hidden}
+  height:100%;overflow:hidden;
+  /* 絵の高さは「いちばん中身が多いとき」を基準に固定する。
+     カードプールの選択でカードの配り方の枠が出入りしても、絵の大きさは変わらない */
+  --t2rest:448px;
+  --heroH:clamp(104px, calc(100dvh - var(--t2rest)), 300px)}
+.t2spacer{flex:1 1 auto;min-height:0}
 .t2top{display:flex;align-items:flex-end;gap:1px;margin:0 -6px 0 -4px;flex:0 0 auto}
 .t2top .topback{margin:0;padding:4px 6px;align-self:center}
 .t2sp{flex:1}
@@ -2604,7 +2609,7 @@ body.shake{animation:shk2 .56s}
 .t2ico .rcnt{position:absolute;right:0;top:-2px;font-size:8px;font-weight:900;color:var(--gold);
   background:rgba(58,47,16,.85);border:1px solid rgba(242,198,92,.5);border-radius:999px;padding:0 3px;line-height:1.4}
 /* 闘技場の帯。残ったスペースを吸うが、絵の比率（2.5:1）より縦長にはしない */
-.t2hero{position:relative;flex:1 1 auto;width:100%;aspect-ratio:25/10;min-height:120px;max-height:250px;
+.t2hero{position:relative;flex:0 0 auto;width:100%;height:var(--heroH);
   border-radius:14px;overflow:hidden;border:1px solid rgba(242,198,92,.34);box-shadow:0 6px 22px rgba(0,0,0,.6)}
 .t2hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 42%}
 .t2hero::after{content:"";position:absolute;inset:0;pointer-events:none;
@@ -2617,8 +2622,6 @@ body.shake{animation:shk2 .56s}
 .t2g{background:rgba(18,24,41,.55);border:1px solid rgba(255,255,255,.06);border-radius:12px;
   padding:8px 9px 9px;flex:0 0 auto}
 .t2g.need{border-color:rgba(242,198,92,.5);box-shadow:0 0 0 1px rgba(242,198,92,.2)}
-.t2g.need .t2lab{color:var(--gold)}
-.t2lab{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#8fa0c0;margin:0 0 6px 2px}
 .t2row{display:flex;gap:6px}
 .t2chip{flex:1;min-width:0;border:1px solid #2c3652;border-radius:9px;background:#1a2138;
   padding:7px 3px;text-align:center;line-height:1.15;cursor:pointer}
@@ -2636,7 +2639,8 @@ body.shake{animation:shk2 .56s}
 #screen-title.t2 .verlab{margin:0;flex:0 0 auto}
 /* 横持ちのときは帯を低く */
 @media (orientation:landscape) and (max-height:560px){
-  .t2hero{max-height:120px} .t2heroname b{font-size:17px}
+  #screen-title.t2{--heroH:clamp(72px, calc(100dvh - 330px), 130px)}
+  .t2heroname b{font-size:17px} .t2heroname i{font-size:8.5px}
 }
 
 </style>
@@ -9034,6 +9038,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
      ホーム ── 闘技場・世界の探索・叙事詩
      ========================================================= */
   function renderHome() {
+    S.arenaArt = null;                 /* 次に闘技場へ入ったら絵を選び直す */
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
     S.screen = 'title'; syncBgm();
@@ -9130,7 +9135,9 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
     S.screen = 'title'; syncBgm();
-    var arenaArt = pickArena();
+    /* 絵は闘技場にいるあいだ変えない。ホームへ戻るか戦いを始めると選び直す */
+    if (!S.arenaArt) S.arenaArt = pickArena();
+    var arenaArt = S.arenaArt;
     app.innerHTML =
       '<div id="screen-title" class="t2">' +
         '<div class="t2top">' +
@@ -9148,8 +9155,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
           ? '<div class="t2hero"><img src="' + arenaArt + '" alt="">' +
             '<div class="t2heroname"><b>闘 技 場</b><i>Arena</i></div></div>'
           : '') +
-        '<div class="t2g' + (S.pool ? '' : ' need') + '"><div class="t2lab">' +
-          (S.pool ? 'カードプール' : '◆ まずカードプールを選んでください') + '</div><div class="t2row">' +
+        '<div class="t2g' + (S.pool ? '' : ' need') + '"><div class="t2row">' +
           ['tutorial', 'starter', 'full'].map(function (k) {
             var P = E.POOLS[k];
             var ic = { tutorial: '🌱', starter: '🎓', full: '🏆' }[k];
@@ -9159,7 +9165,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
           }).join('') +
         '</div></div>' +
         (S.pool && S.pool !== 'tutorial'
-          ? '<div class="t2g" id="dealbox"><div class="t2lab">カードの配り方</div><div class="t2row">' +
+          ? '<div class="t2g" id="dealbox"><div class="t2row">' +
             [['shuffle', '🎲', 'シャッフル'], ['full', '📚', 'フルカード']].map(function (o) {
               var sz = E.POOLS[S.pool].size;
               var sub = o[0] === 'shuffle'
@@ -9170,7 +9176,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
             }).join('') +
           '</div></div>'
           : '') +
-        '<div class="t2g"><div class="t2lab">対戦</div><div class="t2row">' +
+        '<div class="t2g"><div class="t2row">' +
           '<div class="t2chip' + (S.mode === 'pvp' ? ' on' : '') + '" data-mode="pvp"><b>👥 ふたりで</b><i>1台を交代で</i></div>' +
           '<div class="t2chip' + (S.mode === 'cpu' ? ' on' : '') + '" data-mode="cpu"><b>🤖 CPUと</b><i>ひとりで</i></div>' +
         '</div>' +
@@ -9182,6 +9188,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
             }).join('') + '</div>'
           : '') +
         '</div>' +
+        '<div class="t2spacer"></div>' +
         '<button class="btn primary t2go" id="go"' + (S.pool ? '' : ' disabled') + '>' +
           (S.pool ? '⚔ 戦いを始める' : '↑ カードプールを選択') + '</button>' +
         (VERSION ? '<div class="verlab">ver ' + VERSION + '</div>' : '') +
@@ -9682,6 +9689,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
      ゲーム開始・編成
      ========================================================= */
   function startGame() {
+    S.arenaArt = null;                 /* 次に闘技場へ入ったら絵を選び直す */
     E.setPool(S.pool || 'full');
     E.setDealMode(S.deal || 'shuffle');
     var d = E.deal();

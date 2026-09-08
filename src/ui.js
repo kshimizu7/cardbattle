@@ -1747,6 +1747,7 @@
      ホーム ── 闘技場・世界の探索・叙事詩
      ========================================================= */
   function renderHome() {
+    S.arenaArt = null;                 /* 次に闘技場へ入ったら絵を選び直す */
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
     S.screen = 'title'; syncBgm();
@@ -1843,7 +1844,9 @@
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
     S.screen = 'title'; syncBgm();
-    var arenaArt = pickArena();
+    /* 絵は闘技場にいるあいだ変えない。ホームへ戻るか戦いを始めると選び直す */
+    if (!S.arenaArt) S.arenaArt = pickArena();
+    var arenaArt = S.arenaArt;
     app.innerHTML =
       '<div id="screen-title" class="t2">' +
         '<div class="t2top">' +
@@ -1861,8 +1864,7 @@
           ? '<div class="t2hero"><img src="' + arenaArt + '" alt="">' +
             '<div class="t2heroname"><b>闘 技 場</b><i>Arena</i></div></div>'
           : '') +
-        '<div class="t2g' + (S.pool ? '' : ' need') + '"><div class="t2lab">' +
-          (S.pool ? 'カードプール' : '◆ まずカードプールを選んでください') + '</div><div class="t2row">' +
+        '<div class="t2g' + (S.pool ? '' : ' need') + '"><div class="t2row">' +
           ['tutorial', 'starter', 'full'].map(function (k) {
             var P = E.POOLS[k];
             var ic = { tutorial: '🌱', starter: '🎓', full: '🏆' }[k];
@@ -1872,7 +1874,7 @@
           }).join('') +
         '</div></div>' +
         (S.pool && S.pool !== 'tutorial'
-          ? '<div class="t2g" id="dealbox"><div class="t2lab">カードの配り方</div><div class="t2row">' +
+          ? '<div class="t2g" id="dealbox"><div class="t2row">' +
             [['shuffle', '🎲', 'シャッフル'], ['full', '📚', 'フルカード']].map(function (o) {
               var sz = E.POOLS[S.pool].size;
               var sub = o[0] === 'shuffle'
@@ -1883,7 +1885,7 @@
             }).join('') +
           '</div></div>'
           : '') +
-        '<div class="t2g"><div class="t2lab">対戦</div><div class="t2row">' +
+        '<div class="t2g"><div class="t2row">' +
           '<div class="t2chip' + (S.mode === 'pvp' ? ' on' : '') + '" data-mode="pvp"><b>👥 ふたりで</b><i>1台を交代で</i></div>' +
           '<div class="t2chip' + (S.mode === 'cpu' ? ' on' : '') + '" data-mode="cpu"><b>🤖 CPUと</b><i>ひとりで</i></div>' +
         '</div>' +
@@ -1895,6 +1897,7 @@
             }).join('') + '</div>'
           : '') +
         '</div>' +
+        '<div class="t2spacer"></div>' +
         '<button class="btn primary t2go" id="go"' + (S.pool ? '' : ' disabled') + '>' +
           (S.pool ? '⚔ 戦いを始める' : '↑ カードプールを選択') + '</button>' +
         (VERSION ? '<div class="verlab">ver ' + VERSION + '</div>' : '') +
@@ -2395,6 +2398,7 @@
      ゲーム開始・編成
      ========================================================= */
   function startGame() {
+    S.arenaArt = null;                 /* 次に闘技場へ入ったら絵を選び直す */
     E.setPool(S.pool || 'full');
     E.setDealMode(S.deal || 'shuffle');
     var d = E.deal();
