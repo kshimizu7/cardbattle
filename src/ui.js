@@ -17,10 +17,9 @@
     screen: 'title', mode: 'cpu', diff: 'normal', speed: 1,
     hands: [null, null], teams: [[], []], draftIdx: 0, mulligan: [true, true],
     seenIds: [],
-    st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, bgm: true, pool: 'tutorial',
+    st: null, selCard: null, selAct: null, busy: false, auto: false, sound: true, bgm: false, pool: 'tutorial',
     deal: 'shuffle', selSlot: null, hist: [[], []],
-    compact: false, sideBySide: false, hintSeen: false,
-    introMode: 'one',   /* 開幕の紹介：one＝一体ずつ／six＝六枚同時／none＝なし */
+    hintSeen: false,
     /* 全自動は陣営ごとに持つ。PvPでは P1だけ・P2だけ・両方(観戦) を選べる */
     autoSides: [false, false]
   };
@@ -102,23 +101,21 @@
     try {
       SAVE.setSettings({ sound: S.sound, bgm: S.bgm, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
-                         compact: S.compact, sideBySide: S.sideBySide,
-                         hintSeen: S.hintSeen, intro: S.introMode });
+                         hintSeen: S.hintSeen });
     } catch (e) {}
   }
   function restoreSettings() {
     try {
       var g = SAVE.getSettings();
       if (typeof g.sound === 'boolean') S.sound = g.sound;
+      /* BGM は覚えない。開くたびに必ず切から始める（人に見せるときに鳴り出さないように） */
+      S.bgm = false;
       if (g.speed === 1 || g.speed === 2 || g.speed === 4) S.speed = g.speed;
       if (E.POOLS[g.pool]) S.pool = g.pool;
       if (g.deal === 'shuffle' || g.deal === 'full') S.deal = g.deal;
       if (g.mode === 'cpu' || g.mode === 'pvp') S.mode = g.mode;
       if (g.diff === 'easy' || g.diff === 'normal' || g.diff === 'hard') S.diff = g.diff;
-      if (typeof g.compact === 'boolean') S.compact = g.compact;
-      if (typeof g.sideBySide === 'boolean') S.sideBySide = g.sideBySide;
       if (typeof g.hintSeen === 'boolean') S.hintSeen = g.hintSeen;
-      if (g.intro === 'one' || g.intro === 'six' || g.intro === 'none') S.introMode = g.intro;
     } catch (e) {}
   }
 
@@ -1836,9 +1833,6 @@
     app.innerHTML =
       '<div id="screen-title">' +
         '<button class="topback" id="home1" aria-label="ホームへ">‹ ホーム</button>' +
-        '<div><div class="title-logo" style="font-size:34px">ARCANA<br>CLASH</div>' +
-        '<div class="sub" style="margin-top:6px">アルカナ・クラッシュ</div>' +
-        '<div class="sub" style="margin-top:10px;letter-spacing:.05em;color:#6d7b99">6体編成の陣形カードバトル</div></div>' +
         '<div class="opt-group pool' + (S.pool ? '' : ' need') + '"><div class="opt-label">' +
           (S.pool ? 'カードプール' : '◆ まずカードプールを選んでください') + '</div><div class="opt-col">' +
           ['tutorial', 'starter', 'full'].map(function (k) {
@@ -1867,11 +1861,6 @@
             }).join('') +
           '</div></div>'
           : '') +
-        '<div class="opt-group"><div class="opt-label">開幕の紹介</div><div class="opt-row">' +
-          [['one', '🃏 一体ずつ'], ['six', '🎴 六枚同時'], ['none', '⏭ なし']].map(function (o) {
-            return '<div class="opt' + (S.introMode === o[0] ? ' on' : '') + '" data-intro="' + o[0] + '">' + o[1] + '</div>';
-          }).join('') +
-        '</div></div>' +
         '<div class="opt-group"><div class="opt-label">対戦モード</div><div class="opt-row">' +
           '<div class="opt' + (S.mode === 'pvp' ? ' on' : '') + '" data-mode="pvp">👥 ふたりで対戦<br><small style="font-weight:600;font-size:10px">1台を交代で</small></div>' +
           '<div class="opt' + (S.mode === 'cpu' ? ' on' : '') + '" data-mode="cpu">🤖 CPUと対戦<br><small style="font-weight:600;font-size:10px">ひとりで</small></div>' +
@@ -1895,17 +1884,6 @@
           '<button class="btn ghost" id="bgm0" style="flex:1;white-space:nowrap">' +
             (S.bgm ? '🎵 BGM ON' : '🎵 BGM OFF') + '</button>' +
         '</div>' +
-        '<div class="opt-group"><div class="opt-label">画面表示</div><div class="opt-col">' +
-          '<div class="opt poolopt tgl' + (S.compact ? ' on' : '') + '" data-tgl="compact">' +
-            '<span class="pn">📐 コンパクト表示 <b>' + (S.compact ? 'ON' : 'OFF') + '</b></span>' +
-            '<span class="pd">行動順バーと戦闘ログを畳んで、<b>盤面を大きく</b>します。' +
-              'スクロールせずに全体が見えるようになります</span></div>' +
-          '<div class="opt poolopt tgl' + (S.sideBySide ? ' on' : '') + '" data-tgl="sideBySide">' +
-            '<span class="pn">🤝 横並び対戦 <b>' + (S.sideBySide ? 'ON' : 'OFF') + '</b></span>' +
-            '<span class="pd">編成は<b>縦持ちで各自</b>、戦闘は<b>端末を横にして隣同士</b>で。' +
-              '向きがひとつなので、どちらからも同じように読めます</span></div>' +
-
-        '</div></div>' +
         '<button class="btn ghost" id="home0" style="width:100%">← ホームへ</button>' +
         '<button class="btn ghost" id="record" style="width:100%">📊 戦績・記録' +
           (SAVE.gameCount() ? '<span class="rcnt">' + SAVE.gameCount() + '戦</span>' : '') + '</button>' +
@@ -1913,12 +1891,6 @@
       '</div>';
     $$('[data-pool]').forEach(function (b) { b.onclick = function () { S.pool = b.dataset.pool; E.setPool(S.pool); rememberSettings(); renderTitle(); }; });
     $$('[data-deal]').forEach(function (b) { b.onclick = function () { S.deal = b.dataset.deal; E.setDealMode(S.deal); rememberSettings(); renderTitle(); }; });
-    $$('[data-intro]').forEach(function (b) { b.onclick = function () { S.introMode = b.dataset.intro; rememberSettings(); renderTitle(); }; });
-    $$('[data-tgl]').forEach(function (b) { b.onclick = function () {
-      var k = b.dataset.tgl;
-      S[k] = !S[k];
-      rememberSettings(); renderTitle();
-    }; });
     $$('[data-mode]').forEach(function (b) { b.onclick = function () { S.mode = b.dataset.mode; rememberSettings(); renderTitle(); }; });
     $$('[data-diff]').forEach(function (b) { b.onclick = function () { S.diff = b.dataset.diff; rememberSettings(); renderTitle(); }; });
     $('#go').onclick = startGame;
@@ -2370,16 +2342,9 @@
     /* 札の絵は「目」を基準に置く（戦闘冒頭の札と同じ） */
     $$('.rcard', app).forEach(function (c) { fitFace($('.art', c), $('.cut', c), c.dataset.def); });
 
-    /* ⌕：開いて2秒で現れ、スクロール中は隠れ、止まって1秒で戻る */
-    var srch = $('#recsearch'), body = $('#recbody'), tmr = null;
-    function showSearch() { srch.classList.add('on'); }
-    tmr = setTimeout(showSearch, 2000);
-    body.addEventListener('scroll', function () {
-      srch.classList.remove('on');
-      clearTimeout(tmr); tmr = setTimeout(showSearch, 1000);
-    }, { passive: true });
-
-    $('#recback').onclick = function () { clearTimeout(tmr); (back || renderHome)(); };
+    var srch = $('#recsearch');
+    srch.classList.add('on');                 /* v104: ⌕ は常に出しておく */
+    $('#recback').onclick = function () { (back || renderHome)(); };
     srch.onclick = function () { openRecSheet(); };
     $$('[data-rid]', app).forEach(function (c) {
       c.onclick = function () { openDetail(c.dataset.rid, poolIds()); };
@@ -2448,54 +2413,6 @@
       '<div style="color:var(--dim);font-size:13px">相手に見られないよう端末を受け取ってください</div>' +
       '<button class="btn primary" id="pgo" style="padding:16px 34px;font-size:16px">タップして開始</button></div>';
     $('#pgo').onclick = next;
-  }
-
-  /* 編成が済んだあと、端末を横にしてもらうための画面。
-     横向きになるとボタンが光る。縦のままでも押せる（強制はしない）。 */
-  function renderReady() {
-    S.screen = 'ready'; syncBgm();
-    var land = isLandscape();
-    var vs = S.mode === 'cpu' ? 'CPU' : 'プレイヤー2';
-    app.innerHTML =
-      '<div id="screen-ready">' +
-        '<div class="rd-art' + (land ? ' ok' : '') + '">' +
-          '<svg viewBox="0 0 200 120" aria-hidden="true">' +
-            '<rect class="dev" x="78" y="18" width="44" height="84" rx="7"/>' +
-            '<rect class="dev-l" x="46" y="38" width="108" height="44" rx="7"/>' +
-            '<path class="arr" d="M64 30 A46 46 0 0 1 140 30" fill="none"/>' +
-            '<polygon class="arr-h" points="140,22 150,32 136,38"/>' +
-            '<circle class="ppl p1" cx="34" cy="98" r="9"/>' +
-            '<circle class="ppl p2" cx="60" cy="98" r="9"/>' +
-          '</svg>' +
-        '</div>' +
-        '<h2>' + (land ? '準備できました' : '端末を横向きにしてください') + '</h2>' +
-        '<p class="rd-lead">' +
-          'ふたりで<b>隣に並んで</b>座り、端末を横にして置いてください。<br>' +
-          '<b>左がプレイヤー1、右が' + vs + '</b>の陣地になります。' +
-        '</p>' +
-        '<p class="rd-note">横並びなら画面の向きがひとつなので、' +
-          'どちらからも同じように数字が読めます。</p>' +
-        '<button class="btn primary" id="rgo"' + (land ? ' data-ready="1"' : '') + '>' +
-          (land ? '⚔ 対戦開始' : '⚔ このまま開始する') + '</button>' +
-        '<button class="btn ghost small" id="rback">編成に戻る</button>' +
-      '</div>';
-    $('#rgo').onclick = function () {
-      /* 「対戦開始」のタップは利用者の操作なので、ここでなら全画面に入れる。
-         対応していない端末では黙って通常表示のまま進む。 */
-      try {
-        var el = document.documentElement;
-        var req = el.requestFullscreen || el.webkitRequestFullscreen;
-        if (req && !document.fullscreenElement && !document.webkitFullscreenElement) {
-          var r = req.call(el);
-          if (r && r.catch) r.catch(function () {});
-        }
-      } catch (e) {}
-      beginBattle();
-    };
-    $('#rback').onclick = function () {
-      S.draftIdx = (S.mode === 'pvp') ? 1 : 0;
-      renderDraft();
-    };
   }
 
   function teamCost(t) { return t.reduce(function (s, c) { return s + E.BY_ID[c.id].cost; }, 0); }
@@ -2790,8 +2707,6 @@
       if (S.mode === 'pvp' && side === 0) {
         S.draftIdx = 1;
         renderPass(1, function () { renderDraft(); });
-      } else if (S.sideBySide) {
-        renderReady();
       } else {
         beginBattle();
       }
@@ -2825,9 +2740,9 @@
     });
     S.gen = (S.gen || 0) + 1;
     S.screen = 'battle'; syncBgm();
-    S.intro = S.introMode !== 'none';
+    S.intro = true;
     renderBattle();
-    (S.introMode === 'six' ? playIntroSix : S.introMode === 'none' ? function (f) { f(); } : playIntro)(function () {
+    playIntroSix(function () {
       SFX.play('start');
       banner('BATTLE START', 'font-size:22px');
       wait(1100, function () { SFX.play('round'); banner('ROUND 1'); wait(900, step); });
@@ -2841,7 +2756,6 @@
      向きは盤面と同じ（自陣は左向き）なので、収まったあとに裏返らない。
      画面のタップか「スキップ」で残りを飛ばす。
      ========================================================= */
-  var INTRO = { appear: 180, flip: 360, hold: 600, fly: 360, gap: 60 };
   /* 盤面の切り出し（style.css の v95 と同じ数字）。飛びながらこの値へ寄せる */
   var CROP = { full: { left: '3%', top: '4%', width: '94%', height: '92%' },
                top:  { left: '-20%', top: '1%', width: '140%', height: '146%' },
@@ -2906,74 +2820,6 @@
   function introMirrored(el) {
     var t = el && getComputedStyle(el).transform;
     return !!(t && /^matrix\(-1,/.test(t));
-  }   /* 一体あたり約1.6秒。戦闘速度 x2/x4 でそのぶん速く */
-  function playIntro(done) {
-    var st = S.st, gen = S.gen;
-    var units = introUnits(st);
-    var ov = document.createElement('div');
-    ov.className = 'introov';
-    ov.innerHTML = '<button class="btn ghost introskip" type="button">スキップ ▶</button>';
-    app.appendChild(ov);
-    app.classList.add('intro');
-    $$('.unit[data-uid]').forEach(function (e) { e.classList.remove('arrived'); });
-    var over = false, timers = [], anims = [];
-    var isp = function () { return Math.max(1, S.speed || 1); };   /* 通常の技より速さの補正を弱く（x1 のとき等倍） */
-    function later(ms, fn) { timers.push(setTimeout(fn, ms / isp())); }
-    function finish() {
-      if (over) return; over = true;
-      timers.forEach(clearTimeout);
-      anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
-      $$('.introcard,.introfly', app).forEach(function (e) { e.remove(); });
-      ov.remove();
-      $$('.unit[data-uid]').forEach(function (e) { e.classList.add('arrived'); });
-      app.classList.remove('intro');
-      S.intro = false;
-      if (S.gen !== gen || S.screen !== 'battle') return;
-      renderActions();
-      done();
-    }
-    ov.addEventListener('click', function (ev) { ev.stopPropagation(); finish(); });
-    var i = 0;
-    function next() {
-      if (over) return;
-      if (i >= units.length) { later(260, finish); return; }
-      var u = units[i++];
-      var cell = $('.unit[data-uid="' + u.uid + '"]');
-      if (!cell) { next(); return; }
-      var lay = $('.pic .lay', cell);
-      var flip = introMirrored(lay);
-      var card = document.createElement('div');
-      card.className = 'introcard';
-      card.innerHTML = '<div class="face back"></div>' +
-        '<div class="face front"><div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-        '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i></div></div>';
-      app.appendChild(card);
-      var base = 'translate(-50%,-50%)';
-      var a1 = card.animate([{ transform: base + ' rotateY(180deg) scale(.7)', opacity: 0 },
-                             { transform: base + ' rotateY(180deg) scale(1)', opacity: 1 }],
-                            { duration: INTRO.appear / isp(), fill: 'forwards' });
-      anims.push(a1);
-      a1.onfinish = function () {
-        if (over) return;
-        if (S.sound) SFX.play('select');
-        var a2 = card.animate([{ transform: base + ' rotateY(180deg) scale(1)' },
-                               { transform: base + ' rotateY(0deg) scale(1.02)' }],
-                              { duration: INTRO.flip / isp(), easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' });
-        anims.push(a2);
-        a2.onfinish = function () {
-          later(INTRO.hold, function () {
-            if (over) return;
-            var art = $('.art', card);
-            card.style.visibility = 'hidden';
-            flyToCell(u, art, cell, flip, INTRO.fly / isp(), anims, function () {
-              if (over) return;
-              card.remove(); later(INTRO.gap, next);
-            });
-          });
-        };
-      };
-    }
-    next();
   }
 
   /* 開幕の紹介（六枚同時）：陣営ごとに縦長6枚を並べ、左上から右下へテンポよくめくる。
@@ -3144,11 +2990,9 @@
       '<button class="btn small ghost ico b-auto1" data-auto="one" title="このターンだけAIに任せる">⚡</button>' +
       autoAllBtnHTML(actorSide(st), 'btn small ghost ico b-autoall') +
       '<button class="btn small ghost ico b-fs" title="全画面">⛶</button>' +
-      (S.compact
-        ? '<button class="btn small ghost ico b-disp" title="表示設定">⚙</button>'
-        : '<button class="btn small ghost ico snd b-snd' + (S.sound ? '' : ' off') + '"' +
-            ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
-          '<button class="btn small ghost ico b-spd" title="戦闘速度">x' + S.speed + '</button>') +
+      '<button class="btn small ghost ico snd b-snd' + (S.sound ? '' : ' off') + '"' +
+        ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
+      '<button class="btn small ghost ico b-spd" title="戦闘速度">x' + S.speed + '</button>' +
       '<button class="btn small ghost ico b-quit" title="タイトルへ">✕</button>';
   }
 
@@ -3201,7 +3045,6 @@
         : '<span style="color:var(--dim)">戦闘ログ</span>') + '<b>全ログ</b></div>' +
       '<div class="actpanel" id="actpanel"></div>';
 
-    app.classList.toggle('compact', !!S.compact);
     var land = isLandscape();
     app.classList.toggle('land', land);
     /* ひとり用（CPU戦）は、自分を右に置く。操作パネルが右にあり、手と目の動きが短くなる。
@@ -3241,8 +3084,6 @@
           '<button class="dm" data-d="snd">' + (S.sound ? '♪ 音 ON' : '♪ 音 OFF') + '</button>' +
           '<button class="dm" data-d="bgm">' + (S.bgm ? '🎵 曲 ON' : '🎵 曲 OFF') + '</button>' +
           '<button class="dm" data-d="spd">⏩ 速度 x' + S.speed + '</button>' +
-          '<button class="dm wide' + (S.compact ? ' on' : '') + '" data-d="compact">📐 コンパクト表示　' + (S.compact ? 'ON' : 'OFF') + '</button>' +
-          '<button class="dm wide' + (S.sideBySide ? ' on' : '') + '" data-d="sidebyside">🤝 横並び対戦　' + (S.sideBySide ? 'ON' : 'OFF') + '</button>' +
         '</div>' +
         '<button class="btn ghost" id="dmclose" style="width:100%;margin-top:12px">閉じる</button></div>';
       $$('[data-d]', m).forEach(function (b) {
@@ -3254,10 +3095,8 @@
           if (k === 'snd') { S.sound = !S.sound; SFX.setEnabled(S.sound); }
           if (k === 'bgm') { S.bgm = !S.bgm; syncBgm(); }
           if (k === 'spd') S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : 1;
-          if (k === 'compact') S.compact = !S.compact;
-          if (k === 'sidebyside') S.sideBySide = !S.sideBySide;
           rememberSettings();
-          if (k === 'compact' || k === 'sidebyside' || k === 'spd') { m.remove(); renderBattle(); return; }
+          if (k === 'spd') { m.remove(); renderBattle(); return; }
           draw();
         };
       });
@@ -4818,8 +4657,7 @@
     _wasLandscape = now;
     clearTimeout(_reflow);
     _reflow = setTimeout(function () {
-      if (S.screen === 'ready') renderReady();
-      else if (S.screen === 'battle' && S.st && !S.busy) renderBattle();
+      if (S.screen === 'battle' && S.st && !S.busy) renderBattle();
     }, 220);
   }
   _wasLandscape = isLandscape();
