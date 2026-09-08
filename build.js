@@ -7,7 +7,9 @@ const VERSION = process.env.CBVER || '21';
 /* RPGモード：探索ページをまるごと文字列として埋め込み、iframe（srcdoc）で開く */
 require('child_process').execSync('node ' + __dirname + '/tools/rpgexp.js', { stdio: 'inherit' });
 const ART_FILES = { title: 'title_vot', beast: 'entry_beast', mine: 'entry_mine',
-                    maze: 'entry_maze', shrine: 'entry_shrine' };
+                    maze: 'entry_maze', shrine: 'entry_shrine',
+                    /* 闘技場の帯。開くたびに3枚から1枚を選ぶ */
+                    arena1: 'arena_bright', arena2: 'arena_ruin', arena3: 'arena_sky' };
 /* 描き下ろしのキャラ絵。art/cut/<id>.webp（マゼンタを抜いた切り抜き、RGBA）を置くだけで差し替わる。
    置いていない者は、いままでの線画のまま。
    v92: 背景込みの art/char から、切り抜きの art/cut に切り替え（地・枠・縁の光はCSSで重ねる） */

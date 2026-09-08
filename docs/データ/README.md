@@ -75,4 +75,5 @@ node tools/dbgen.js     台帳を engine.js から組み直す（作り直した
 - 盤面の切り出し：`art/board_view.json`（top＝膝上から上を1.45倍／big＝全身のまま1.2倍）。数字は `src/style.css` の v95 の項
 - 背景色：`art/bg_colours.json`（`tools/cut2webp.py` が系譜の色から作る。直すならそこ）
 - **目の位置**：`art/face.json`（一体ごとの [x, y] 割合。両目の中間／横顔は見える目／目のない者は頭の中心）。六枚同時と邂逅録の札は `fitFace` がこの点を札の左右中央・上から3割に置く。ずれたらここを直す。確認は目の周りを拡大して十字を打った一覧（30体×216px）を見るのが早い
+- **闘技場の絵**：`art/arena_bright.webp`（白昼）・`arena_ruin.webp`（落日の廃）・`arena_sky.webp`（天空）。横長 2.5:1・1000px。闘技場の設定画面で開くたびに1枚が選ばれる。増やすときは `build.js` の `ART_FILES` に `arenaN` を足す
 - 未作成：古代竜（第16便として1体で出す）

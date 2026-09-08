@@ -1826,67 +1826,77 @@
     m.querySelector('#lorex2').onclick = function () { m.remove(); };
   }
 
+  /* 闘技場の帯の絵。開くたびに3枚から1枚を選ぶ。直前と同じ絵は避ける */
+  var _arenaLast = -1;
+  function pickArena() {
+    var A = window.VOT_ART || {};
+    var list = [A.arena1, A.arena2, A.arena3].filter(Boolean);
+    if (!list.length) return '';
+    if (list.length === 1) return list[0];
+    var i = Math.floor(Math.random() * list.length);
+    if (i === _arenaLast) i = (i + 1 + Math.floor(Math.random() * (list.length - 1))) % list.length;
+    _arenaLast = i;
+    return list[i];
+  }
+
   function renderTitle() {
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
     S.screen = 'title'; syncBgm();
+    var arenaArt = pickArena();
     app.innerHTML =
-      '<div id="screen-title">' +
-        '<button class="topback" id="home1" aria-label="ホームへ">‹ ホーム</button>' +
-        '<div class="opt-group pool' + (S.pool ? '' : ' need') + '"><div class="opt-label">' +
-          (S.pool ? 'カードプール' : '◆ まずカードプールを選んでください') + '</div><div class="opt-col">' +
+      '<div id="screen-title" class="t2">' +
+        '<div class="t2top">' +
+          '<button class="topback" id="home1" aria-label="ホームへ">‹ ホーム</button>' +
+          '<span class="t2sp"></span>' +
+          '<button class="t2ico" id="rules"><i>📖</i><b>ルール</b></button>' +
+          '<button class="t2ico" id="record"><i>📊</i><b>戦績</b>' +
+            (SAVE.gameCount() ? '<span class="rcnt">' + SAVE.gameCount() + '</span>' : '') + '</button>' +
+          '<button class="t2ico' + (S.sound ? '' : ' off') + '" id="snd0"><i>♪</i><b>効果音</b></button>' +
+          '<button class="t2ico' + (S.bgm ? '' : ' off') + '" id="bgm0"><i>🎵</i><b>BGM</b></button>' +
+          '<button class="t2ico" id="fs0"><i>⛶</i><b>全画面</b></button>' +
+        '</div>' +
+        /* 闘技場の帯。開くたびに3枚から1枚（同じ絵が続かないように前回を避ける） */
+        (arenaArt
+          ? '<div class="t2hero"><img src="' + arenaArt + '" alt="">' +
+            '<div class="t2heroname"><b>闘 技 場</b><i>Arena</i></div></div>'
+          : '') +
+        '<div class="t2g' + (S.pool ? '' : ' need') + '"><div class="t2lab">' +
+          (S.pool ? 'カードプール' : '◆ まずカードプールを選んでください') + '</div><div class="t2row">' +
           ['tutorial', 'starter', 'full'].map(function (k) {
             var P = E.POOLS[k];
             var ic = { tutorial: '🌱', starter: '🎓', full: '🏆' }[k];
-            var sub = k === 'tutorial'
-              ? '8枚すべてから6体を選ぶ・コスト制限なし'
-              : 'コスト' + P.costCap + '以内で4〜6体';
-            return '<div class="opt poolopt' + (S.pool === k ? ' on' : '') + '" data-pool="' + k + '">' +
-              '<span class="pn">' + ic + ' ' + P.name + ' <b>' + P.size + '枚</b></span>' +
-              '<span class="pd">' + P.desc + '</span>' +
-              '<span class="ps">' + sub + '</span></div>';
+            var nm = { tutorial: '入門', starter: 'スターター', full: '拡張' }[k];
+            return '<div class="t2chip' + (S.pool === k ? ' on' : '') + '" data-pool="' + k + '">' +
+              '<b>' + ic + ' ' + nm + '</b><i>' + P.size + '枚</i></div>';
           }).join('') +
         '</div></div>' +
         (S.pool && S.pool !== 'tutorial'
-          ? '<div class="opt-group" id="dealbox">' +
-            '<div class="opt-label">カードの配り方</div><div class="opt-col">' +
-            [['shuffle', '🎲', 'シャッフルモード', 'プールから無作為に選ばれた候補で戦う。<b>敵味方まったく同じ候補</b>なので、引きの差が出ません'],
-             ['full', '📚', 'フルカードモード', 'そのプールの<b>全カード</b>が候補。じっくり考えて組みたい人向け']
-            ].map(function (o) {
+          ? '<div class="t2g" id="dealbox"><div class="t2lab">カードの配り方</div><div class="t2row">' +
+            [['shuffle', '🎲', 'シャッフル'], ['full', '📚', 'フルカード']].map(function (o) {
               var sz = E.POOLS[S.pool].size;
-              var n = o[0] === 'shuffle' ? Math.min(E.SHUFFLE_SIZE, sz) : sz;
-              return '<div class="opt poolopt dealopt' + (S.deal === o[0] ? ' on' : '') + '" data-deal="' + o[0] + '">' +
-                '<span class="pn">' + o[1] + ' ' + o[2] + ' <b>候補' + n + '枚</b></span>' +
-                '<span class="pd">' + o[3] + '</span></div>';
+              var sub = o[0] === 'shuffle'
+                ? 'ランダムに候補' + Math.min(E.SHUFFLE_SIZE, sz) + '枚'
+                : '候補' + sz + '枚すべて';
+              return '<div class="t2chip' + (S.deal === o[0] ? ' on' : '') + '" data-deal="' + o[0] + '">' +
+                '<b>' + o[1] + ' ' + o[2] + '</b><i>' + sub + '</i></div>';
             }).join('') +
           '</div></div>'
           : '') +
-        '<div class="opt-group"><div class="opt-label">対戦モード</div><div class="opt-row">' +
-          '<div class="opt' + (S.mode === 'pvp' ? ' on' : '') + '" data-mode="pvp">👥 ふたりで対戦<br><small style="font-weight:600;font-size:10px">1台を交代で</small></div>' +
-          '<div class="opt' + (S.mode === 'cpu' ? ' on' : '') + '" data-mode="cpu">🤖 CPUと対戦<br><small style="font-weight:600;font-size:10px">ひとりで</small></div>' +
-        '</div></div>' +
-        '<div class="opt-group' + (S.mode === 'cpu' ? '' : ' hidden') + '" id="difbox"><div class="opt-label">CPUの強さ</div><div class="opt-row">' +
-          ['easy', 'normal', 'hard'].map(function (k, i) {
-            return '<div class="opt' + (S.diff === k ? ' on' : '') + '" data-diff="' + k + '">' + ['かんたん', 'ふつう', 'つよい'][i] + '</div>';
-          }).join('') +
-        '</div></div>' +
-        '<button class="btn primary" id="go" style="width:100%;font-size:16px;padding:15px"' +
-          (S.pool ? '' : ' disabled') + '>' + (S.pool ? '⚔ 戦いを始める' : '↑ カードプールを選択') + '</button>' +
-        /* 2段に分ける。1段に4つ並べると幅が足りず、日本語が1文字ずつ折り返される */
-        '<div style="display:flex;gap:8px">' +
-          '<button class="btn ghost" id="rules" style="flex:1;white-space:nowrap">📖 ルール</button>' +
-          '<button class="btn ghost" id="gallery" style="flex:1;white-space:nowrap">📜 邂逅録</button>' +
-          '<button class="btn ghost" id="fs0" style="flex:0 0 52px" title="全画面">⛶</button>' +
+        '<div class="t2g"><div class="t2lab">対戦</div><div class="t2row">' +
+          '<div class="t2chip' + (S.mode === 'pvp' ? ' on' : '') + '" data-mode="pvp"><b>👥 ふたりで</b><i>1台を交代で</i></div>' +
+          '<div class="t2chip' + (S.mode === 'cpu' ? ' on' : '') + '" data-mode="cpu"><b>🤖 CPUと</b><i>ひとりで</i></div>' +
         '</div>' +
-        '<div style="display:flex;gap:8px">' +
-          '<button class="btn ghost" id="snd0" style="flex:1;white-space:nowrap">' +
-            (S.sound ? '♪ 効果音 ON' : '♪ 効果音 OFF') + '</button>' +
-          '<button class="btn ghost" id="bgm0" style="flex:1;white-space:nowrap">' +
-            (S.bgm ? '🎵 BGM ON' : '🎵 BGM OFF') + '</button>' +
+        (S.mode === 'cpu'
+          ? '<div class="t2row sub"><span class="t2sub">CPUの強さ</span>' +
+            ['easy', 'normal', 'hard'].map(function (k, i) {
+              return '<div class="t2mini' + (S.diff === k ? ' on' : '') + '" data-diff="' + k + '">' +
+                ['かんたん', 'ふつう', 'つよい'][i] + '</div>';
+            }).join('') + '</div>'
+          : '') +
         '</div>' +
-        '<button class="btn ghost" id="home0" style="width:100%">← ホームへ</button>' +
-        '<button class="btn ghost" id="record" style="width:100%">📊 戦績・記録' +
-          (SAVE.gameCount() ? '<span class="rcnt">' + SAVE.gameCount() + '戦</span>' : '') + '</button>' +
+        '<button class="btn primary t2go" id="go"' + (S.pool ? '' : ' disabled') + '>' +
+          (S.pool ? '⚔ 戦いを始める' : '↑ カードプールを選択') + '</button>' +
         (VERSION ? '<div class="verlab">ver ' + VERSION + '</div>' : '') +
       '</div>';
     $$('[data-pool]').forEach(function (b) { b.onclick = function () { S.pool = b.dataset.pool; E.setPool(S.pool); rememberSettings(); renderTitle(); }; });
@@ -1896,11 +1906,9 @@
     $('#go').onclick = startGame;
     $('#rules').onclick = showRules;
     $('#fs0').onclick = toggleFullscreen;
-    $('#gallery').onclick = function () { renderRecord(renderTitle); };
     $('#snd0').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderTitle(); };
     $('#bgm0').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderTitle(); };
     $('#record').onclick = showRecord;
-    $('#home0').onclick = renderHome;
     $('#home1').onclick = renderHome;
   }
 

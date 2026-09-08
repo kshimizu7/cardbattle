@@ -2576,3 +2576,53 @@ body.shake{animation:shk2 .56s}
 /* 上端の戻る */
 .topback{align-self:flex-start;border:0;background:none;color:#e9d8a6;font-size:13px;font-weight:800;letter-spacing:.06em;padding:4px 8px 4px 2px;margin:-14px 0 -8px -6px}
 .hdrback{border:0;background:none;color:#e9d8a6;font-size:26px;line-height:1;font-weight:300;padding:0 6px 3px 2px;margin-left:-4px}
+
+/* ---------- v105：闘技場の設定画面（1画面に収める） ---------- */
+#screen-title.t2{padding:8px 14px calc(10px + var(--safe-b));gap:11px;justify-content:flex-start;
+  height:100%;overflow:hidden}
+.t2top{display:flex;align-items:flex-end;gap:1px;margin:0 -6px 0 -4px;flex:0 0 auto}
+.t2top .topback{margin:0;padding:4px 6px;align-self:center}
+.t2sp{flex:1}
+.t2ico{position:relative;border:0;background:none;color:#c9d3ea;padding:3px 5px 2px;line-height:1;
+  display:flex;flex-direction:column;align-items:center;gap:3px;min-width:44px}
+.t2ico i{font-style:normal;font-size:16px}
+.t2ico b{font-size:8.5px;font-weight:800;letter-spacing:.02em;color:#8fa0c0;white-space:nowrap}
+.t2ico.off{opacity:.36}
+.t2ico:active{color:var(--gold)}
+.t2ico .rcnt{position:absolute;right:0;top:-2px;font-size:8px;font-weight:900;color:var(--gold);
+  background:rgba(58,47,16,.85);border:1px solid rgba(242,198,92,.5);border-radius:999px;padding:0 3px;line-height:1.4}
+/* 闘技場の帯。残ったスペースを吸うが、絵の比率（2.5:1）より縦長にはしない */
+.t2hero{position:relative;flex:1 1 auto;width:100%;aspect-ratio:25/10;min-height:120px;max-height:250px;
+  border-radius:14px;overflow:hidden;border:1px solid rgba(242,198,92,.34);box-shadow:0 6px 22px rgba(0,0,0,.6)}
+.t2hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 42%}
+.t2hero::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(180deg,rgba(6,9,17,.45),rgba(6,9,17,0) 36%,rgba(6,9,17,.88))}
+.t2heroname{position:absolute;left:0;right:0;bottom:8px;text-align:center;z-index:2;line-height:1.15}
+.t2heroname b{display:block;font-size:22px;font-weight:900;letter-spacing:.34em;color:#f4dda2;
+  text-shadow:0 2px 10px #000,0 0 18px rgba(0,0,0,.9);text-indent:.34em}
+.t2heroname i{display:block;font-style:normal;font-size:9.5px;font-weight:800;letter-spacing:.28em;
+  color:#c3cee6;text-shadow:0 1px 6px #000;text-indent:.28em}
+.t2g{background:rgba(18,24,41,.55);border:1px solid rgba(255,255,255,.06);border-radius:12px;
+  padding:8px 9px 9px;flex:0 0 auto}
+.t2g.need{border-color:rgba(242,198,92,.5);box-shadow:0 0 0 1px rgba(242,198,92,.2)}
+.t2g.need .t2lab{color:var(--gold)}
+.t2lab{font-size:10.5px;font-weight:800;letter-spacing:.1em;color:#8fa0c0;margin:0 0 6px 2px}
+.t2row{display:flex;gap:6px}
+.t2chip{flex:1;min-width:0;border:1px solid #2c3652;border-radius:9px;background:#1a2138;
+  padding:7px 3px;text-align:center;line-height:1.15;cursor:pointer}
+.t2chip b{display:block;font-size:12.5px;font-weight:900;color:#c9d3ea;white-space:nowrap}
+.t2chip i{display:block;font-style:normal;font-size:9.5px;font-weight:800;color:#7686a6;margin-top:2px;white-space:nowrap}
+.t2chip.on{border-color:var(--gold);background:rgba(58,47,16,.55)}
+.t2chip.on b{color:#ffe9a8} .t2chip.on i{color:#d9c489}
+.t2chip:active{transform:scale(.98)}
+.t2row.sub{margin-top:6px;align-items:center;gap:5px}
+.t2sub{font-size:9.5px;font-weight:800;color:#7686a6;white-space:nowrap}
+.t2mini{flex:1;border:1px solid #2c3652;border-radius:999px;background:#1a2138;padding:5px 2px;
+  text-align:center;font-size:11px;font-weight:800;color:#c9d3ea;cursor:pointer}
+.t2mini.on{border-color:var(--gold);background:rgba(58,47,16,.55);color:#ffe9a8}
+.t2go{width:100%;font-size:16px;padding:14px;flex:0 0 auto}
+#screen-title.t2 .verlab{margin:0;flex:0 0 auto}
+/* 横持ちのときは帯を低く */
+@media (orientation:landscape) and (max-height:560px){
+  .t2hero{max-height:120px} .t2heroname b{font-size:17px}
+}
