@@ -2533,3 +2533,102 @@ body.shake{animation:shk2 .56s}
 .sixcard .nm b{font-size:13px;font-weight:900;letter-spacing:.04em;text-shadow:0 1px 3px #000,0 0 8px #000;white-space:nowrap}
 .sixcard .nm i{font-style:normal;font-size:9px;font-weight:800;color:#9fb0d0;letter-spacing:.1em;white-space:nowrap}
 @media (prefers-reduced-motion:reduce){ .introsix{display:none} }
+
+/* v99: 六枚同時 ── 札に体力・素早・攻撃、そろったらタップ待ち */
+.sixcard .nm{padding:26px 4px 6px;gap:1px}
+.sixcard .sixst{display:flex;gap:5px;margin-top:3px;font-size:10.5px;font-weight:900;font-variant-numeric:tabular-nums}
+.sixcard .sixst span{display:inline-flex;align-items:baseline;gap:2px}
+.sixcard .sixst i{font-style:normal;font-size:7.5px;font-weight:800;color:#9fb0d0;letter-spacing:.04em}
+.sixcard .sixst .hp{color:#7de8a4} .sixcard .sixst .sp{color:#7fd0ff}
+.sixcard .sixst .at{color:#ffb36b} .sixcard .sixst .at.mag{color:#c98cff} .sixcard .sixst .at.heal{color:#7de8a4}
+.introsix .sixhint{position:absolute;left:0;right:0;bottom:-30px;text-align:center;font-size:12px;font-weight:900;
+  letter-spacing:.15em;color:var(--gold);opacity:0;transition:opacity .3s}
+.introsix .sixhint.on{opacity:1;animation:sixblink 1.2s ease-in-out infinite}
+@keyframes sixblink{0%,100%{opacity:1}50%{opacity:.45}}
+
+/* =========================================================
+   v100: 六枚同時の札 ── 名前と数字を絵の上に、顔を上から3割に、数字を大きく
+   ========================================================= */
+.sixcard .art{z-index:1}
+.sixcard .nm{z-index:3;padding:30px 4px 7px}
+/* 顔が上から約3割に来るよう、絵の箱を札より大きく取り、頭を上端から少し下げる。体は下で見切れる */
+.sixcard .art .lay .cut{object-fit:cover;object-position:50% 0;left:-15%;width:130%;top:9%;height:130%}
+/* 横に広い者（竜・トロール・サラマンダーなど）は全身を横幅いっぱいに。頭は上寄せ */
+.sixcard.big .art .lay .cut{object-fit:contain;object-position:50% 0;left:-22%;width:144%;top:10%;height:96%}
+.sixcard .sixst{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:5px;width:100%}
+.sixcard .sixst span{display:flex;flex-direction:column;align-items:center;gap:0;line-height:1}
+.sixcard .sixst i{font-size:8px;font-weight:900;color:#c9d3ea;letter-spacing:.06em}
+.sixcard .sixst b{font-size:17px;font-weight:900;text-shadow:0 1px 3px #000,0 0 6px #000}
+
+/* =========================================================
+   v101: 札は顔を基準に切り出す／詳細の数字の列幅／板の上がり下がりは色で
+   ========================================================= */
+.sixcard .art .lay .cut,.sixcard.big .art .lay .cut{object-position:50% 0}   /* 位置と大きさは JS（fitFace）が決める */
+.detailbox.v95 .strow.z .nv{width:54px;min-width:54px;text-align:right;white-space:nowrap}
+.unit .spb.up,.unit .atb.up{color:#a6f5c2}
+.unit .spb.dn,.unit .atb.dn{color:#ffa9b6}
+
+/* ---------- v102：邂逅録（全画面の図鑑）・戻るボタン ---------- */
+#screen-rec{position:fixed;inset:0;background:#0b0f1c;display:flex;flex-direction:column;overflow:hidden;z-index:30}
+.rechd{position:absolute;left:0;right:0;top:0;height:calc(46px + var(--safe-t,0px));padding-top:var(--safe-t,0px);display:flex;align-items:center;padding-left:4px;padding-right:6px;z-index:5;pointer-events:none;
+  background:linear-gradient(180deg,rgba(11,15,28,.96) 40%,rgba(11,15,28,0))}
+.recback{pointer-events:auto;width:40px;height:40px;border:0;background:none;color:#e9d8a6;font-size:32px;line-height:1;font-weight:300;padding:0 0 4px}
+.rectt{flex:1;text-align:center;line-height:1.05}
+.rectt b{display:block;font-size:15px;letter-spacing:.3em;color:#f4dda2;font-weight:900}
+.rectt i{font-style:normal;font-size:8.5px;letter-spacing:.18em;color:#8fa0c0}
+.recsearch{pointer-events:none;width:38px;height:38px;border:0;border-radius:50%;background:rgba(20,26,44,.72);color:#c9d3ea;font-size:21px;line-height:1;
+  opacity:0;transform:scale(.85);transition:opacity .35s,transform .35s}
+.recsearch.on{pointer-events:auto;opacity:.6;transform:none}
+.recbody{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(48px + var(--safe-t,0px)) 5px calc(24px + var(--safe-b,0px))}
+.rnote{font-size:10.5px;color:#6d7b99;line-height:1.5;margin:0 4px 4px}
+.rempty{color:#8fa0c0;text-align:center;padding:40px 0;font-size:13px}
+.rsec{margin-top:8px}
+.rhd{display:flex;align-items:center;gap:7px;padding:8px 4px 0}
+.rhd .lg{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;background:var(--lc);color:#0b0f1c}
+.rhd b{font-size:14px;color:var(--lc);letter-spacing:.1em}
+.rhd .cnt{margin-left:auto;font-size:10.5px;font-weight:800;color:#6d7b99}
+.rrule{font-size:10.5px;color:#8fa0c0;line-height:1.5;margin:4px 4px 8px}
+.rsolo{font-size:10px;font-weight:800;color:#6d7b99;letter-spacing:.06em;margin:6px 4px 6px}
+.rrow{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px}
+.rcard{position:relative;aspect-ratio:112/308;border-radius:10px;overflow:hidden;background:#141a2c;border:1px solid rgba(242,198,92,.35);box-shadow:0 2px 8px #000;cursor:pointer}
+.rcard:active{transform:scale(.98)}
+.rcard .art{position:absolute;inset:0;z-index:1}
+.rcard .art .lay{width:100%;height:100%;border-radius:10px}
+.rcard .art .lay .fr{display:none}
+.rcard .art .lay .cut{object-position:50% 0}            /* 位置と大きさは fitFace が決める */
+.rcard .art svg{width:100%;height:100%}
+.rcard .rtier{position:absolute;left:0;right:0;top:0;z-index:3;text-align:center;font-size:9px;font-weight:900;letter-spacing:.12em;color:#ffe9a8;padding:3px 0;
+  background:linear-gradient(180deg,rgba(0,0,0,.75),rgba(0,0,0,0));pointer-events:none}
+.rcard .nm{position:absolute;left:0;right:0;bottom:0;z-index:3;padding:30px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:1px;pointer-events:none;
+  background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.85) 45%,rgba(0,0,0,.95))}
+.rcard .nm b{font-size:12.5px;font-weight:900;letter-spacing:.04em;text-shadow:0 1px 3px #000;white-space:nowrap}
+.rcard .nm i{font-style:normal;font-size:8.5px;font-weight:800;color:#9fb0d0;letter-spacing:.08em;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.rcard .sixst{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:4px;width:100%}
+.rcard .sixst span{display:flex;flex-direction:column;align-items:center;line-height:1}
+.rcard .sixst i{font-size:7.5px;font-weight:900;color:#c9d3ea;letter-spacing:.06em}
+.rcard .sixst b{font-size:15px;font-weight:900;text-shadow:0 1px 3px #000}
+.rcard .sixst .hp{color:#7de8a4}.rcard .sixst .sp{color:#7fd0ff}.rcard .sixst .at{color:#ffb36b}
+.rcard .sixst .at.mag{color:#c98cff}.rcard .sixst .at.heal{color:#7de8a4}
+.rcard.soon{border-color:#3d4f7a}
+.rcard.soon .art{filter:brightness(.28) saturate(.3)}
+.rcard.soon .sixst b{color:#6d7b99}
+.rsoon{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-size:12px;font-weight:900;letter-spacing:.2em;color:#bcd2ff;border:1px solid #5c78ad;border-radius:6px;padding:3px 8px;background:rgba(20,30,60,.7);z-index:4;filter:none}
+.rcard.soon .art .rsoon{filter:none}
+/* 絞り込みシート */
+.recsheet{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55)}
+.recsheet .sheet{position:absolute;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:#121829;border-top:1px solid rgba(242,198,92,.4);border-radius:16px 16px 0 0;
+  padding:12px 14px calc(28px + var(--safe-b,0px))}
+.recsheet .sh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.recsheet .sh b{color:#f4dda2;letter-spacing:.1em;font-size:14px}
+.recsheet .shx{border:0;background:none;color:#9fb0d0;font-size:16px;padding:4px 6px}
+.recsheet .sl{font-size:10.5px;color:#8fa0c0;font-weight:800;margin:10px 0 5px;letter-spacing:.06em}
+.recsheet .chips{display:flex;flex-wrap:wrap;gap:6px}
+.rchip{font-size:11.5px;font-weight:800;padding:6px 10px;border-radius:999px;border:1px solid #2c3652;color:#c9d3ea;background:#1a2138;cursor:pointer}
+.rchip.on{border-color:var(--gold);color:#ffe9a8;background:rgba(58,47,16,.6)}
+.recsheet .sn{font-size:10.5px;color:#8fa0c0;margin-top:12px;line-height:1.5}
+/* ホームの4つ目 */
+.hbtn span em{font-style:normal;color:#f2c65c}
+#h_rec span em{color:#8fa0c0;letter-spacing:.12em;font-size:9.5px}
+/* 上端の戻る */
+.topback{align-self:flex-start;border:0;background:none;color:#e9d8a6;font-size:13px;font-weight:800;letter-spacing:.06em;padding:4px 8px 4px 2px;margin:-14px 0 -8px -6px}
+.hdrback{border:0;background:none;color:#e9d8a6;font-size:26px;line-height:1;font-weight:300;padding:0 6px 3px 2px;margin-left:-4px}

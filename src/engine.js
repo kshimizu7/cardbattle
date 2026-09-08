@@ -559,6 +559,18 @@ var CB = (function () {
     return back;
   }
 
+  /** 盤面ぜんぶを見て、空いた前衛マスへ後衛を繰り上げる。
+      倒れた瞬間に呼ぶ pullUp では拾えない場面のために置く：
+      ・殉教のように「倒れる」以外の理由で前衛が欠けたとき
+      ・復活で後衛に生者が戻り、その前が死体だけになっているとき
+      呼ぶだけなら何も起きない（条件を満たす列だけが動く）ので、何度呼んでもよい */
+  function pullUpAll(st) {
+    if (advanceMode !== 'death') return;
+    [0, 1].forEach(function (side) {
+      for (var c = 0; c < 3; c++) pullUp(st, side, c);
+    });
+  }
+
   /** 溜めておいた前進の演出を流す。技の締め・ラウンド処理の締めで必ず呼ぶ。
       溜めているあいだに、繰り上がるはずだった後衛まで倒れていることがある
       （前衛と後衛をまとめて薙ぐ技など）。倒れた者は前へ出ない——
@@ -902,6 +914,9 @@ var CB = (function () {
       u.alive = false; u.hp = 0;
       push(st, { type: 'death', uid: u.uid });
       logMsg(st, u.def.name + ' は自らの命を捧げた…', 'bad');
+      /* 自分が前衛から抜けた（倒された訳ではないので killUnit を通らない）。
+         空いた前衛マスへ後衛を繰り上げる。蘇ったのが真後ろの味方なら、その者が前へ出る */
+      pullUpAll(st);
       return finishAction(st, u, a);
     }
 
@@ -1116,6 +1131,9 @@ var CB = (function () {
         }
       }
     });
+    /* 蘇った者が後衛で、その前が死体だけなら前線へ出す */
+    pullUpAll(st);
+    flushMoves(st);
     buildOrder(st);
     push(st, { type: 'roundStart', round: st.round });
     return st.events;
@@ -1425,6 +1443,7 @@ var CB = (function () {
     cardPower: cardPower, RATING: RATING, meleeChain: meleeChain, meleeReady: meleeReady,
     squareCells: squareCells, tally: tally, deal: deal, redraw: redraw,
     setAdvanceMode: setAdvanceMode, getAdvanceMode: getAdvanceMode, normalizeTeam: normalizeTeam,
+    pullUpAll: pullUpAll,
     playable: playable, mulberry32: mulberry32, shuffle: shuffle, statusVal: statusVal,
     adjacentAllies: adjacentAllies, coverOf: coverOf,
     POOLS: POOLS, setPool: setPool, getPool: getPool, poolIds: poolIds, inPool: inPool, handSize: handSize,

@@ -30,7 +30,9 @@ const UIJS = 'window.VOT_UI = {' + [1, 2, 3].map(t =>
 ).join(',') + '};\n' +
   'window.VOT_BG = ' + fs.readFileSync(__dirname + '/art/bg_colours.json', 'utf8') + ';\n' +
   /* v95: 盤面での切り出し（top＝膝上から上を大きく／big＝全身のまま大きく） */
-  'window.VOT_VIEW = ' + fs.readFileSync(__dirname + '/art/board_view.json', 'utf8') + ';';
+  'window.VOT_VIEW = ' + fs.readFileSync(__dirname + '/art/board_view.json', 'utf8') + ';\n' +
+  /* v101: 顔の中心（絵の中の割合 x,y）。紹介の札で顔を決まった位置に置くため */
+  'window.VOT_FACE = ' + fs.readFileSync(__dirname + '/art/face.json', 'utf8') + ';';
 
 const ARTJS = 'window.VOT_ART = {' + Object.keys(ART_FILES).map(k =>
   JSON.stringify(k) + ':"data:image/webp;base64,' +

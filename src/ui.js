@@ -71,7 +71,7 @@
      再描画のたびに頭から鳴り直すことはない。
      音色はオーケストラ風で固定。 */
   var BGM_FOR = { battle: 'up', title: 'mid', draft: 'mid', ready: 'mid',
-                  pass: 'mid', result: 'mid', rpg: 'mid' };
+                  pass: 'mid', result: 'mid', rpg: 'mid', record: 'mid' };
   var BGM_VOL = 0.3;               // 効果音より一段下げる
   var BGM_TONE = 'chip';           // 電子音（オーケストラ風は 'orch'）
   function syncBgm() {
@@ -1768,6 +1768,8 @@
             (r.coin ? '　<em>硬貨 ' + r.coin + '</em>' : '') + '</span></button>' +
           '<button class="hbtn" id="h_lore"><i>◆</i><b>叙 事 詩</b>' +
             '<span>いま分かっている、この世界のこと</span></button>' +
+          '<button class="hbtn" id="h_rec"><i>◆</i><b>邂 逅 録</b>' +
+            '<span>出会った者たちの記録　<em>Record of Encounters</em></span></button>' +
           '<div class="home-foot">' +
             '<button class="hmini" id="h_snd">' + (S.sound ? '♪ 効果音' : '♪ 効果音 切') + '</button>' +
             '<button class="hmini" id="h_bgm">' + (S.bgm ? '🎵 BGM' : '🎵 BGM 切') + '</button>' +
@@ -1778,6 +1780,7 @@
     $('#h_arena').onclick = function () { renderTitle(); };
     $('#h_rpg').onclick = renderTown;
     $('#h_lore').onclick = showLore;
+    $('#h_rec').onclick = function () { renderRecord(renderHome); };
     $('#h_snd').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderHome(); };
     $('#h_bgm').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderHome(); };
     $('#h_fs2').onclick = toggleFullscreen;
@@ -1832,6 +1835,7 @@
     S.screen = 'title'; syncBgm();
     app.innerHTML =
       '<div id="screen-title">' +
+        '<button class="topback" id="home1" aria-label="ホームへ">‹ ホーム</button>' +
         '<div><div class="title-logo" style="font-size:34px">ARCANA<br>CLASH</div>' +
         '<div class="sub" style="margin-top:6px">アルカナ・クラッシュ</div>' +
         '<div class="sub" style="margin-top:10px;letter-spacing:.05em;color:#6d7b99">6体編成の陣形カードバトル</div></div>' +
@@ -1882,7 +1886,7 @@
         /* 2段に分ける。1段に4つ並べると幅が足りず、日本語が1文字ずつ折り返される */
         '<div style="display:flex;gap:8px">' +
           '<button class="btn ghost" id="rules" style="flex:1;white-space:nowrap">📖 ルール</button>' +
-          '<button class="btn ghost" id="gallery" style="flex:1;white-space:nowrap">🗂 カード図鑑</button>' +
+          '<button class="btn ghost" id="gallery" style="flex:1;white-space:nowrap">📜 邂逅録</button>' +
           '<button class="btn ghost" id="fs0" style="flex:0 0 52px" title="全画面">⛶</button>' +
         '</div>' +
         '<div style="display:flex;gap:8px">' +
@@ -1920,11 +1924,12 @@
     $('#go').onclick = startGame;
     $('#rules').onclick = showRules;
     $('#fs0').onclick = toggleFullscreen;
-    $('#gallery').onclick = showGallery;
+    $('#gallery').onclick = function () { renderRecord(renderTitle); };
     $('#snd0').onclick = function () { S.sound = !S.sound; SFX.setEnabled(S.sound); rememberSettings(); if (S.sound) SFX.play('select'); renderTitle(); };
     $('#bgm0').onclick = function () { S.bgm = !S.bgm; rememberSettings(); syncBgm(); renderTitle(); };
     $('#record').onclick = showRecord;
     $('#home0').onclick = renderHome;
+    $('#home1').onclick = renderHome;
   }
 
   function showRules() {
@@ -2241,19 +2246,44 @@
     document.body.appendChild(m);
   }
 
-  function showGallery() {
-    var m = document.createElement('div');
-    m.className = 'modal gallery';
-    var tab = 'full';
-    var sort = 'line';                                  // line / cost / atk / hp / spd
+  /* =========================================================
+     邂逅録 ── 出会った者たちの記録（v102。全画面の図鑑）
+     ・普段は絞り込みを見せない。開いて2秒たつと右上に⌕、スクロール中は隠す
+     ・戦闘冒頭と同じ縦長の札を幅いっぱいに3列。段のある者は横一列、単体は段落を変えて
+     ========================================================= */
+  var REC = { tab: 'full', sort: 'line', line: 'all' };
+  var REC_SORTS = [
+    { k: 'line', n: '系統別',   d: '系統ごとに Tier1 → Tier2 → Tier3 の順で並べます。暗い札はまだ編成に使えない者' },
+    { k: 'cost', n: 'コスト順', d: 'コストの安い順。編成の枠と相談するときに' },
+    { k: 'atk',  n: '攻撃力順', d: '攻撃力（回復役は回復量）の高い順' },
+    { k: 'hp',   n: '体力順',   d: '体力の高い順。前衛を探すときに' },
+    { k: 'spd',  n: '素早さ順', d: '素早さの高い順。先に動く順番' }
+  ];
+  function recStatsHTML(d) {
+    var ai = atkInfo(d);
+    return '<div class="sixst"><span class="hp"><i>体力</i><b>' + d.hp + '</b></span>' +
+      '<span class="sp"><i>素早</i><b>' + d.spd + '</b></span>' +
+      '<span class="at ' + ai.kind + '"><i>' + ai.label + '</i><b>' + ai.val + '</b></span></div>';
+  }
+  function recCardHTML(id, tier, cap) {
+    var d = E.BY_ID[id], t = d ? null : E.TEASER_BY_ID[id];
+    if (!d && !t) return '';
+    var def = d || t;
+    return '<div class="rcard' + (t ? ' soon' : '') + '" data-' + (t ? 'teaser' : 'rid') + '="' + id + '" data-def="' + id + '">' +
+      (tier ? '<div class="rtier">Tier ' + tier + '</div>' : '') +
+      (cap ? '<div class="rtier">' + cap + '</div>' : '') +
+      '<div class="art">' + ART.portrait(id, def.elem) + (t ? '<div class="rsoon">近日</div>' : '') + '</div>' +
+      '<div class="nm"><b>' + def.name + '</b><i>' + def.en + '</i>' +
+      (d ? recStatsHTML(d)
+         : '<div class="sixst"><span class="hp"><i>体力</i><b>?</b></span><span class="sp"><i>素早</i><b>?</b></span><span class="at"><i>攻撃</i><b>?</b></span></div>') +
+      '</div></div>';
+  }
+  function renderRecord(back) {
+    app.classList.remove('land', 'lp-bottom', 'lp-side');
+    S.gen = (S.gen || 0) + 1;
+    S.screen = 'record'; syncBgm();
+    var tab = REC.tab, sort = REC.sort, line = REC.line;
 
-    var SORTS = [
-      { k: 'line', n: '系統別', d: '系統ごとに Tier1 → Tier2 → Tier3 の順で並べます。青い「近日」カードはまだ編成に使えません' },
-      { k: 'cost', n: 'コスト順', d: 'コストの安い順。編成の枠と相談するときに' },
-      { k: 'atk',  n: '攻撃力順', d: '攻撃力（回復役は回復量）の高い順' },
-      { k: 'hp',   n: '体力順',   d: '体力の高い順。前衛を探すときに' },
-      { k: 'spd',  n: '素早さ順', d: '素早さの高い順。先に動く順番' }
-    ];
     function valOf(d, k) {
       if (k === 'cost') return d.cost;
       if (k === 'hp') return d.hp;
@@ -2261,35 +2291,29 @@
       return atkInfo(d).val;
     }
     function poolIds() {
-      /* 休ませたカード（retired）と、敵としてだけ現れるカード（noDeck）は図鑑の棚に並べない。
-         系統の「段階」を開けば、上位の姿としてちゃんと見えます */
       var live = function (id) { var d = E.BY_ID[id]; return d && !d.retired && !d.noDeck; };
-      return (tab === 'full') ? E.ROSTER.filter(function (x) { return !x.retired && !x.noDeck; }).map(function (x) { return x.id; })
-                              : E.POOLS[tab].ids.filter(live);
+      var ids = (tab === 'full') ? E.ROSTER.filter(function (x) { return !x.retired && !x.noDeck; }).map(function (x) { return x.id; })
+                                 : E.POOLS[tab].ids.filter(live);
+      if (line !== 'all') ids = ids.filter(function (id) { return lineOf(E.BY_ID[id]) === line; });
+      return ids;
     }
-
-    function draw() {
-      var ids = poolIds();
-      var star = E.POOLS.starter.ids;
-      var body = '';
-
+    function bodyHTML() {
+      var ids = poolIds(), body = '';
+      if (!ids.length) return '<div class="rempty">この条件に当てはまる者はいません</div>';
       if (sort === 'line') {
         var showTeaser = (tab === 'full');
         LINE_ORDER.forEach(function (ln) {
           var mine = ids.filter(function (id) { return lineOf(E.BY_ID[id]) === ln; });
           if (!mine.length) return;
           var L = LINES[ln];
-
-          // ラインの起点（Tier1）を集めて、上へ辿って並べる
           function stepOf(id) {
             var d = E.BY_ID[id] || E.TEASER_BY_ID[id];
-            return d ? { id: id, name: d.name, teaser: !E.BY_ID[id], up: d.up } : null;
+            return d ? { id: id, teaser: !E.BY_ID[id], up: d.up } : null;
           }
           var chains = [], used = {};
           mine.forEach(function (id) {
             var d = E.BY_ID[id];
-            if (d.base) return;                       // 途中の段は起点にしない
-            if (!d.up) return;                        // 独立は後で
+            if (d.base || !d.up) return;
             var chain = [], cur = id, guard = 0;
             while (cur && guard++ < 5) {
               var st2 = stepOf(cur);
@@ -2300,42 +2324,21 @@
             if (chain.length > 1) chains.push(chain);
           });
           var solo = mine.filter(function (id) { return !used[id] && !E.BY_ID[id].base; });
-
-          // この系統の欄に実際に並ぶイメージ枠の数
           var soon = 0;
           chains.forEach(function (ch) { ch.forEach(function (x) { if (x.teaser) soon++; }); });
-          body += '<div class="lsec" style="--lc:' + L.c + '">' +
-            '<div class="lhd"><span class="lg">' + ln + '</span><b>' + L.name + '</b>' +
+          body += '<section class="rsec" style="--lc:' + L.c + '">' +
+            '<div class="rhd"><span class="lg">' + ln + '</span><b>' + L.name + '</b>' +
             '<span class="cnt">' + mine.length + '体' + (soon ? '＋近日' + soon : '') + '</span></div>' +
-            '<div class="lrule">' + L.rule + '</div>';
-
+            '<div class="rrule">' + L.rule + '</div>';
           chains.forEach(function (chain) {
-            body += '<div class="tierrow">' + chain.map(function (st3, i) {
-              var card = st3.teaser ? teaserHTML(E.TEASER_BY_ID[st3.id])
-                : cardHTML(st3.id, { en: 1, cls: (tab === 'full' && star.indexOf(st3.id) < 0) ? ' expand' : '' });
-              return (i ? '<div class="parrow">▶</div>' : '') +
-                '<div class="pc">' + card +
-                '<span class="ptag' + (i === 0 ? '' : (st3.teaser ? ' soon' : ' up')) + '">Tier ' + (i + 1) + '</span></div>';
-            }).join('') + '</div>';
+            body += '<div class="rrow">' + chain.map(function (x, i) { return recCardHTML(x.id, i + 1); }).join('') + '</div>';
           });
-
           if (solo.length) {
-            body += '<div class="solohd">上位互換なし（独立）</div><div class="ggrid">' +
-              solo.map(function (id) {
-                return cardHTML(id, { en: 1, cls: (tab === 'full' && star.indexOf(id) < 0) ? ' expand' : '' });
-              }).join('') + '</div>';
+            body += (chains.length ? '<div class="rsolo">単体（上の段なし）</div>' : '') +
+              '<div class="rrow wrap">' + solo.map(function (id) { return recCardHTML(id, 0); }).join('') + '</div>';
           }
-          body += '</div>';
+          body += '</section>';
         });
-        if (showTeaser) {
-          body += '<div class="lsec concepts"><div class="lhd"><span class="lg" style="background:#4a5a80">?</span>' +
-            '<b>まだ見ぬ者たち</b><span class="cnt">構想中</span></div>' +
-            '<div class="lrule">名前だけが決まっているライン。実装するかどうかも含めて検討中です。</div>' +
-            E.CONCEPTS.map(function (c) {
-              return '<div class="crow"><span class="ci">' + c.icon + '</span><b>' + c.line + '</b>' +
-                '<span class="cl">' + c.low + '</span><span class="ca">▶</span><span class="ch">' + c.high + '</span></div>';
-            }).join('') + '</div>';
-        }
       } else {
         var sorted = ids.slice().sort(function (x, y) {
           var dx = E.BY_ID[x], dy = E.BY_ID[y];
@@ -2344,50 +2347,75 @@
           return dx.cost - dy.cost;
         });
         var unit = { cost: 'コスト', atk: '攻撃', hp: '体力', spd: '素早' }[sort];
-        var last = null;
-        body += '<div class="ggrid sortgrid">';
-        sorted.forEach(function (id) {
-          var d = E.BY_ID[id], v = valOf(d, sort);
-          if (v !== last) { last = v; }
-          body += '<div class="sortcell"><div class="sortv">' + unit + ' ' + v + '</div>' +
-            cardHTML(id, { en: 1, cls: (tab === 'full' && star.indexOf(id) < 0) ? ' expand' : '' }) + '</div>';
-        });
-        body += '</div>';
+        body += '<section class="rsec"><div class="rrow wrap">' + sorted.map(function (id) {
+          return recCardHTML(id, 0, unit + ' ' + valOf(E.BY_ID[id], sort));
+        }).join('') + '</div></section>';
       }
-
-      m.innerHTML = '<div class="box">' +
-        '<h3 style="color:var(--gold);margin-bottom:6px">カード図鑑</h3>' +
-        '<div class="gtabs">' +
-          '<button class="gtab' + (tab === 'tutorial' ? ' on' : '') + '" data-tab="tutorial">🌱 入門 ' + E.POOLS.tutorial.ids.length + '</button>' +
-          '<button class="gtab' + (tab === 'starter' ? ' on' : '') + '" data-tab="starter">🎓 スターター ' + E.POOLS.starter.ids.length + '</button>' +
-          '<button class="gtab' + (tab === 'full' ? ' on' : '') + '" data-tab="full">🏆 ' + E.POOLS.full.name + ' ' +
-            E.ROSTER.filter(function (x) { return !x.retired && !x.noDeck; }).length + '</button>' +
-        '</div>' +
-        '<div class="gsorts">' + SORTS.map(function (o) {
-          return '<button class="gsort' + (sort === o.k ? ' on' : '') + '" data-sort="' + o.k + '">' + o.n + '</button>';
-        }).join('') + '</div>' +
-        '<div class="gnote">' + (SORTS.filter(function (o) { return o.k === sort; })[0] || {}).d +
-          '　カードをタップで詳細' + (tab === 'full' ? '　<span style="color:#c98cff">紫枠＝拡張</span>' : '') + '</div>' +
-        body +
-        '<button class="btn ghost" id="gclose" style="width:100%;margin-top:12px">閉じる</button></div>';
-
-      $$('[data-tab]', m).forEach(function (b) {
-        b.onclick = function (ev) { ev.stopPropagation(); tab = b.dataset.tab; draw(); };
-      });
-      $$('[data-sort]', m).forEach(function (b) {
-        b.onclick = function (ev) { ev.stopPropagation(); sort = b.dataset.sort; draw(); };
-      });
-      $('#gclose', m).onclick = function () { m.remove(); };
-      $$('[data-card]', m).forEach(function (c) {
-        c.onclick = function (ev) { ev.stopPropagation(); openDetail(c.dataset.card, poolIds()); };
-      });
-      $$('[data-teaser]', m).forEach(function (c) {
-        c.onclick = function (ev) { ev.stopPropagation(); openTeaser(c.dataset.teaser); };
-      });
+      return body;
     }
-    draw();
-    m.onclick = function (ev) { if (ev.target === m) m.remove(); };
-    document.body.appendChild(m);
+    var cur = REC_SORTS.filter(function (o) { return o.k === sort; })[0] || REC_SORTS[0];
+    app.innerHTML =
+      '<div id="screen-rec">' +
+        '<div class="rechd">' +
+          '<button class="recback" id="recback" aria-label="戻る">‹</button>' +
+          '<div class="rectt"><b>邂逅録</b><i>Record of Encounters</i></div>' +
+          '<button class="recsearch" id="recsearch" aria-label="絞り込み">⌕</button>' +
+        '</div>' +
+        '<div class="recbody" id="recbody">' +
+          '<div class="rnote">' + cur.d + '　札をタップで詳細</div>' +
+          bodyHTML() +
+        '</div>' +
+      '</div>';
+
+    /* 札の絵は「目」を基準に置く（戦闘冒頭の札と同じ） */
+    $$('.rcard', app).forEach(function (c) { fitFace($('.art', c), $('.cut', c), c.dataset.def); });
+
+    /* ⌕：開いて2秒で現れ、スクロール中は隠れ、止まって1秒で戻る */
+    var srch = $('#recsearch'), body = $('#recbody'), tmr = null;
+    function showSearch() { srch.classList.add('on'); }
+    tmr = setTimeout(showSearch, 2000);
+    body.addEventListener('scroll', function () {
+      srch.classList.remove('on');
+      clearTimeout(tmr); tmr = setTimeout(showSearch, 1000);
+    }, { passive: true });
+
+    $('#recback').onclick = function () { clearTimeout(tmr); (back || renderHome)(); };
+    srch.onclick = function () { openRecSheet(); };
+    $$('[data-rid]', app).forEach(function (c) {
+      c.onclick = function () { openDetail(c.dataset.rid, poolIds()); };
+    });
+    $$('[data-teaser]', app).forEach(function (c) {
+      c.onclick = function () { openTeaser(c.dataset.teaser); };
+    });
+
+    function chip(attr, k, on, label) {
+      return '<span class="rchip' + (on ? ' on' : '') + '" data-' + attr + '="' + k + '">' + label + '</span>';
+    }
+    function openRecSheet() {
+      var m = document.createElement('div');
+      m.className = 'recsheet';
+      var nFull = E.ROSTER.filter(function (x) { return !x.retired && !x.noDeck; }).length;
+      m.innerHTML = '<div class="sheet">' +
+        '<div class="sh"><b>絞り込み・並び</b><button class="shx" aria-label="閉じる">✕</button></div>' +
+        '<div class="sl">カードプール</div><div class="chips">' +
+          chip('tab', 'tutorial', tab === 'tutorial', '🌱 入門 ' + E.POOLS.tutorial.ids.length) +
+          chip('tab', 'starter', tab === 'starter', '🎓 スターター ' + E.POOLS.starter.ids.length) +
+          chip('tab', 'full', tab === 'full', '🏆 ' + E.POOLS.full.name + ' ' + nFull) + '</div>' +
+        '<div class="sl">系統</div><div class="chips">' +
+          chip('line', 'all', line === 'all', 'すべて') +
+          LINE_ORDER.map(function (ln) { return chip('line', ln, line === ln, LINES[ln].name); }).join('') + '</div>' +
+        '<div class="sl">並び</div><div class="chips">' +
+          REC_SORTS.map(function (o) { return chip('sort', o.k, sort === o.k, o.n); }).join('') + '</div>' +
+        '<div class="sn">' + cur.d + '</div>' +
+        '</div>';
+      document.body.appendChild(m);
+      function close() { m.remove(); }
+      m.onclick = function (e) { if (e.target === m) close(); };
+      $('.shx', m).onclick = close;
+      $$('[data-tab]', m).forEach(function (b) { b.onclick = function () { REC.tab = b.dataset.tab; close(); renderRecord(back); }; });
+      $$('[data-line]', m).forEach(function (b) { b.onclick = function () { REC.line = b.dataset.line; close(); renderRecord(back); }; });
+      $$('[data-sort]', m).forEach(function (b) { b.onclick = function () { REC.sort = b.dataset.sort; close(); renderRecord(back); }; });
+    }
   }
 
   /* =========================================================
@@ -2644,6 +2672,7 @@
 
     app.innerHTML =
       '<div class="hdr">' +
+        '<button class="hdrback" id="dback" aria-label="設定へ戻る">‹</button>' +
         '<span class="t" style="color:' + (side === 0 ? 'var(--p1)' : 'var(--p2)') + '">P' + (side + 1) + ' 編成</span>' +
         (noCost ? '<span class="sp" style="flex:1"></span>'
           : '<div class="meter' + (over ? ' over' : '') + (manaOut ? ' spent' : '') + '">' +
@@ -2738,6 +2767,8 @@
     });
 
     /* ---------- ツール ---------- */
+    /* 上端の ‹ ：設定へ戻る（置いた札は白紙になる） */
+    $('#dback').onclick = function () { renderTitle(); };
     $('#arrange').onclick = function () {
       var next = autoArrange(team);
       if (sameTeam(next, team)) { toast('すでに整っています'); return; }
@@ -2841,6 +2872,26 @@
       a2.onfinish = function () { fly.remove(); if (onDone) onDone(); };
     };
   }
+  /* 絵の「目」（両目が見えれば その中間、片目なら見える目。目のない者は頭の中心）が
+     箱の（左右中央・上から30%）に来るように、絵の大きさと位置を決める。
+     目の位置は art/face.json（絵の中の割合、一体ごと）。v102 から顔の中心ではなく目を基準にした */
+  var FACE_AT = { x: 0.5, y: 0.30, zoom: 1.25 };
+  function fitFace(box, img, defId) {
+    if (!box || !img) return;
+    var f = (window.VOT_FACE && window.VOT_FACE[defId]) || [0.5, 0.12];
+    function place() {
+      var iw = img.naturalWidth, ih = img.naturalHeight; if (!iw || !ih) return;
+      var w = box.clientWidth, h = box.clientHeight; if (!w || !h) return;
+      var s = Math.max(w / iw, h / ih) * FACE_AT.zoom;
+      /* 顔をぴったり狙いの位置に置く。絵は透明な切り抜きなので、上や横に空きができても背景が見えるだけ */
+      var fx = f[0], fy = f[1];   /* 左右反転は .lay の CSS(scaleX(-1)) が担う。ここで反転すると二重になる */
+      var W = iw * s, H = ih * s;
+      var left = w * FACE_AT.x - fx * W, top = h * FACE_AT.y - fy * H;
+      top = Math.min(top, h * 0.12);          /* 頭の上の空きは箱の12%まで */
+      img.style.cssText = 'position:absolute;object-fit:fill;width:' + W + 'px;height:' + H + 'px;left:' + left + 'px;top:' + top + 'px';
+    }
+    if (img.complete && img.naturalWidth) place(); else img.onload = place;
+  }
   function introUnits(st) {
     var units = [];
     [0, 1].forEach(function (side) {
@@ -2927,7 +2978,7 @@
 
   /* 開幕の紹介（六枚同時）：陣営ごとに縦長6枚を並べ、左上から右下へテンポよくめくる。
      6枚そろったら止めて見せ、6枚同時に盤面の定位置へ飛ぶ。味方→敵 */
-  var INTRO6 = { stagger: 160, flip: 380, hold: 1300, fly: 520, between: 350 };
+  var INTRO6 = { stagger: 200, flip: 700, fly: 520, between: 350 };   /* めくりは重ねてよい。6枚そろったらタップ待ち */
   function playIntroSix(done) {
     var st = S.st, gen = S.gen;
     var isp = function () { return Math.max(1, S.speed || 1); };
@@ -2952,9 +3003,22 @@
       renderActions();
       done();
     }
-    ov.addEventListener('click', function (ev) { ev.stopPropagation(); finish(); });
+    /* タップ：6枚が出そろって待っているときは「次へ」、それ以外は何もしない（スキップはボタン） */
+    var onTap = null;
+    ov.addEventListener('click', function (ev) {
+      ev.stopPropagation();
+      if (ev.target && ev.target.closest && ev.target.closest('.introskip')) { finish(); return; }
+      if (onTap) { var f = onTap; onTap = null; f(); }
+    });
     function team(side) {
       return introUnits(st).filter(function (v) { return v.side === side; });
+    }
+    function statsHTML(u) {
+      var pw = atkLive(u), spdv = E.getSpd(u, st);
+      var lb = pw.kind === 'heal' ? '回復' : pw.kind === 'mag' ? '魔力' : '攻撃';
+      return '<div class="sixst"><span class="hp"><i>体力</i><b>' + u.maxHp + '</b></span>' +
+        '<span class="sp"><i>素早</i><b>' + spdv + '</b></span>' +
+        '<span class="at ' + pw.kind + '"><i>' + lb + '</i><b>' + pw.val + '</b></span></div>';
     }
     function showSide(side, after) {
       if (over) return;
@@ -2964,12 +3028,14 @@
       wrap.innerHTML = '<div class="sixtag">' + sideName(side) + '</div>' + us.map(function (u) {
         var cell = $('.unit[data-uid="' + u.uid + '"]');
         var flip = introMirrored($('.pic .lay', cell));
-        return '<div class="sixcard" data-uid="' + u.uid + '"><div class="face back"></div>' +
+        var big = $('.pic .lay', cell) && $('.pic .lay', cell).classList.contains('v-big');
+        return '<div class="sixcard' + (big ? ' big' : '') + '" data-uid="' + u.uid + '"><div class="face back"></div>' +
           '<div class="face front"><div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
-          '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i></div></div></div>';
-      }).join('');
+          '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i>' + statsHTML(u) + '</div></div></div>';
+      }).join('') + '<div class="sixhint">タップで次へ</div>';
       app.appendChild(wrap);
-      var cards = $$('.sixcard', wrap);
+      var cards = $$('.sixcard', wrap), hint = $('.sixhint', wrap);
+      cards.forEach(function (c) { fitFace($('.art', c), $('.cut', c), E.findUid(st, c.dataset.uid).defId); });
       cards.forEach(function (c, i) {
         later(80 + INTRO6.stagger * i, function () {
           if (over) return;
@@ -2978,9 +3044,15 @@
                                { duration: INTRO6.flip / isp(), easing: 'cubic-bezier(.3,.7,.3,1)', fill: 'forwards' }));
         });
       });
-      var doneAt = 80 + INTRO6.stagger * (cards.length - 1) + INTRO6.flip + INTRO6.hold;
+      var doneAt = 80 + INTRO6.stagger * (cards.length - 1) + INTRO6.flip;
       later(doneAt, function () {
         if (over) return;
+        hint.classList.add('on');
+        onTap = go;
+      });
+      function go() {
+        if (over) return;
+        hint.classList.remove('on');
         var left = cards.length;
         cards.forEach(function (c) {
           var u = E.findUid(st, c.dataset.uid), cell = $('.unit[data-uid="' + u.uid + '"]');
@@ -2991,7 +3063,7 @@
             if (--left === 0) { wrap.remove(); later(INTRO6.between, after); }
           });
         });
-      });
+      }
     }
     showSide(0, function () { showSide(1, function () { later(200, finish); }); });
   }
@@ -3031,7 +3103,8 @@
     var cdTag = '';
     var pw = atkLive(u);
     var spd = E.getSpd(u, st), sdir = spd > u.def.spd ? 1 : spd < u.def.spd ? -1 : 0;
-    var arrow = function (d) { return d > 0 ? '<i class="up">▲</i>' : d < 0 ? '<i class="dn">▼</i>' : ''; };
+    /* v101: 板の中の▲▼はやめ、数字の色と縁の光で上がり下がりを示す（板が小さく数字が潰れるため） */
+    var arrow = function (d) { return ''; };
     var kd = ART.kindOf ? ART.kindOf(u.defId) : { wep: 'sword', body: 'human' };
     /* 息づかい。HPが減るほど荒くなる。無生物は息をしない。
        全員の呼吸が揃うと人形の群れに見えるので、開始をひとりずつずらす */
@@ -3301,7 +3374,10 @@
     }
 
     var opts = E.getOptions(st, u);
-    if (!S.selAct || !opts.some(function (o) { return o.action.key === S.selAct; })) S.selAct = opts[0].action.key;
+    /* v100: 技は自動で選ばない。手番が変わったら未選択に戻し、
+       プレイヤーが技をタップして初めて対象が光る（選択肢が一つでも同じ） */
+    if (S.selFor !== u.uid) { S.selFor = u.uid; S.selAct = null; }
+    if (S.selAct && !opts.some(function (o) { return o.action.key === S.selAct; })) S.selAct = null;
     var cur = opts.filter(function (o) { return o.action.key === S.selAct; })[0];
 
     var allActs = u.def.actions.concat([]);
@@ -4096,7 +4172,7 @@
   }
 
   /* --- 技名カットイン --- */
-  function techRibbon(who, tech, color, big, at) {
+  function techRibbon(who, tech, color, big, at, hold) {
     /* 前の技名は即座に消さず、短く溶かして消す。
        連続行動（凱歌など）や高速再生のときに「出た瞬間に消える」ように
        見えていたのを、切り替わりとして分かる動きにする。 */
@@ -4110,6 +4186,9 @@
       } catch (e) {}
       setTimeout(function () { o.remove(); }, 160);
     });
+    /* 出ている時間は技の長さに合わせる。範囲技の途中で名前だけ先に消えると、
+       次の技の名前が出たときに「点滅した」ように見えるため */
+    var ribLife = Math.max(1000, (hold || 2600) / spd());
     var d = document.createElement('div');
     d.className = 'techrib' + (big ? ' big' : '') + (at ? ' dtl' : '');
     d.style.setProperty('--c', color);
@@ -4124,12 +4203,12 @@
       { transform: 'translate(-50%,0) scale(1)', opacity: 1, offset: .14 },
       { transform: 'translate(-50%,0) scale(1)', opacity: 1, offset: .88 },
       { transform: 'translate(-50%,-20px) scale(.97)', opacity: 0 }
-    ], { duration: Math.max(1000, 2600 / spd()), easing: 'cubic-bezier(.2,.9,.3,1)' });
+    ], { duration: ribLife, easing: 'cubic-bezier(.2,.9,.3,1)' });
     var sh = d.lastChild;
     sh.animate([{ transform: 'translateX(-130%) skewX(-18deg)' },
                 { transform: 'translateX(130%) skewX(-18deg)' }],
       { duration: 900 / spd(), delay: 180 / spd(), easing: 'cubic-bezier(.3,.1,.2,1)' });
-    setTimeout(function () { d.remove(); }, Math.max(1060, 2660 / spd()));
+    setTimeout(function () { d.remove(); }, ribLife + 60);
   }
 
   /* --- パッシブ（特殊能力）発動の明示 --- */
@@ -4190,10 +4269,55 @@
     next();
   }
 
+  /** いま再生している技のあいだに、まだダメージ表示が残っているか。
+      あいだに撃破・ログ・パッシブが挟まるので、次の技（attack/cast/turnStart）まで見て判断する */
+  function moreOf(rest, type) {
+    for (var i = 0; i < (rest ? rest.length : 0); i++) {
+      var t = rest[i].type;
+      if (t === 'attack' || t === 'cast' || t === 'turnStart') return false;
+      if (t === type) return true;
+    }
+    return false;
+  }
+  function moreDamage(rest) { return moreOf(rest, 'damage'); }
+  /** この技で本当に当たる相手（＝ダメージか首狩りのイベントが出る相手）を、後続のイベントから拾う。
+      範囲技の途中ですでに倒れている相手にはイベントが出ないので、光らせない */
+  function landingUids(rest) {
+    var out = [];
+    for (var i = 0; i < (rest ? rest.length : 0); i++) {
+      var r = rest[i];
+      if (r.type === 'attack' || r.type === 'cast' || r.type === 'turnStart') break;
+      if (r.type === 'damage' || r.type === 'execute') out.push(r.uid);
+    }
+    return out;
+  }
+  var HIT_GAP = 240;                 /* 範囲技で1体ずつ当てていく間隔 */
+  /** この技の演出が終わるまでの、おおよその長さ。技名を出しておく時間に使う。
+      撃破や前進が挟まると技の演出は数秒に伸びるので、
+      名前だけ先に消えて「点滅した」ように見えるのを防ぐ */
+  function actionSpan(rest, head) {
+    var t = head || 0;
+    for (var i = 0; i < (rest ? rest.length : 0); i++) {
+      var r = rest[i], ty = r.type;
+      if (ty === 'attack' || ty === 'cast' || ty === 'turnStart') break;
+      if (ty === 'damage') t += HIT_GAP;
+      else if (ty === 'death') t += 1000;
+      else if (ty === 'execute') t += 1150;
+      else if (ty === 'heal') t += 620;
+      else if (ty === 'revive') t += 1200;
+      else if (ty === 'devotion') t += 1000;
+      else if (ty === 'move') t += 700;
+      else if (ty === 'passive') t += r.small ? 620 : 1150;
+      else if (ty === 'buffFx') t += 200;
+      else t += 40;                                  /* ログなどの細かい間 */
+    }
+    return t + 700;
+  }
+
   function applyEvent(e, rest) {
     var st = S.st;
     switch (e.type) {
-      case 'turnStart': return 60;
+      case 'turnStart': S.impact = null; S.screenFx = 0; return 60;
 
       case 'move': {
         var mu = E.findUid(st, e.uid);
@@ -4229,23 +4353,30 @@
       case 'attack': {
         flowWarline(e.uid != null ? (E.findUid(st, e.uid) || {}).side : null);
         var f = fxOf(e.fx);
-        S.fx = f; S.fxName = e.fx; S.hits = 0; S.total = 0; S.multi = e.targets.length > 1;
+        /* 本当に当たる相手だけを光らせる（範囲技の途中で倒れた相手には当てない）。
+           「王命の盾」で庇われたときも、庇った側が光る */
+        var land = landingUids(rest);
+        S.fx = f; S.fxName = e.fx; S.hits = 0; S.total = 0; S.multi = land.length > 1;
+        /* 当てた場所を控えておき、続くダメージ表示では光を重ねない（二重に光って見えていた） */
+        S.impact = {}; S.screenFx = 0;
+        land.forEach(function (tid) { S.impact[tid] = (S.impact[tid] || 0) + 1; });
         SFX.play(e.fx);
         var au = E.findUid(st, e.uid);
-        techRibbon(au ? au.def.name : '', e.name, f.c, S.multi || f.sh >= 12);
+        techRibbon(au ? au.def.name : '', e.name, f.c, S.multi || f.sh >= 12,
+                   null, Math.max(2200, actionSpan(rest, 600)));
         var src = rectOf(e.uid);
         var swing = src ? motionPlay(src.el, 'attack') : 0;   // 振り抜くまでの時間
         var isSound = (e.fx === 'discord' || e.fx === 'screech');
-        if (f.k === 'magic' && !isSound) setTimeout(function () { tintScreen(f.c, e.targets.length > 2 ? 0.34 : 0.2); }, swing / spd());
+        if (f.k === 'magic' && !isSound) setTimeout(function () { tintScreen(f.c, land.length > 2 ? 0.34 : 0.2); }, swing / spd());
         if (isSound && src) {
           /* 音波：術者から大きな同心円を3重に放つ */
           [0, 130, 260].forEach(function (dl, k) {
             setTimeout(function () { ringWave(src.x, src.y, f.c, 150 + k * 70, 5); }, (swing + dl) / spd());
           });
         }
-        e.targets.forEach(function (tid, i) {
+        land.forEach(function (tid, i) {
           var t = rectOf(tid); if (!t) return;
-          var d0 = swing + 30 + i * 130;                 // 振り抜いた瞬間に当たる／範囲は1体ずつ
+          var d0 = swing + 30 + i * HIT_GAP;             // 振り抜いた瞬間に当たる／範囲は1体ずつ
           if (f.k === 'proj') {
             if (src) setTimeout(function () { projectile(src.x, src.y, t.x, t.y, f.c); }, (d0 - 60) / spd());
             setTimeout(function () {
@@ -4284,7 +4415,9 @@
           }
         });
         setTimeout(function () { shakeBy(f.sh); }, swing / spd());
-        return 700 + swing + (S.multi ? 130 * e.targets.length : 0);
+        /* 光った直後に数字が出るように、最初の1発ぶんだけ待つ。
+           残りはダメージ表示側が HIT_GAP ずつ間を置いて続く */
+        return swing + (S.multi ? 230 : 260);
       }
 
       case 'damage': {
@@ -4295,6 +4428,9 @@
         var crit = e.amount >= 10 || ratio >= 0.4;
         SFX.impact(S.fxName, crit);
         S.hits++; S.total += e.amount;
+        /* この相手は攻撃の演出ですでに光っている。粒子や閃光を重ねず、数字と体力だけを出す */
+        var lit = !!(S.impact && S.impact[e.uid] > 0);
+        if (lit) S.impact[e.uid]--;
         if (r) {
           r.el.classList.add('hitflash');
           setTimeout(function () { r.el.classList.remove('hitflash'); }, 480 / spd());
@@ -4307,12 +4443,15 @@
             size: Math.min(106, 50 + e.amount * 3.1),
             tag: crit ? '痛恨' : null
           });
-          particles(r.x, r.y, f2.c, crit ? 16 : 9, f2.p);
+          if (!lit) particles(r.x, r.y, f2.c, crit ? 16 : 9, f2.p);
           if (crit) {
-            hitStop(190); shakeBy(Math.max(11, f2.sh));
-            burstRays(r.x, r.y, '#fff', 16, 200);
-            ringWave(r.x, r.y, f2.c, 96, 6);
-            tintScreen(f2.c, 0.2);
+            /* 画面を止める・染める・揺らすのは、ひとつの技につき1回だけ。
+               6発の技で毎回止まると、ちらついて技名も読めなかった */
+            if (!S.screenFx) {
+              S.screenFx = 1;
+              hitStop(190); shakeBy(Math.max(11, f2.sh)); tintScreen(f2.c, 0.2);
+            }
+            if (!lit) { burstRays(r.x, r.y, '#fff', 16, 200); ringWave(r.x, r.y, f2.c, 96, 6); }
           }
           var bar = $('.hpf', r.el), num = $('.hpn', r.el);
           if (bar && uu) {
@@ -4322,10 +4461,10 @@
           }
           if (num && uu) num.textContent = Math.max(0, e.hp) + '/' + uu.maxHp;
         }
-        if (S.multi) {
-          var more = rest && rest.length && rest[0].type === 'damage';
-          comboShow(S.hits, S.total, !more && S.hits > 1);
-        }
+        var more = moreDamage(rest);
+        if (S.multi) comboShow(S.hits, S.total, !more && S.hits > 1);
+        /* 範囲・連撃は1体ずつテンポよく。最後の1発だけ、読めるように長めに止める */
+        if (more) return HIT_GAP;
         return crit ? 900 : 700;
       }
 
@@ -4345,7 +4484,8 @@
           bh.className = 'hpf' + (p2 <= 25 ? ' low' : p2 <= 55 ? ' mid' : '');
         }
         if (nh && uh) nh.textContent = e.hp + '/' + uh.maxHp;
-        return 620;
+        /* 味方全体の回復は1人ずつテンポよく。最後だけ長めに止める */
+        return moreOf(rest, 'heal') ? HIT_GAP : 620;
       }
 
       case 'death': {
@@ -4403,8 +4543,11 @@
         var fc = fxOf(e.fx);
         var rc = rectOf(e.uid);
         if (rc) motionPlay(rc.el, 'cast');
+        /* 詠唱は回復・補助。攻撃の「光済み」の印を持ち越さない */
+        S.impact = null; S.screenFx = 0; S.multi = false;
         var ua = E.findUid(st, e.uid);
-        if (ua && e.fx !== 'guard') techRibbon(ua.def.name, e.name || '詠唱', fc.c);
+        if (ua && e.fx !== 'guard')
+          techRibbon(ua.def.name, e.name || '詠唱', fc.c, false, null, Math.max(2200, actionSpan(rest, 600)));
         if (rc) { ringWave(rc.x, rc.y, fc.c, 96, 4); burstRays(rc.x, rc.y, fc.c, 10, 140);
                   particles(rc.x, rc.y, fc.c, 11, fc.p); }
         return 620;
@@ -4418,6 +4561,11 @@
       case 'passive': {
         var pu = E.findUid(st, e.uid);
         var col = e.kind === 'bad' ? '#ff6b7d' : '#7de8a4';
+        /* ラウンド終わりの継続ダメージ。直前の技の色と「光済み」の印を引きずらないように戻す */
+        if (e.kind === 'bad' && /継続ダメージ/.test(e.text || '')) {
+          S.fxName = (e.name === '燃焼') ? 'fire' : 'shadow';
+          S.fx = fxOf(S.fxName); S.multi = false; S.impact = null; S.screenFx = 0;
+        }
         SFX.play(e.kind === 'bad' ? 'shadow' : 'ward');
         if (pu) {
           var pr = rectOf(e.uid);
