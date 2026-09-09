@@ -1245,7 +1245,7 @@ var CB = (function () {
     { id:'skald', name:'武勲詩人', en:'Skald', line:'人', tier:2, base:'bard', up:'bragi',
       art:{ body:'human', head:'circlet', wep:'lute', deco:'wings' }, elem:'wind',
       tech:'凱歌', flavor:'その歌が始まると、退く者がいなくなる。' },
-    { id:'bragi', name:'ブラギ', en:'Bragi', line:'神', tier:3, base:'skald',
+    { id:'bragi', name:'ブラギ', en:'Bragi', line:'人', tier:3, base:'skald',
       art:{ body:'robe', head:'crown', wep:'lute', deco:'rays' }, elem:'holy',
       tech:'不滅の詩', flavor:'語られたことは、二度と失われない。' },
     { id:'necromancer', name:'死霊術師', en:'Necromancer', line:'邪', tier:2, base:'shaman', up:'lich',

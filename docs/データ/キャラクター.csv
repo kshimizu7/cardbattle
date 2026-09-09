@@ -38,7 +38,7 @@ ancientdragon,古代竜,Ancient Dragon,3,大,Large,竜,Dragon,生命,Life,dragon
 warfiend,戦鬼,Warfiend,3,小,Small,人,Human,秩序,Order,berserker,,warrior,次段（絵と名のみ）,
 shadowblade,闇の刃,Shadowblade,3,小,Small,人,Human,秩序,Order,assassin,,rogue,次段（絵と名のみ）,
 skald,武勲詩人,Skald,2,小,Small,人,Human,秩序,Order,bard,bragi,bard,次段（絵と名のみ）,
-bragi,ブラギ,Bragi,3,小,Small,神獣,Divine,秩序,Order,skald,,bard,次段（絵と名のみ）,出自は人、系統は神獣系
+bragi,ブラギ,Bragi,3,小,Small,人,Human,秩序,Order,skald,,bard,次段（絵と名のみ）,出自は人、系統は神獣系吟遊詩人の三の段。神ではなく、神格化された人の語り部として扱う
 necromancer,死霊術師,Necromancer,2,小,Small,邪,Profane,秩序,Order,shaman,lich,shaman,次段（絵と名のみ）,系統は邪悪系だが、理は秩序 Order
 lich,リッチ,Lich,3,小,Small,邪,Profane,秩序,Order,necromancer,,shaman,次段（絵と名のみ）,系統は邪悪系だが、理は秩序 Order
 phoenix,フェニックス,Phoenix,2,大,Large,神獣,Divine,精神,Spirit,salamander,,salamander,次段（絵と名のみ）,出自は精霊、系統は神獣系

@@ -29,5 +29,9 @@
  "dragon": "big",
  "salamander": "big",
  "golem": "big",
- "ancientdragon": "big"
+ "ancientdragon": "big",
+ "kingshield": "big",
+ "royalguard": "top",
+ "ancient": "big",
+ "colossus": "big"
 }

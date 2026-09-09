@@ -9,7 +9,7 @@ sys.path.insert(0, os.path.join(ROOT,'tools'))
 from bgpalette import lch_to_rgb
 PAL=json.load(open('/tmp/pal_v2.json')) if os.path.exists('/tmp/pal_v2.json') else {}
 LINEAGE_OF={'paladin':'knight','paladinking':'knight','berserker':'warrior','warfiend':'warrior','assassin':'rogue','shadowblade':'rogue',
- 'archmage':'mage','grandsage':'mage','highpriest':'priest','saint':'priest','dragon':'whelp','ancientdragon':'whelp'}
+ 'archmage':'mage','grandsage':'mage','highpriest':'priest','saint':'priest','dragon':'whelp','ancientdragon':'whelp','necromancer':'shaman','lich':'shaman','royalguard':'shieldguard','kingshield':'shieldguard','phantom':'archer','divinearcher':'archer'}
 def colour(cid):
     k=LINEAGE_OF.get(cid,cid); L,C,h=PAL.get(k,[50,20,250]); return L,C,h
 def rgb(L,C,h): return tuple(int(round(v)) for v in lch_to_rgb(L,C,h))
