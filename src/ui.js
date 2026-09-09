@@ -285,7 +285,9 @@
     return '<div class="card' + (d.base ? ' upper' : '') + (opts.cls || '') + '" data-card="' + id + '">' +
       (isFinite(E.costCap()) ? '<div class="cost">' + d.cost + '</div>' : '') + '<div class="rng">' + (RANGE_MARK[ai.range] ? RANGE_MARK[ai.range].mark : '近') + '</div>' +
       '<div class="lnb" style="--lc:' + LINES[ln].c + '">' + ln + '</div>' +
-      '<div class="art">' + ART.portrait(d.id, d.elem) + '</div>' +
+      (opts.put ? '<button class="drput" aria-label="空いているマスへ置く">↑</button>' : '') +
+      '<div class="art">' + ART.portrait(d.id, d.elem) +
+        '<div class="nmov">' + d.name + '</div></div>' +
       '<div class="nm">' + d.name + (opts.en ? '<em>' + d.en + '</em>' : '') + '</div>' +
       '<div class="st"><span class="s-hp">♥<b>' + d.hp + '</b></span>' +
       '<span class="s-at ' + ai.kind + '">' + ai.icon + '<b>' + ai.val + '</b></span>' +
@@ -662,7 +664,7 @@
       '<small>' + L.rule + '</small></div>';
   }
 
-  function openDetail(id, list) {
+  function openDetail(id, list, put) {
     list = (list && list.length) ? list.slice() : [id];
     if (list.indexOf(id) < 0) list.unshift(id);
     var idx = list.indexOf(id);
@@ -671,6 +673,16 @@
     function draw() {
       var cid = list[idx];
       m.innerHTML = cardModalHTML(detailHTML(E.BY_ID[cid]), list.length);
+      if (put && put.onPut) {                       /* v108: 詳細から直接この編成に入れる */
+        var nav = $('.dnav', m), ok = put.canPut(cid);
+        if (nav) {
+          var pb = document.createElement('button');
+          pb.className = 'btn primary drdput' + (ok ? '' : ' off');
+          pb.textContent = ok ? '＋ この編成に入れる' : '入れられません';
+          if (ok) pb.onclick = function (ev) { ev.stopPropagation(); m.remove(); put.onPut(cid); };
+          nav.parentNode.insertBefore(pb, nav);
+        }
+      }
       var dr = $('.dright', m); if (dr && list.length > 1) dr.textContent = (idx + 1) + ' / ' + list.length;
       $$('[data-nav]', m).forEach(function (b) {
         b.onclick = function (ev) {
@@ -796,7 +808,10 @@
 
   /* 長押し＝詳細（タップと衝突しないように、押しっぱなしを検知したらタップは無効化） */
   function bindLongPress(sel, fn) {
-    $$(sel).forEach(function (el) {
+    $$(sel).forEach(function (el) { bindLongPressEl(el, fn); });
+  }
+  function bindLongPressEl(el, fn) {
+    (function (el) {
       var timer = null;
       function start() {
         cancel();
@@ -817,7 +832,7 @@
       el.addEventListener('mousedown', start);
       el.addEventListener('mouseup', cancel);
       el.addEventListener('mouseleave', cancel);
-    });
+    })(el);
   }
   /* v95: 絵が本物の画像になったので、長押しでブラウザの画像メニューが出ないようにする */
   document.addEventListener('contextmenu', function (e) {
@@ -1931,11 +1946,13 @@
       '<li>使用中のプール：<b style="color:var(--gold)">' + E.POOLS[E.getPool()].name +
         ' ' + E.poolIds().length + '枚</b>（タイトル画面で変更できます）</li>' +
       (isFinite(E.costCap())
-        ? '<li><b>' + E.minUnits() + '〜' + E.maxUnits() + '体</b>まで／<b>編成コスト合計 ' + E.costCap() + ' 以内</b></li>'
+        ? '<li><b>最大' + E.maxUnits() + '体</b>／<b>編成コスト合計 ' + E.costCap() + ' 以内</b>。' +
+          '人数は自由（少数精鋭でも数で押してもよい）</li>'
         : '<li><b>' + E.maxUnits() + '体ちょうど</b>を配置する（コスト制限なし）</li>') +
-      '<li>盤面は<b>前衛3マス・後衛3マス</b>。候補をタップすると<b>前衛の左から順に</b>置かれ、' +
-        '場のカードをタップすると<b>移動・入れ替え・取り外し</b>ができる</li>' +
-      '<li><b>⇅ 自動整列</b>を押すと、近接を前衛・遠隔を後衛へまとめて並べ替えられる</li>' +
+      '<li>盤面は<b>前衛3マス・後衛3マス</b>。候補をタップして光らせ、置きたいマスをタップすると置かれる。' +
+        '<b>候補をもう一度タップ（または右上の↑）</b>で空いているマスへ入り、' +
+        '<b>場のカードをもう一度タップ（または✕）</b>で候補に戻る</li>' +
+      '<li>前衛が空いている列は、<b>出撃のときに後衛が前へ繰り上がる</b></li>' +
       (E.getPool() === 'tutorial'
         ? '<li style="color:var(--gold)">入門モードでは<b>特殊能力・状態異常・回復が一切ありません</b>。' +
           '体力・攻撃力・射程・行動順の4つだけで勝負が決まります</li>'
@@ -2407,6 +2424,7 @@
     S.mulligan = [true, true];
     S.hist = [[], []];
     S.selSlot = null; S.selCard = null;
+    S.dSort = 'deal'; S.dRng = 'all'; S.dHide = false; S._dtKey = null;
     S.draftIdx = 0;
     if (S.mode === 'cpu') {
       S.teams[1] = AI.buildTeam(S.hands[1], S.diff, Math.random);
@@ -2509,6 +2527,27 @@
     return k(a) === k(b);
   }
 
+  /* 出撃したときに前衛へ繰り上がる数（前衛が空で、その真下に後衛がいる列） */
+  function pullUpCount(team) {
+    var n = 0;
+    for (var col = 0; col < 3; col++) {
+      var f = team.some(function (c) { return c.row === 0 && c.col === col; });
+      var b = team.some(function (c) { return c.row === 1 && c.col === col; });
+      if (!f && b) n++;
+    }
+    return n;
+  }
+  /* 射程の3分類（⌕のしぼり込み用） */
+  var DR_GROUP = {
+    melee:     'melee', pierce: 'melee', adj_ally: 'melee',
+    any1:      'ranged', weakest: 'ranged', ally1: 'ranged',
+    front_row: 'area', square: 'area', row: 'area', all: 'area',
+    all_ally:  'area', random: 'area', dead_ally: 'area'
+  };
+  var DR_SORT = { deal: '', cost: 'コストの安い順', costd: 'コストの高い順',
+                  spd: '素早い順', hp: '体力の多い順' };
+  var DR_RNG  = { all: '', melee: '近接だけ', ranged: '遠距離だけ', area: '範囲だけ' };
+
   function renderDraft() {
     app.classList.remove('land', 'lp-bottom', 'lp-side');
     S.gen = (S.gen || 0) + 1;
@@ -2516,10 +2555,11 @@
     var side = S.draftIdx;
     var team = S.teams[side], hand = S.hands[side];
     var cap = E.costCap(), noCost = !isFinite(cap);
-    var cost = teamCost(team), over = cost > cap;
+    var cost = teamCost(team), over = cost > cap, rest = cap - cost;
     var minU = E.minUnits(), maxU = E.maxUnits();
     var used = team.map(function (c) { return c.id; });
     var full = team.length >= maxU;
+    var pull = pullUpCount(team);
 
     /* 選択中の場のカード */
     var sel = null;
@@ -2528,191 +2568,222 @@
       sel = unitAtSlot(team, +sp[0], +sp[1]);
       if (!sel) S.selSlot = null;
     }
+    if (S.selCard && (used.indexOf(S.selCard) >= 0 || hand.indexOf(S.selCard) < 0)) S.selCard = null;
 
-    /* その移動が規則（前衛のいない列に後衛は立てない）を満たすか */
-    function mvOK(row, col) {
-      if (!sel) return false;
-      if (col < 0 || col > 2) return false;
-      if (row === sel.row && col === sel.col) return false;
-      return legalTeam(afterMove(team, sel, row, col));
-    }
+    function affordable(id) { return noCost || cost + E.BY_ID[id].cost <= cap; }
+    function canTake(id) { return used.indexOf(id) < 0 && !full && affordable(id); }
 
-    function affordable(id) { return cost + E.BY_ID[id].cost <= cap; }
-    var anyLeft = hand.some(function (id) {
-      return used.indexOf(id) < 0 && affordable(id);
-    });
-    var manaOut = !full && !anyLeft && team.length > 0;
-
-    /* 履歴を積んでから盤面を書き換える */
+    /* 履歴を積んでから盤面を書き換える（v108: 繰り上げはしない。出撃時に行う） */
     function commit(next) {
       S.hist[side].push(team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; }));
       if (S.hist[side].length > 30) S.hist[side].shift();
-      S.teams[side] = compactTeam(next);
+      S.teams[side] = next.map(function (c) { return { id: c.id, row: c.row, col: c.col }; });
     }
 
-    var nextCell = firstEmpty(team);
+    /* ---------- 候補の並べ替え・しぼり込み ---------- */
+    var sortK = S.dSort || 'deal', rngK = S.dRng || 'all', hidePut = !!S.dHide;
+    var filtered = rngK !== 'all' || hidePut;
+    var anyState = filtered || sortK !== 'deal';
+    var list = hand.slice();
+    if (rngK !== 'all') list = list.filter(function (id) {
+      return DR_GROUP[atkInfo(E.BY_ID[id]).range] === rngK;
+    });
+    if (hidePut) list = list.filter(function (id) { return used.indexOf(id) < 0; });
+    if (sortK === 'cost')  list.sort(function (a, b) { return E.BY_ID[a].cost - E.BY_ID[b].cost; });
+    if (sortK === 'costd') list.sort(function (a, b) { return E.BY_ID[b].cost - E.BY_ID[a].cost; });
+    if (sortK === 'spd')   list.sort(function (a, b) { return E.BY_ID[b].spd  - E.BY_ID[a].spd; });
+    if (sortK === 'hp')    list.sort(function (a, b) { return E.BY_ID[b].hp   - E.BY_ID[a].hp; });
+
+    /* ---------- 選抜スペース ---------- */
     function slotHTML(row, col) {
       var u = unitAtSlot(team, row, col);
+      var key = row + '-' + col;
       if (u) {
         var isSel = sel && u === sel;
-        return '<div class="slot filled' + (isSel ? ' selslot' : '') + '" data-slot="' + row + '-' + col + '">' +
-          cardHTML(u.id, { cls: isSel ? ' onboard sel' : ' onboard' }) + '</div>';
+        return '<div class="drslot filled' + (isSel ? ' selslot' : '') + '" data-slot="' + key + '">' +
+          cardHTML(u.id, { cls: isSel ? ' onboard sel' : ' onboard' }) +
+          (isSel ? '<button class="drx" data-back="' + key + '" aria-label="候補に戻す">✕</button>' : '') +
+          '</div>';
       }
-      var isNext = !sel && !full && nextCell && nextCell[0] === row && nextCell[1] === col;
-      return '<div class="slot' + (sel ? ' can' : '') + (isNext ? ' next' : '') + '" data-slot="' + row + '-' + col + '">' +
-        (sel ? '↪ ここへ' : isNext ? '<span class="nx">次はここ</span>' : (row === 0 ? '前衛' : '後衛')) + '</div>';
+      return '<div class="drslot' + (row === 0 ? ' front' : '') + (S.selCard || sel ? ' can' : '') +
+        '" data-slot="' + key + '">' + (S.selCard ? '<span class="drph">ここに置く</span>' : '') + '</div>';
     }
-    var front = [0, 1, 2].map(function (c) { return slotHTML(0, c); }).join('');
-    var back  = [0, 1, 2].map(function (c) { return slotHTML(1, c); }).join('');
-
-    var handHTML = hand.map(function (id) {
-      var isUsed = used.indexOf(id) >= 0;
-      var dim = isUsed || full || !affordable(id);
-      return cardHTML(id, { cls: (dim ? ' used' : '') + (isUsed ? ' picked' : '') });
+    var grid = [0, 1].map(function (r) {
+      return [0, 1, 2].map(function (c) { return slotHTML(r, c); }).join('');
     }).join('');
 
-    /* 操作バー */
-    var barHTML = '';
-    if (sel) {
-      var sd = E.BY_ID[sel.id];
-      barHTML =
-        '<div class="actbar">' +
-          '<div class="ab-hd"><b>' + sd.name + '</b>' +
-            '<span>' + (sel.row === 0 ? '前衛' : '後衛') + '・' + ['左', '中央', '右'][sel.col] + '</span>' +
-            '<i>空きマスや他のカードを直接タップしてもOK</i></div>' +
-          '<div class="ab-row">' +
-            '<button class="ab" data-mv="L"' + (mvOK(sel.row, sel.col - 1) ? '' : ' disabled') + '>◀ 左へ</button>' +
-            '<button class="ab" data-mv="V"' + (mvOK(1 - sel.row, sel.col) ? '' : ' disabled') + '>' +
-              (sel.row === 0 ? '▼ 後衛へ' : '▲ 前衛へ') + '</button>' +
-            '<button class="ab" data-mv="R"' + (mvOK(sel.row, sel.col + 1) ? '' : ' disabled') + '>右へ ▶</button>' +
-          '</div>' +
-          '<div class="ab-row">' +
-            '<button class="ab sub" data-mv="I">ℹ 詳細を見る</button>' +
-            '<button class="ab del" data-mv="X">✕ 場から外す</button>' +
-          '</div>' +
-        '</div>';
-    }
+    /* ---------- 候補 ---------- */
+    var handHTML = list.map(function (id) {
+      var isUsed = used.indexOf(id) >= 0;
+      var ok = canTake(id);
+      return cardHTML(id, {
+        cls: (isUsed || !ok ? ' used' : '') + (isUsed ? ' picked' : '') +
+             (S.selCard === id ? ' sel' : '') + (ok ? ' canput' : ''),
+        put: ok
+      });
+    }).join('');
 
-    var tip = sel
-      ? '<b style="color:var(--gold)">' + E.BY_ID[sel.id].name + '</b> を選択中 — 下のボタン、または移動先をタップ'
-      : (team.length === 0
-        ? '候補カードをタップすると <b style="color:var(--gold)">前衛の左から順に</b> 配置されます'
-        : '場のカードをタップ＝移動・入れ替え ／ 候補を長押し＝詳細');
+    /* ---------- 最上段（のこりマナ／入門は出撃数） ---------- */
+    var manaHTML = noCost
+      ? '<div class="drmana"><span class="lb">出撃</span><span class="big">' + team.length +
+        '</span><span class="cap">/' + maxU + '</span></div>'
+      : '<div class="drmana' + (rest <= 4 ? ' low' : '') + (over ? ' over' : '') + '">' +
+        '<span class="lb">のこり</span><span class="big">' + rest + '</span>' +
+        '<span class="cap">/' + cap + '</span>' +
+        '<span class="dlt">' + (S.selCard ? '−' + E.BY_ID[S.selCard].cost : '') + '</span></div>';
+
+    var stateHTML = anyState
+      ? '<button class="drstate" id="drclear"><em>' +
+          [DR_SORT[sortK], DR_RNG[rngK], hidePut ? '配置済みは非表示' : ''].filter(Boolean).join(' ・ ') +
+          '</em>' + (filtered ? '<em>・' + list.length + '/' + hand.length + '枚</em>' : '') +
+          '<u>✕</u></button>'
+      : '<span class="drorn">◆◇◆</span>';
+
+    var goLabel = team.length < minU
+      ? (minU > 1 ? 'あと' + (minU - team.length) + '体を配置してください' : 'キャラを配置してください')
+      : over ? 'コスト超過'
+      : '⚔ この編成で出撃<small>' + team.length + '体' +
+        (noCost ? '' : '・コスト ' + cost + '/' + cap) + '</small>' +
+        (pull ? '<em>出撃時に' + pull + '体が前衛に移動します</em>' : '');
 
     app.innerHTML =
-      '<div class="hdr">' +
-        '<button class="hdrback" id="dback" aria-label="設定へ戻る">‹</button>' +
-        '<span class="t" style="color:' + (side === 0 ? 'var(--p1)' : 'var(--p2)') + '">P' + (side + 1) + ' 編成</span>' +
-        (noCost ? '<span class="sp" style="flex:1"></span>'
-          : '<div class="meter' + (over ? ' over' : '') + (manaOut ? ' spent' : '') + '">' +
-            '<div class="lab"><span>' + (manaOut ? 'マナ使い切り' : 'コスト') + '</span><span>' + cost + ' / ' + cap + '</span></div>' +
-            '<div class="bar"><div class="fill" style="width:' + Math.min(100, cost / cap * 100) + '%"></div></div></div>') +
-        '<span class="badge' + (team.length >= maxU ? ' ok' : '') + '">出撃 ' + team.length + '/' + maxU + '</span>' +
-      '</div>' +
-      '<div class="draft-body">' +
-        '<div class="rowlab">▲ 前衛（敵と切り結ぶ列）</div><div class="grid3">' + front + '</div>' +
-        '<div class="rowlab">▼ 後衛（守られる列）</div><div class="grid3">' + back + '</div>' +
-        barHTML +
-        '<div class="draft-tools">' +
-          '<button class="btn ghost small" id="arrange"' + (team.length < 2 ? ' disabled' : '') + '>⇅ 自動整列</button>' +
-          '<button class="btn ghost small" id="undo"' + (S.hist[side].length ? '' : ' disabled') + '>↩ ひとつ戻す</button>' +
-          '<button class="btn ghost small" id="clr"' + (team.length ? '' : ' disabled') + '>🗑 全部戻す</button>' +
+      '<div id="screen-draft">' +
+        '<div class="drtop">' +
+          '<button class="drback" id="dback" aria-label="設定へ戻る">‹</button>' +
+          '<span class="drttl" style="color:' + (side === 0 ? 'var(--p1)' : 'var(--p2)') + '">P' +
+            (side + 1) + ' 編成</span>' +
+          '<button class="drclr" id="clr"' + (team.length ? '' : ' disabled') +
+            '><i>↺</i><b>全部戻す</b></button>' +
+          manaHTML +
         '</div>' +
-        '<button class="btn primary" id="done" style="width:100%;margin-top:8px;padding:14px"' +
+        (noCost ? '' : '<div class="drbar' + (over ? ' over' : '') + '"><i style="width:' +
+          Math.min(100, cost / cap * 100) + '%"></i></div>') +
+        '<div class="drpick">' +
+          '<div class="drrail"><span class="f"><i>前</i><i>衛</i></span>' +
+            '<span><i>後</i><i>衛</i></span></div>' +
+          '<div class="drgrid">' + grid + '</div>' +
+        '</div>' +
+        '<div class="drdiv"><span class="ln"></span>' + stateHTML + '<span class="ln"></span>' +
+          (hand.length >= 13 ? '<button class="drfind' + (anyState ? ' on' : '') +
+            '" id="drfind" aria-label="並べ替え・しぼり込み">⌕</button>' : '') +
+        '</div>' +
+        '<div class="drpool">' +
+          (list.length ? '<div class="drgridp">' + handHTML + '</div>'
+            : '<div class="drnone">この条件に合う候補はありません<br>上の ✕ で元に戻せます</div>') +
+        '</div>' +
+        '<div class="drfoot"><button class="btn primary drgo" id="done"' +
           (team.length >= minU && !over ? '' : ' disabled') +
-          (team.length >= minU && !over && (full || manaOut) ? ' data-ready="1"' : '') + '>' +
-          (team.length < minU ? 'あと' + (minU - team.length) + '体を配置してください'
-            : over ? 'コスト超過'
-            : '⚔ この編成で出撃' + (noCost ? '' : '（コスト ' + cost + '/' + cap + '）')) + '</button>' +
-      '</div>' +
-      '<div class="hand-wrap"><div class="hand-tip">' +
-        '<span class="hl">' + E.POOLS[E.getPool()].name + '／' +
-          (E.getDealMode() === 'full' || noCost
-            ? '📚 全' + hand.length + '枚が候補'
-            : '🎲 シャッフル候補 ' + hand.length + '枚（敵味方とも同じ候補）') +
-          '（残り' + (hand.length - team.length) + '枚）</span>' + tip +
-        '</div>' +
-        (manaOut ? '<div class="manaout">マナを使い切りました。このまま出撃できます</div>'
-          : full ? '<div class="manaout">出撃枠がいっぱいです（' + maxU + '体）</div>' : '') +
-        '<div class="hand' + (hand.length > 12 ? ' many' : '') + '">' + handHTML + '</div></div>';
+          (team.length >= minU && !over && full ? ' data-ready="1"' : '') + '>' +
+          goLabel + '</button></div>' +
+      '</div>';
 
-    /* ---------- 候補カード：1タップで前衛左から順に配置 ---------- */
-    bindLongPress('.hand [data-card]', function (el) { openDetail(el.dataset.card, hand); });
-    $$('.hand [data-card]').forEach(function (c) {
-      c.onclick = function () {
-        if (c._longPressed) { c._longPressed = false; return; }
-        var id = c.dataset.card;
-        if (used.indexOf(id) >= 0) { toast('すでに場に出ています'); return; }
-        if (full) { toast('出撃は最大' + maxU + '体までです'); return; }
-        if (!affordable(id)) { toast('マナ（コスト）が足りません'); return; }
-        var f = firstEmpty(team);
-        if (!f) { toast('空いているマスがありません'); return; }
-        commit(team.concat([{ id: id, row: f[0], col: f[1] }]));
-        S.selSlot = null;
-        renderDraft();
-      };
-    });
+    /* ---------- タップ／ダブルタップ ---------- */
+    var TAPGAP = 320;
+    function isDouble(key) {
+      var now = Date.now();
+      if (S._dtKey === key && now - S._dtAt < TAPGAP) { S._dtKey = null; return true; }
+      S._dtKey = key; S._dtAt = now; return false;
+    }
+    function actDone() { S._dtKey = null; }   /* 盤面を変えたら、次のタップと対にしない */
 
-    /* ---------- 場：タップで選択／移動／入れ替え ---------- */
-    function moveTo(row, col) {
-      var next = afterMove(team, sel, row, col);
-      if (!legalTeam(next)) {
-        toast('後衛に置けるのは、同じ列に前衛がいるときだけです');
-        return;
-      }
-      commit(next);
-      S.selSlot = row + '-' + col;
+    function autoPut(id) {
+      if (!canTake(id)) return;
+      var f = firstEmpty(team);
+      if (!f) { toast('空いているマスがありません'); return; }
+      commit(team.concat([{ id: id, row: f[0], col: f[1] }]));
+      S.selCard = null; S.selSlot = null; actDone();
+      if (S.sound) SFX.play('select');
       renderDraft();
     }
-    $$('[data-slot]').forEach(function (s) {
-      s.onclick = function () {
-        if (s._longPressed) { s._longPressed = false; return; }
-        var sl = s.dataset.slot.split('-'), row = +sl[0], col = +sl[1];
-        var here = unitAtSlot(team, row, col);
-        if (!sel) { if (here) { S.selSlot = s.dataset.slot; renderDraft(); } return; }
-        if (here === sel) { S.selSlot = null; renderDraft(); return; }
-        moveTo(row, col);
-      };
-    });
-    bindLongPress('.slot [data-card]', function (el) { openDetail(el.dataset.card, hand); });
+    function takeBack(row, col) {
+      var u = unitAtSlot(team, row, col);
+      if (!u) return;
+      commit(team.filter(function (c) { return c !== u; }));
+      S.selSlot = null; S.selCard = null; actDone();
+      if (S.sound) SFX.play('select');
+      renderDraft();
+      var back = $('.drpool [data-card="' + u.id + '"]');
+      if (back) { back.classList.add('drflash'); back.scrollIntoView({ block: 'nearest' }); }
+    }
 
-    /* ---------- 操作バー ---------- */
-    $$('[data-mv]').forEach(function (b) {
-      b.onclick = function (ev) {
-        ev.stopPropagation();
-        if (!sel || b.disabled) return;
-        var k = b.dataset.mv;
-        if (k === 'I') { openDetail(sel.id, hand); return; }
-        if (k === 'X') {
-          commit(team.filter(function (c) { return c !== sel; }).map(function (c) {
-            return { id: c.id, row: c.row, col: c.col };
-          }));
-          S.selSlot = null; renderDraft(); return;
-        }
-        if (k === 'L') return moveTo(sel.row, sel.col - 1);
-        if (k === 'R') return moveTo(sel.row, sel.col + 1);
-        if (k === 'V') return moveTo(1 - sel.row, sel.col);
-      };
+    /* 候補：タップ＝ハイライト／もう一度＝解除／ダブルタップ・↑＝空きへ自動配置 */
+    var pool = $('.drpool');
+    if (pool) pool.onclick = function (ev) {
+      var c = ev.target.closest ? ev.target.closest('[data-card]') : null;
+      if (!c) return;
+      if (c._longPressed) { c._longPressed = false; return; }
+      var id = c.dataset.card;
+      if (ev.target.closest('.drput')) { autoPut(id); return; }
+      if (isDouble('c' + id)) { autoPut(id); return; }
+      if (used.indexOf(id) >= 0) {                    /* 配置済み＝いまどこに居るかを示す */
+        var u = null;
+        team.forEach(function (t) { if (t.id === id) u = t; });
+        if (u) { S.selSlot = u.row + '-' + u.col; S.selCard = null; renderDraft(); }
+        return;
+      }
+      if (full) { toast('出撃は最大' + maxU + '体までです'); return; }
+      if (!affordable(id)) { toast('マナ（コスト）が足りません'); return; }
+      S.selCard = (S.selCard === id) ? null : id;
+      S.selSlot = null;
+      renderDraft();
+    };
+    bindLongPress('.drpool [data-card]', function (el) {
+      openDetail(el.dataset.card, list, { canPut: canTake, onPut: autoPut });
     });
 
-    /* ---------- ツール ---------- */
-    /* 上端の ‹ ：設定へ戻る（置いた札は白紙になる） */
+    /* 選抜：タップ＝ハイライト／もう一度＝解除／ダブルタップ・✕＝候補へ戻す */
+    var pick = $('.drpick');
+    if (pick) pick.onclick = function (ev) {
+      var bk = ev.target.closest ? ev.target.closest('[data-back]') : null;
+      if (bk) { var b = bk.dataset.back.split('-'); takeBack(+b[0], +b[1]); return; }
+      var s = ev.target.closest ? ev.target.closest('[data-slot]') : null;
+      if (!s) return;
+      var card = ev.target.closest('[data-card]');
+      if (card && card._longPressed) { card._longPressed = false; return; }
+      var sl = s.dataset.slot.split('-'), row = +sl[0], col = +sl[1];
+      var here = unitAtSlot(team, row, col);
+      if (here && isDouble('s' + s.dataset.slot)) { takeBack(row, col); return; }
+      if (S.selCard) {                                /* 候補を持っている → ここへ置く */
+        var next = team.filter(function (c) { return c !== here; })
+                       .concat([{ id: S.selCard, row: row, col: col }]);
+        commit(next); S.selCard = null; S.selSlot = null; actDone();
+        if (S.sound) SFX.play('select');
+        renderDraft(); return;
+      }
+      if (sel) {
+        if (sel.row === row && sel.col === col) { S.selSlot = null; renderDraft(); return; }
+        commit(afterMove(team, sel, row, col));
+        S.selSlot = row + '-' + col; actDone();
+        renderDraft(); return;
+      }
+      if (here) { S.selSlot = s.dataset.slot; renderDraft(); }
+    };
+    bindLongPress('.drpick [data-card]', function (el) {
+      openDetail(el.dataset.card, hand, null);
+    });
+
+    /* ---------- 上段の道具 ---------- */
     $('#dback').onclick = function () { renderTitle(); };
-    $('#arrange').onclick = function () {
-      var next = autoArrange(team);
-      if (sameTeam(next, team)) { toast('すでに整っています'); return; }
-      commit(next);
-      S.selSlot = null; renderDraft();
-      toast('近接を前衛・遠隔を後衛に並べ替えました');
-    };
-    $('#undo').onclick = function () {
-      var prev = S.hist[side].pop();
-      if (!prev) return;
-      S.teams[side] = prev; S.selSlot = null; renderDraft();
-    };
     $('#clr').onclick = function () {
       if (!team.length) return;
-      commit([]); S.selSlot = null; renderDraft();
+      var snap = team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; });
+      commit([]); S.selSlot = null; S.selCard = null; actDone();
+      renderDraft();
+      var f = $('.drfoot');
+      if (!f) return;
+      var b = document.createElement('button');
+      b.className = 'drundo'; b.textContent = '↩ 元に戻す';
+      b.onclick = function (ev) {
+        ev.stopPropagation();
+        S.teams[side] = snap; S.selSlot = null; S.selCard = null; renderDraft();
+      };
+      f.appendChild(b);
+      setTimeout(function () { if (b.parentNode) b.remove(); }, 4000);
+    };
+    var fb = $('#drfind'); if (fb) fb.onclick = openDraftFind;
+    var cb = $('#drclear');
+    if (cb) cb.onclick = function () {
+      S.dSort = 'deal'; S.dRng = 'all'; S.dHide = false; renderDraft();
     };
     $('#done').onclick = function () {
       S.selSlot = null; S.selCard = null;
@@ -2723,6 +2794,42 @@
         beginBattle();
       }
     };
+  }
+
+  /* 並べ替え・しぼり込みのシート */
+  function openDraftFind() {
+    var m = document.createElement('div');
+    m.className = 'modal drsheet';
+    var so = [['deal', '配られた順'], ['cost', 'コストの安い順'], ['costd', 'コストの高い順'],
+              ['spd', '素早い順'], ['hp', '体力の多い順']];
+    var rn = [['all', 'すべて'], ['melee', '近接'], ['ranged', '遠距離'], ['area', '範囲']];
+    m.innerHTML = '<div class="box drbox">' +
+      '<h4>並べ替え</h4><div class="drchips">' +
+        so.map(function (o) {
+          return '<button class="drchip' + ((S.dSort || 'deal') === o[0] ? ' on' : '') +
+            '" data-s="' + o[0] + '">' + o[1] + '</button>';
+        }).join('') + '</div>' +
+      '<h4>射程でしぼる</h4><div class="drchips">' +
+        rn.map(function (o) {
+          return '<button class="drchip' + ((S.dRng || 'all') === o[0] ? ' on' : '') +
+            '" data-r="' + o[0] + '">' + o[1] + '</button>';
+        }).join('') + '</div>' +
+      '<h4>そのほか</h4><div class="drchips">' +
+        '<button class="drchip' + (S.dHide ? ' on' : '') + '" data-h="1">配置済みを隠す</button></div>' +
+      '<button class="btn ghost drclose">閉じる</button></div>';
+    function refresh() { renderDraft(); m.remove(); openDraftFind(); }
+    $$('[data-s]', m).forEach(function (b) {
+      b.onclick = function () { S.dSort = b.dataset.s; if (S.sound) SFX.play('select'); refresh(); };
+    });
+    $$('[data-r]', m).forEach(function (b) {
+      b.onclick = function () { S.dRng = b.dataset.r; if (S.sound) SFX.play('select'); refresh(); };
+    });
+    $$('[data-h]', m).forEach(function (b) {
+      b.onclick = function () { S.dHide = !S.dHide; if (S.sound) SFX.play('select'); refresh(); };
+    });
+    $('.drclose', m).onclick = function () { m.remove(); };
+    m.onclick = function (ev) { if (ev.target === m) m.remove(); };
+    document.body.appendChild(m);
   }
 
   function toast(msg) {
@@ -2747,6 +2854,8 @@
   function beginBattle() {
     S._saved = false;
     S.autoSides = [false, false];
+    /* v108: 前衛が空いている列は、ここで後衛を繰り上げてから戦いに入る */
+    S.teams = [compactTeam(S.teams[0]), compactTeam(S.teams[1])];
     S.st = E.createState(S.teams[0], S.teams[1], {
       nameA: 'プレイヤー1', nameB: S.mode === 'cpu' ? 'CPU' : 'プレイヤー2'
     });

@@ -14,7 +14,7 @@ var CB = (function () {
   var COST_CAP   = 22;
   var HAND_SIZE  = 10;
   var MAX_UNITS  = 6;
-  var MIN_UNITS  = 4;
+  var MIN_UNITS  = 1;   /* v108: 人数の下限をなくす（コスト上限が実質の下限になる） */
 
   /* ---------- 乱数（シード固定可能） ---------- */
   function mulberry32(a) {
