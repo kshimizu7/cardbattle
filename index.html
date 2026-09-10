@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="108">
+<meta name="app-version" content="109">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -3587,10 +3587,17 @@ var CB = (function () {
       });
     });
     // 凱歌
-    if (src && hasP(src, 'triumph') && !src.flags.triumphUsed && src.alive) {
-      src.flags.triumphUsed = true;
-      src.flags.extraTurn = true;
-      logMsg(st, src.def.name + ' の【凱歌】！ 続けてもう一度行動する', 'good');
+    if (src && hasP(src, 'triumph') && src.alive) {
+      if (!src.flags.triumphUsed) {
+        src.flags.triumphUsed = true;
+        src.flags.extraTurn = true;
+        push(st, { type: 'passive', uid: src.uid, name: '凱歌', text: 'もう一度行動する', kind: 'good' });
+        logMsg(st, src.def.name + ' の【凱歌】！ 続けてもう一度行動する', 'good');
+      } else {
+        /* 1ラウンド1回。2体目を倒しても続かない理由が分からないという声があったので、
+           使い切っていることをその場で伝える */
+        logMsg(st, src.def.name + ' の【凱歌】は、このラウンドではもう使えない');
+      }
     }
   }
 
@@ -3758,6 +3765,15 @@ var CB = (function () {
 
     var killedAny = false, totalDmg = 0;
     victims.forEach(function (v) {
+      /* v108: 乱れ撃ちの撃ち直し。
+         乱れ撃ちは撃つ前に全弾の狙いを決めるので、途中で倒した相手に
+         残りの弾が吸い込まれ、そのぶんが不発になっていた（メテオで確認）。
+         狙った相手がもう倒れていたら、生きている敵へ撃ち直す。
+         範囲技はこの限りではない（先に倒れた相手には当たらないのが正しい） */
+      if (!v.u.alive && a.range === 'random') {
+        var rest = aliveUnits(st, foe);
+        if (rest.length) v = { u: rest[Math.floor(st.rnd() * rest.length)], mul: v.mul };
+      }
       if (!v.u.alive) return;
       var amt = base * v.mul;
       if (hasP(u, 'snipe') && v.u.row === 1) amt += 3;
