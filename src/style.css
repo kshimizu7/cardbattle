@@ -2632,7 +2632,7 @@ body.shake{animation:shk2 .56s}
 }
 
 /* =========================================================
-   v108: 編成画面（選抜スペース固定＋候補だけスクロール）
+   v108/v111: 編成画面（選抜スペース固定＋候補だけスクロール）
    ========================================================= */
 #screen-draft{position:fixed;inset:0;display:flex;flex-direction:column;overflow:hidden;
   background:linear-gradient(180deg,#080b15,#05070e)}
@@ -2653,34 +2653,26 @@ body.shake{animation:shk2 .56s}
 .drmana .cap{font-size:13px;font-weight:800;color:#6f7a94}
 .drmana .dlt{font-size:13.5px;font-weight:900;color:#ff9f6b}
 .drmana.low .big,.drmana.over .big{color:#ff9f6b;text-shadow:0 0 14px rgba(255,120,80,.4)}
-.drbar{flex:0 0 auto;height:3px;margin:5px 12px 0;border-radius:2px;background:#1f2740;overflow:hidden}
+.drbar{flex:0 0 auto;height:3px;margin:5px 10px 0;border-radius:2px;background:#1f2740;overflow:hidden}
 .drbar i{display:block;height:100%;background:linear-gradient(90deg,#f2c65c,#ffa64d)}
 .drbar.over i{background:linear-gradient(90deg,#ff6b7d,#ff3d5c)}
 
-/* 選抜スペース（板・固定） */
-.drpick{flex:0 0 auto;display:flex;gap:6px;padding:9px 12px 11px;margin-top:6px;
+/* 選抜スペース（板・固定）。枠は正方形にそろえる */
+.drpick{flex:0 0 auto;padding:10px 13px 12px;margin-top:6px;
   background:linear-gradient(180deg,#111827,#0d1322);border-radius:0 0 16px 16px;
   box-shadow:0 8px 20px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.05)}
-.drrail{flex:0 0 15px;display:grid;grid-template-rows:1fr 1fr;gap:8px}
-.drrail span{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  font-size:10.5px;font-weight:900;line-height:1;color:#5f6c8a}
-.drrail span.f{color:#c98a63}
-.drrail i{font-style:normal}
-.drgrid{flex:1 1 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.drslot{position:relative;border-radius:12px;padding-bottom:26px;
+.drgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.drslot{position:relative;border-radius:12px;aspect-ratio:1/1;
   border:1.5px dashed #2b3552;background:rgba(8,12,22,.6)}
-.drslot::before{content:"";display:block;width:100%;aspect-ratio:1/1}
 .drslot.front{border-color:#4a3a34;background:rgba(28,18,16,.45)}
 .drslot.can{border-color:var(--gold);border-style:solid;
   box-shadow:0 0 0 2px rgba(242,198,92,.2),0 0 16px rgba(242,198,92,.16)}
-.drslot.filled{border:none;padding:0;background:none}
+.drslot.filled{border-color:transparent;background:none}
 .drslot .card{position:absolute;inset:0;margin:0}
 .drslot .drph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-  font-size:11.5px;font-weight:800;color:#7a6231;z-index:2}
-.drslot.selslot .card{border-color:var(--gold);
-  box-shadow:0 0 0 2px rgba(242,198,92,.6),0 0 20px rgba(242,198,92,.45)}
-.drslot.selslot .card .rng{display:none}
-.drx{position:absolute;top:3px;right:3px;z-index:9;width:27px;height:27px;border-radius:50%;
+  font-size:11.5px;font-weight:800;color:#4a5674;z-index:2;letter-spacing:.08em}
+.drslot.can .drph{color:#a98b45}
+.drx{position:absolute;top:-8px;right:-8px;z-index:9;width:27px;height:27px;border-radius:50%;
   border:1.5px solid var(--gold);background:#1a1408;color:var(--gold);font-size:15px;font-weight:900;
   display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.7)}
 
@@ -2703,30 +2695,56 @@ body.shake{animation:shk2 .56s}
   border-radius:50%;background:#ff9f6b;border:1.5px solid #0a0e18}
 
 /* 候補（ここだけスクロール） */
-.drpool{flex:1 1 auto;overflow-y:auto;padding:2px 12px 10px;-webkit-overflow-scrolling:touch}
+.drpool{flex:1 1 auto;overflow-y:auto;padding:6px 13px 10px;-webkit-overflow-scrolling:touch}
 .drpool::-webkit-scrollbar{width:0}
-.drgridp{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-left:21px}
+.drgridp{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
 .drpool .card{touch-action:manipulation}
 .drpool .card.used{opacity:.26;filter:grayscale(.8)}
-.drpool .card.sel{border-color:var(--gold);
-  box-shadow:0 0 0 2px rgba(242,198,92,.6),0 0 20px rgba(242,198,92,.45)}
 .drpool .card.drflash{animation:drfl .9s ease}
 @keyframes drfl{0%,40%{box-shadow:0 0 0 3px rgba(242,198,92,.85),0 0 22px rgba(242,198,92,.6)}
   100%{box-shadow:none}}
 .drnone{padding:26px 10px;text-align:center;color:#6b7793;font-size:12.5px;font-weight:800;line-height:1.9}
-.drput{position:absolute;top:4px;right:4px;z-index:6;width:26px;height:26px;border-radius:9px;
-  border:1px solid rgba(242,198,92,.55);background:rgba(20,15,6,.82);color:var(--gold);
-  font-size:15px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center}
-#screen-draft .drpool .card .rng{right:38px}
 
-/* カード：編成画面では名前を絵の中に入れて縦を節約する */
+/* カード：編成画面のときだけ、名前を絵の中に入れ、飾りを枠の外へ出す */
 .card .nmov{display:none}
+#screen-draft .card{overflow:visible}
+#screen-draft .card .art{border-radius:10px 10px 0 0}
 #screen-draft .card .nm{display:none}
 #screen-draft .card .nmov{display:block;position:absolute;left:0;right:0;bottom:0;z-index:5;
-  text-align:center;font-weight:900;font-size:12.5px;padding:14px 3px 3px;color:#eef2fb;
-  text-shadow:0 1px 3px #000,0 0 8px rgba(0,0,0,.7);
-  background:linear-gradient(180deg,rgba(4,7,14,0),rgba(4,7,14,.55) 40%,rgba(4,7,14,.88))}
-#screen-draft .card .st{height:26px;align-items:center;padding:0 4px}
+  text-align:center;font-weight:900;font-size:12.5px;padding:12px 3px 2px;color:#eef2fb;
+  text-shadow:0 1px 3px #000,0 0 8px rgba(0,0,0,.75);
+  background:linear-gradient(180deg,rgba(4,7,14,0),rgba(4,7,14,.55) 40%,rgba(4,7,14,.9))}
+#screen-draft .card .cost{top:-7px;left:-7px;width:25px;height:25px;font-size:13px;
+  border:1.5px solid #0a0e18;box-shadow:0 2px 6px rgba(0,0,0,.7);z-index:7}
+#screen-draft .card .rng{top:4px;right:4px;font-size:9.5px;padding:1px 4px;
+  background:rgba(6,9,18,.72);border-color:rgba(90,105,140,.6)}
+#screen-draft .card .lnb{left:-6px;bottom:auto;top:20px;z-index:7}
+#screen-draft .card .st{height:21px;padding:0 4px;border-radius:0 0 10px 10px;
+  align-items:center;font-size:10px;letter-spacing:-.02em}
+#screen-draft .card .st b{font-size:13.5px}
+/* 選抜スペースに置いたカードは、絵と名前だけ（数字は候補側で読む） */
+#screen-draft .drslot .card .st,
+#screen-draft .drslot .card .lnb{display:none}
+#screen-draft .drslot .card .art{border-radius:10px}
+
+/* 上位互換の金枠と、選択中の光を見分ける
+   上位互換＝外に光らない金の額縁／選択中＝白い二重の輪と浮き上がり */
+#screen-draft .card.upper{box-shadow:inset 0 0 0 1px rgba(255,225,150,.45),0 3px 8px rgba(0,0,0,.5)}
+/* 選んでいるあいだは、ほかの札を沈める（何を持っているか一目で分かる） */
+#screen-draft .drpool.pick .card:not(.sel){opacity:.45;filter:saturate(.6)}
+#screen-draft .drpool.pick .card.used{opacity:.16}
+#screen-draft .card.sel .rng{display:none}
+#screen-draft .card.sel{border-color:#fff6de;
+  box-shadow:inset 0 0 0 3px #fff6de, 0 0 0 3px rgba(242,198,92,.85), 0 0 20px rgba(242,198,92,.5),
+             0 8px 16px rgba(0,0,0,.65);
+  transform:translateY(-3px);z-index:6}
+#screen-draft .drslot.selslot .card{border-color:#fff6de;
+  box-shadow:inset 0 0 0 3px #fff6de, 0 0 0 3px rgba(242,198,92,.85), 0 0 20px rgba(242,198,92,.5);
+  z-index:6}
+.drput{position:absolute;top:-8px;right:-8px;z-index:8;width:27px;height:27px;border-radius:50%;
+  border:1.5px solid var(--gold);background:#1a1408;color:var(--gold);
+  font-size:15px;font-weight:900;line-height:1;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.7)}
 
 /* 最下段 */
 .drfoot{flex:0 0 auto;padding:8px 12px calc(10px + env(safe-area-inset-bottom));position:relative}

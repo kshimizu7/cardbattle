@@ -22,9 +22,12 @@ const F='file://'+require('path').join(__dirname,'ArcanaClash.html');
       await p.click('.drslot.can',{timeout:2000});
       await p.waitForSelector('.drslot.filled',{timeout:2000});
     });
-    await check(pool+'：↑で自動配置', async()=>{
+    await check(pool+'：選ぶと↑が出て、押すと自動配置', async()=>{
       const n0=(await p.$$('.drslot.filled')).length;
-      await p.click('.drpool .card:not(.used) .drput',{timeout:3000});
+      if((await p.$$('.drpool .drput')).length!==0) throw new Error('選ぶ前から↑が出ている');
+      await p.click('.drpool .card:not(.used)',{timeout:3000});
+      await p.waitForSelector('.drpool .card.sel .drput',{timeout:2000});
+      await p.click('.drpool .card.sel .drput',{timeout:2000});
       const n1=(await p.$$('.drslot.filled')).length;
       if(n1!==n0+1) throw new Error('増えなかった '+n0+'→'+n1);
     });
@@ -35,9 +38,11 @@ const F='file://'+require('path').join(__dirname,'ArcanaClash.html');
       if(n1!==n0-1) throw new Error('減らなかった '+n0+'→'+n1);
     });
     await check(pool+'：6体そろえて出撃', async()=>{
-      for(let i=0;i<8;i++){
-        const u=await p.$('.drpool .card:not(.used) .drput'); if(!u) break;
-        await u.click().catch(()=>{});
+      for(let i=0;i<10;i++){
+        const c=await p.$('.drpool .card:not(.used)'); if(!c) break;
+        await c.click().catch(()=>{});
+        const u=await p.$('.drpool .card.sel .drput');
+        if(u) await u.click().catch(()=>{}); else break;
         if((await p.$$('.drslot.filled')).length>=6) break;
       }
       const go=await p.$('#done:not([disabled])'); if(!go) throw new Error('出撃ボタンが押せない');

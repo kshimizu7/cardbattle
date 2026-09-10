@@ -40,4 +40,11 @@ def fix(cid, width=3, thr=18.0):
     Image.fromarray(a.astype(np.uint8),'RGBA').save(p)
     print(cid, 'ふちの紫を中和', n, '／内側の紫の点を埋めた', m)
 if __name__=='__main__':
-    for c in sys.argv[1:]: fix(c)
+    # 使い方： python3 tools/despill.py <id> [<id> ...] [--width 4] [--thr 12]
+    args=sys.argv[1:]; w,t=3,18.0; ids=[]
+    i=0
+    while i<len(args):
+        if args[i]=='--width': w=int(args[i+1]); i+=2
+        elif args[i]=='--thr': t=float(args[i+1]); i+=2
+        else: ids.append(args[i]); i+=1
+    for c in ids: fix(c, w, t)

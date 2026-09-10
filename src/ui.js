@@ -2605,8 +2605,10 @@
           (isSel ? '<button class="drx" data-back="' + key + '" aria-label="候補に戻す">✕</button>' : '') +
           '</div>';
       }
+      var lab = row === 0 ? '前衛' : '後衛';
       return '<div class="drslot' + (row === 0 ? ' front' : '') + (S.selCard || sel ? ' can' : '') +
-        '" data-slot="' + key + '">' + (S.selCard ? '<span class="drph">ここに置く</span>' : '') + '</div>';
+        '" data-slot="' + key + '"><span class="drph">' +
+        (S.selCard ? lab + 'に置く' : lab) + '</span></div>';
     }
     var grid = [0, 1].map(function (r) {
       return [0, 1, 2].map(function (c) { return slotHTML(r, c); }).join('');
@@ -2618,8 +2620,8 @@
       var ok = canTake(id);
       return cardHTML(id, {
         cls: (isUsed || !ok ? ' used' : '') + (isUsed ? ' picked' : '') +
-             (S.selCard === id ? ' sel' : '') + (ok ? ' canput' : ''),
-        put: ok
+             (S.selCard === id ? ' sel' : ''),
+        put: ok && S.selCard === id
       });
     }).join('');
 
@@ -2658,16 +2660,12 @@
         '</div>' +
         (noCost ? '' : '<div class="drbar' + (over ? ' over' : '') + '"><i style="width:' +
           Math.min(100, cost / cap * 100) + '%"></i></div>') +
-        '<div class="drpick">' +
-          '<div class="drrail"><span class="f"><i>前</i><i>衛</i></span>' +
-            '<span><i>後</i><i>衛</i></span></div>' +
-          '<div class="drgrid">' + grid + '</div>' +
-        '</div>' +
+        '<div class="drpick"><div class="drgrid">' + grid + '</div></div>' +
         '<div class="drdiv"><span class="ln"></span>' + stateHTML + '<span class="ln"></span>' +
           (hand.length >= 13 ? '<button class="drfind' + (anyState ? ' on' : '') +
             '" id="drfind" aria-label="並べ替え・しぼり込み">⌕</button>' : '') +
         '</div>' +
-        '<div class="drpool">' +
+        '<div class="drpool' + (S.selCard ? ' pick' : '') + '">' +
           (list.length ? '<div class="drgridp">' + handHTML + '</div>'
             : '<div class="drnone">この条件に合う候補はありません<br>上の ✕ で元に戻せます</div>') +
         '</div>' +
