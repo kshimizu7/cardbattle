@@ -3093,6 +3093,11 @@
 
   /* 陣営名の横の数字（生存・HP計・与ダメ）は、盤面を見れば分かるので出さない */
   function sideStats(side) { return ''; }
+  /* 中央の帯に出す「残り体数」 */
+  function liveCount(st, side) {
+    var a = E.aliveUnits(st, side).length, n = st.players[side].units.length;
+    return a + '/' + n;
+  }
 
   /* 戦闘中の共通バー。縦持ちでは画面上段に、横持ちでは右パネルの上部に置く。
      同じ中身を2箇所に出すため、IDではなくクラスで拾う。 */
@@ -3112,10 +3117,12 @@
       '<button class="btn small ghost ico snd b-snd' + (S.sound ? '' : ' off') + '"' +
         ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
       '<button class="btn small ghost ico b-spd" title="戦闘速度">x' + S.speed + '</button>' +
+      '<button class="btn small ghost ico b-log" title="戦闘ログ">📜</button>' +
       '<button class="btn small ghost ico b-quit" title="タイトルへ">✕</button>';
   }
 
   function bindBattleBar() {
+    $$('.b-log').forEach(function (b) { b.onclick = showLog; });
     $$('.b-fs').forEach(function (b) { b.onclick = toggleFullscreen; });
     $$('.b-disp').forEach(function (b) { b.onclick = showDisplayMenu; });
     $$('.b-snd').forEach(function (b) {
@@ -3146,22 +3153,17 @@
       /* v93: 「行動順／自軍／敵軍／なぜこの順番？」の行は消し、帯だけにする（根拠はバー長押しで） */
       '<div class="turnbar" id="turnbar">' + order + '</div>' +
       '<div class="field">' +
-        '<div class="side-tag s1"><span class="dot"></span>' + p2name + ' <span class="stats">' + sideStats(1) + '</span></div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 1, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
-        '<div class="warline">' +
-          '<div class="wl-edge top"></div>' +
-          '<div class="wl-mid"><span class="wl-flow"><i>❯</i><i>❯</i><i>❯</i><i>❯</i></span></div>' +
-          '<div class="wl-edge bot"></div>' +
+        /* v112: 陣営の行をやめ、中央の帯に「どちらの陣か」を斜めに入れる */
+        '<div class="warline vsband">' +
+          '<div class="vs s1"><b>' + p2name + '</b><i>' + liveCount(st, 1) + '</i></div>' +
+          '<div class="vs s0"><b>' + p1name + '</b><i>' + liveCount(st, 0) + '</i></div>' +
+          '<span class="wl-flow"><i>❯</i><i>❯</i><i>❯</i><i>❯</i></span>' +
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 1, c); }).join('') + '</div>' +
-        '<div class="side-tag s0"><span class="dot"></span>' + p1name + ' <span class="stats">' + sideStats(0) + '</span></div>' +
       '</div>' +
-      '<div style="flex:1;min-height:0"></div>' +
-      '<div class="loglast" id="log">' + (st.log.length
-        ? '<span class="' + st.log[st.log.length - 1].cls + '">' + st.log[st.log.length - 1].text + '</span>'
-        : '<span style="color:var(--dim)">戦闘ログ</span>') + '<b>全ログ</b></div>' +
       '<div class="actpanel" id="actpanel"></div>';
 
     var land = isLandscape();
@@ -3185,7 +3187,6 @@
           st.order.map(function (x) { return E.findUid(st, x).defId; }));
       };
     });
-    var lb = $('#log'); if (lb) lb.onclick = showLog;
     bindInspect();
     renderActions();
   }

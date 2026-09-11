@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="111">
+<meta name="app-version" content="112">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -2781,6 +2781,43 @@ body.shake{animation:shk2 .56s}
 .drclose{width:100%;padding:12px}
 .drdput{width:100%;margin-bottom:8px;padding:13px}
 .drdput.off{opacity:.4}
+
+/* =========================================================
+   v112: 戦闘画面 ── 陣営の行をやめ、中央の帯に名前。ログ行は廃止（📜へ）
+   ========================================================= */
+/* 盤面は余った高さをぜんぶ使う。セルは横幅で決まらず、行の高さに追従する */
+#app:not(.land) .field{flex:1 1 auto;min-height:0;justify-content:center}
+#app:not(.land) .field .grid3{flex:1 1 auto;min-height:0}
+#app:not(.land) .field .cell{aspect-ratio:auto;min-height:0;height:100%}
+#app:not(.land) .field .cell .unit{aspect-ratio:auto;height:100%}
+
+/* 中央の帯：斜めに二分して、上が相手・下が自分 */
+.warline.vsband{margin:6px 0;position:relative;height:34px;overflow:hidden;border-radius:8px;
+  background:#0b0f1b;border:1px solid #1c2438}
+.warline.vsband .vs{position:absolute;inset:0;display:flex;align-items:center;gap:8px;
+  font-size:12.5px;font-weight:900;letter-spacing:.06em;transition:opacity .2s}
+.warline.vsband .vs b{font-weight:900}
+.warline.vsband .vs i{font-style:normal;font-size:10.5px;font-weight:800;opacity:.75;
+  font-variant-numeric:tabular-nums}
+/* 上側（相手）＝右上の三角 */
+.warline.vsband .vs.s1{justify-content:flex-end;padding:0 12px 6px 0;align-items:flex-start;
+  background:linear-gradient(100deg,rgba(255,107,125,.14),rgba(255,107,125,.42));
+  color:#ffd2d8;clip-path:polygon(42% 0, 100% 0, 100% 100%, 58% 100%)}
+/* 下側（自分）＝左下の三角 */
+.warline.vsband .vs.s0{justify-content:flex-start;padding:6px 0 0 12px;align-items:flex-end;
+  background:linear-gradient(100deg,rgba(95,168,255,.42),rgba(95,168,255,.14));
+  color:#d6e6ff;clip-path:polygon(0 0, 42% 0, 58% 100%, 0 100%)}
+/* 手番でない側は沈める */
+#app.turn0 .warline.vsband .vs.s1,#app.turn1 .warline.vsband .vs.s0{opacity:.4}
+#app.turn0 .warline.vsband .vs.s0{box-shadow:inset 0 0 18px rgba(95,168,255,.55)}
+#app.turn1 .warline.vsband .vs.s1{box-shadow:inset 0 0 18px rgba(255,95,118,.55)}
+.warline.vsband .wl-flow{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3}
+
+/* 技のボタン：1つめは横いっぱい、2つめ3つめは半分ずつ（名前が2段でも入る） */
+.actpanel .acts{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.actpanel .acts .act{min-width:0;width:auto}
+.actpanel .acts .act:first-child:nth-last-child(odd){grid-column:1 / -1}
+.actpanel .acts.waiting{display:block}
 
 </style>
 </head>
@@ -10613,6 +10650,11 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
 
   /* 陣営名の横の数字（生存・HP計・与ダメ）は、盤面を見れば分かるので出さない */
   function sideStats(side) { return ''; }
+  /* 中央の帯に出す「残り体数」 */
+  function liveCount(st, side) {
+    var a = E.aliveUnits(st, side).length, n = st.players[side].units.length;
+    return a + '/' + n;
+  }
 
   /* 戦闘中の共通バー。縦持ちでは画面上段に、横持ちでは右パネルの上部に置く。
      同じ中身を2箇所に出すため、IDではなくクラスで拾う。 */
@@ -10632,10 +10674,12 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       '<button class="btn small ghost ico snd b-snd' + (S.sound ? '' : ' off') + '"' +
         ' title="' + (S.sound ? '音を消す' : '音を出す') + '">♪</button>' +
       '<button class="btn small ghost ico b-spd" title="戦闘速度">x' + S.speed + '</button>' +
+      '<button class="btn small ghost ico b-log" title="戦闘ログ">📜</button>' +
       '<button class="btn small ghost ico b-quit" title="タイトルへ">✕</button>';
   }
 
   function bindBattleBar() {
+    $$('.b-log').forEach(function (b) { b.onclick = showLog; });
     $$('.b-fs').forEach(function (b) { b.onclick = toggleFullscreen; });
     $$('.b-disp').forEach(function (b) { b.onclick = showDisplayMenu; });
     $$('.b-snd').forEach(function (b) {
@@ -10666,22 +10710,17 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       /* v93: 「行動順／自軍／敵軍／なぜこの順番？」の行は消し、帯だけにする（根拠はバー長押しで） */
       '<div class="turnbar" id="turnbar">' + order + '</div>' +
       '<div class="field">' +
-        '<div class="side-tag s1"><span class="dot"></span>' + p2name + ' <span class="stats">' + sideStats(1) + '</span></div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 1, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
-        '<div class="warline">' +
-          '<div class="wl-edge top"></div>' +
-          '<div class="wl-mid"><span class="wl-flow"><i>❯</i><i>❯</i><i>❯</i><i>❯</i></span></div>' +
-          '<div class="wl-edge bot"></div>' +
+        /* v112: 陣営の行をやめ、中央の帯に「どちらの陣か」を斜めに入れる */
+        '<div class="warline vsband">' +
+          '<div class="vs s1"><b>' + p2name + '</b><i>' + liveCount(st, 1) + '</i></div>' +
+          '<div class="vs s0"><b>' + p1name + '</b><i>' + liveCount(st, 0) + '</i></div>' +
+          '<span class="wl-flow"><i>❯</i><i>❯</i><i>❯</i><i>❯</i></span>' +
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 1, c); }).join('') + '</div>' +
-        '<div class="side-tag s0"><span class="dot"></span>' + p1name + ' <span class="stats">' + sideStats(0) + '</span></div>' +
       '</div>' +
-      '<div style="flex:1;min-height:0"></div>' +
-      '<div class="loglast" id="log">' + (st.log.length
-        ? '<span class="' + st.log[st.log.length - 1].cls + '">' + st.log[st.log.length - 1].text + '</span>'
-        : '<span style="color:var(--dim)">戦闘ログ</span>') + '<b>全ログ</b></div>' +
       '<div class="actpanel" id="actpanel"></div>';
 
     var land = isLandscape();
@@ -10705,7 +10744,6 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
           st.order.map(function (x) { return E.findUid(st, x).defId; }));
       };
     });
-    var lb = $('#log'); if (lb) lb.onclick = showLog;
     bindInspect();
     renderActions();
   }
