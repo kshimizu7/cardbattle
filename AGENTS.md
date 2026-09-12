@@ -22,7 +22,12 @@
 ### 2. `index.html` は直接編集しない
 
 `index.html` は `build.js` の出力物。手で編集すると次のビルドで消える。
-**必ず `src/` を直して `CBVER=NN node build.js` で作り直す。**
+**必ず `src/` を直し、PowerShellで `CBVER` を明示して作り直す。**
+
+```powershell
+$env:CBVER = 'NN'
+node .\build.js
+```
 （`CBVER` を省くと版番号が既定値の `21` になってしまう）
 
 `ArcanaClash.html` と `dist/` も同じく成果物（`.gitignore` 対象）。
@@ -98,42 +103,49 @@ engine → ai → gear → save → sfx → bgm → art → teamname → CHAR/UI
 
 ---
 
-## 環境の使い分け（母艦PC ＝ Claude ／ ノートPC ＝ ChatGPT）
+## 正式開発環境
 
-詳しい手順は [docs/開発ガイド.md](docs/開発ガイド.md#作業環境の使い分け母艦pc-と-ノートpc) を参照。
+詳しい手順は [docs/開発ガイド.md](docs/開発ガイド.md#正式開発環境とgit運用) を参照。
 
-### 12. 実装・build・テスト・配信は母艦の Claude が担当する
+### 12. 母艦PCの `cardbattle-main` を使う
 
-ノートPCの ChatGPT は **相談・設計確認・レビュー・GitHub からの最新化** が基本。
-**実装を行うのは、kazu がその作業を明示的に割り当てたときだけ。**
+正式な開発環境は、母艦Windows PCのCodexと次の通常clone。
 
-### 13. GitHub の `main` が両環境をつなぐ正本
+```text
+C:\Users\kazu_\projects\cardbattle-main
+```
+
+実装・build・テスト・commit・push・配信は、kazu が明示的に依頼または承認した範囲だけ行う。
+
+### 13. GitHub の `main` が唯一の正本
 
 - **作業を始める前に、必ず `main` へ最新化する**
-- **作業が終わったら `main` への反映完了を確認してから、もう一方の環境を更新する**
+- 通常の `git pull --ff-only origin main` / commit / `git push origin main` を使う
+- `GIT_DIR` / `GIT_WORK_TREE`、detached HEAD、tgz転送、別環境での再commitは使わない
+- ローカルファイルの直接コピーを環境間の受け渡し手段にしない
 
-ローカルのファイルを直接コピーして環境間で受け渡さない。
-（クラウドの Claude 環境は detached HEAD で運用しており、`pull` ではなく配信手順に従う）
+### 14. 同じテーマを複数環境で同時に編集しない
 
-### 14. 同じテーマを2つの環境で同時に編集しない
-
-- 1つのテーマは、母艦かノートのどちらか一方だけが触る
+- 1つのテーマは、必ず1つの作業コピーだけで触る
 - **未 commit の変更が残っている状態で、もう一方へ同じ作業を依頼しない**
 
-### 15. 母艦の特殊な Git 設定をノートPCへ持ち込まない
+### 15. commit identity はリポジトリローカルに固定する
 
-母艦（`C:\Users\kazu_\projects\cardbattle`）だけが `GIT_DIR` / `GIT_WORK_TREE` を明示する構成。
-ノートPC（`C:\Users\kazu_\Documents\Codex\cardbattle`）は**普通の clone** なので、
-**母艦用の `GIT_DIR` 設定を適用してはいけない。**
+グローバル設定は変更せず、このリポジトリの `.git/config` に次を設定する。
+
+```powershell
+git config --local user.name kshimizu7
+git config --local user.email 70817205+kshimizu7@users.noreply.github.com
+```
 
 ---
 
 ## 作業の型
 
-1. **作業前に、自分の環境を `main` の内容に合わせる**（環境ごとの手順は開発ガイド）
+1. **作業前に、通常cloneを `main` の内容に合わせる**（手順は開発ガイド）
 2. `docs/現在地.md` で、いま何が最優先かを確認する
 3. 変更は `src/` に対して行う
-4. `node smoke.js` と `node rulecheck.js 300` を通す
+4. `node .\smoke.js` と `node .\rulecheck.js 300` を通す
 5. `変更履歴.md` に日本語で追記する
 6. kazu の確認を受けてから配信する（手順は [docs/開発ガイド.md](docs/開発ガイド.md)）
-7. `main` への反映を確認してから、もう一方の環境を最新化する
+7. ローカルHEADと `origin/main` の一致を確認する

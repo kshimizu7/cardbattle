@@ -30,11 +30,15 @@
 
 ## 開発
 
-```bash
-CBVER=120 node build.js   # ビルド（index.html を作り直す）
-node smoke.js             # 画面の通し確認
-node rulecheck.js 300     # 戦闘ルールの回帰チェック
+```powershell
+$env:CBVER = '120'
+node .\build.js          # ビルド（index.html を作り直す）
+node .\smoke.js          # 画面の通し確認
+node .\rulecheck.js 300  # 戦闘ルールの回帰チェック
 ```
+
+正式な開発環境は `C:\Users\kazu_\projects\cardbattle-main` の通常cloneです。
+Playwrightはリポジトリ外のグローバル開発ツールとして管理します。
 
 `index.html` はビルド成果物です。**直接編集せず、必ず `src/` を直してください。**
 
