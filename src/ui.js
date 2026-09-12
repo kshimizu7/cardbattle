@@ -2688,8 +2688,9 @@
     var goLabel = team.length < minU
       ? (minU > 1 ? 'あと' + (minU - team.length) + '体を配置してください' : 'キャラを配置してください')
       : over ? 'コスト超過'
-      : '⚔ この編成で出撃<small>' + team.length + '体' +
-        (noCost ? '' : '・コスト ' + cost + '/' + cap) + '</small>' +
+      /* v119: 体数とコストは上段のマナ表示で分かるので、ボタンからは外した。
+         「前衛がいない列がある」ときの注意書きだけは残す */
+      : '⚔ この編成で出撃' +
         (pull ? '<em>出撃時に' + pull + '体が前衛に移動します</em>' : '');
 
     app.innerHTML =
@@ -3280,6 +3281,32 @@
     });
   }
 
+  /* v119: 盤面は「残った高さを全部使う」ので、下の操作欄の高さが変わるたびに
+     マスが伸び縮みしていた（実測で1ターンに2回・最大14px＝約9%）。
+     いちばん高くなる状態（技3つ＋案内）を実際に測って、操作欄の高さをそこに固定する。
+     端末の文字サイズ設定や画面の大きさが変わっても、測り直すので必ず合う。 */
+  function lockPanelHeight() {
+    var panel = $('#actpanel');
+    if (!panel || !panel.parentNode) return;
+    var probe = document.createElement('div');
+    probe.className = 'actpanel';
+    /* .actpanel は sticky+bottom:0 なので、bottom を打ち消さないと画面いっぱいに伸びる */
+    probe.style.cssText = 'position:absolute;left:0;right:0;top:0;bottom:auto;height:auto;' +
+                          'visibility:hidden;pointer-events:none;min-height:0;max-height:none';
+    probe.innerHTML = '<div class="acts">' +
+        '<button class="act">技の名前<small>威力5・前列を貫通（後方へは60%）</small></button>' +
+        '<button class="act">技の名前<small>回復5・味方全体</small></button>' +
+        '<button class="act">技の名前<small>自己犠牲で味方を蘇生</small></button>' +
+      '</div><div class="hint">6体すべてに必ず命中します' +
+        '<div class="subhint">もう一度タップで実行</div></div>';
+    panel.parentNode.appendChild(probe);
+    var h = Math.ceil(probe.getBoundingClientRect().height);
+    probe.remove();
+    /* 万一おかしな値になっても、画面の3割を超えて占有はしない */
+    var cap = Math.round(window.innerHeight * 0.3);
+    if (h > 40 && h < cap) app.style.setProperty('--panelH', h + 'px');
+  }
+
   function renderBattle() {
     var st = S.st;
     var actor = E.currentActor(st);
@@ -3330,6 +3357,7 @@
     app.classList.toggle('landA', S.landStyle !== 'B');
     app.classList.toggle('landB', S.landStyle === 'B');
     bindBattleBar();
+    lockPanelHeight();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
     var tb = $('#turnbar'), nowtk = $('.tk.now');

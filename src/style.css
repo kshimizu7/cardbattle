@@ -3029,3 +3029,12 @@ body.shake{animation:shk2 .56s}
 .techrib{max-width:94vw;min-width:min(68vw,420px)}
 .techrib .t{white-space:nowrap}
 .techrib .w{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* =========================================================
+   v119: 操作欄の高さを固定して、盤面のマスが揺れないようにする
+   ========================================================= */
+/* --panelH は JS が「いちばん高くなる状態」を実測して入れる（既定は控えめな値） */
+#app:not(.land) .actpanel{min-height:var(--panelH,121px);box-sizing:border-box;
+  display:flex;flex-direction:column;justify-content:flex-start}
+/* 案内文が長くても伸びないよう、2行までに抑える */
+#app:not(.land) .hint{max-height:2.9em;overflow:hidden}
