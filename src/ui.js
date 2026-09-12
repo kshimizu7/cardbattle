@@ -2705,17 +2705,20 @@
           '<button class="drnx" id="tnext" aria-label="' +
             (tnAuto ? '別の名前にする' : 'チーム名を決める') + '">' +
             (tnAuto ? '⟳' : '✎') + '</button>' +
-          /* v118: 文字を外してアイコンだけに（チーム名の幅を優先） */
-          '<button class="drclr" id="clr" title="全部戻す" aria-label="全部戻す"' +
-            (team.length ? '' : ' disabled') + '><i>↺</i></button>' +
+          /* v120: 「全部やりなおす」は ⟳（名前の付け直し）と形が似ていて紛らわしいので、
+             上段から外して、区切り線の左端の ⚙ にまとめた */
           manaHTML +
         '</div>' +
         (noCost ? '' : '<div class="drbar' + (over ? ' over' : '') + '"><i style="width:' +
           Math.min(100, cost / cap * 100) + '%"></i></div>') +
         '<div class="drpick"><div class="drgrid">' + grid + '</div></div>' +
-        '<div class="drdiv"><span class="ln"></span>' + stateHTML + '<span class="ln"></span>' +
-          (hand.length >= 13 ? '<button class="drfind' + (anyState ? ' on' : '') +
-            '" id="drfind" aria-label="並べ替え・しぼり込み">⌕</button>' : '') +
+        /* v120: 左端に ⚙（やりなおし・使い方）、右端に ⌕（並べ替え・しぼり込み）。
+           どちらも常に置くので、中央の ◆◇◆ がずれない */
+        '<div class="drdiv">' +
+          '<button class="drgear" id="drgear" aria-label="メニュー">⚙</button>' +
+          '<span class="ln"></span>' + stateHTML + '<span class="ln"></span>' +
+          '<button class="drfind' + (anyState ? ' on' : '') +
+            '" id="drfind" aria-label="並べ替え・しぼり込み">⌕</button>' +
         '</div>' +
         '<div class="drpool' + (S.selCard ? ' pick' : '') + '">' +
           (list.length ? '<div class="drgridp">' + handHTML + '</div>'
@@ -2814,7 +2817,7 @@
 
     /* ---------- 上段の道具 ---------- */
     $('#dback').onclick = function () { renderTitle(); };
-    $('#clr').onclick = function () {
+    function clearAll() {
       if (!team.length) return;
       var snap = team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; });
       commit([]); S.selSlot = null; S.selCard = null; actDone();
@@ -2829,7 +2832,9 @@
       };
       f.appendChild(b);
       setTimeout(function () { if (b.parentNode) b.remove(); }, 4000);
-    };
+    }
+    var gb = $('#drgear');
+    if (gb) gb.onclick = function () { openDraftMenu(team.length > 0, clearAll); };
     /* チーム名：名前を押すと入力、⟳ を押すと次の候補へ（1→2→3→4→5→1） */
     $('#tname').onclick = function () { openTeamName(side, tnAvoid); };
     $('#tnext').onclick = function () {
@@ -2912,6 +2917,35 @@
       m.remove();
       renderDraft();
     };
+  }
+
+  /* v120: ⚙ のメニュー。やりなおしと、この画面の使い方をここにまとめる */
+  function openDraftMenu(hasAny, clearAll) {
+    var m = document.createElement('div');
+    m.className = 'modal drsheet';
+    m.innerHTML = '<div class="box drbox">' +
+      '<h4>この編成</h4>' +
+      '<button class="drmi" id="dmclr"' + (hasAny ? '' : ' disabled') + '>' +
+        '<i>↺</i><span><b>全部やりなおす</b>' +
+        '<small>置いたキャラをすべて候補に戻します</small></span></button>' +
+      '<h4 style="margin-top:15px">この画面の使い方</h4>' +
+      '<div class="drhelp">' +
+        '<p><b>置く</b><span>候補のカードをタップ → 上の枠をタップ。' +
+          '選んだカードの右上に出る <em>↑</em> を押すと、空いている枠へ自動で入ります</span></p>' +
+        '<p><b>外す</b><span>置いたカードを<u>2回続けてタップ</u>すると候補に戻ります。' +
+          '1回タップして出る <em>✕</em> でも戻せます</span></p>' +
+        '<p><b>詳しく</b><span>カードを<u>長押し</u>すると、技や特殊能力が読めます</span></p>' +
+        '<p><b>チーム名</b><span>上の名前をタップすると変えられます。' +
+          '<em>⟳</em> を押すと、編成に合う別の名前に変わります</span></p>' +
+        '<p><b>絞り込み</b><span>区切り線の右端の <em>⌕</em> から、' +
+          '並べ替えとしぼり込みができます</span></p>' +
+        '<p><b>前衛と後衛</b><span>前衛が空いている列は、出撃のときに後衛が前へ出ます</span></p>' +
+      '</div>' +
+      '<button class="btn ghost drclose" id="dmx">閉じる</button></div>';
+    document.body.appendChild(m);
+    m.onclick = function (ev) { if (ev.target === m) m.remove(); };
+    $('#dmx', m).onclick = function () { m.remove(); };
+    $('#dmclr', m).onclick = function () { m.remove(); clearAll(); };
   }
 
   /* 並べ替え・しぼり込みのシート */
@@ -3299,12 +3333,19 @@
         '<button class="act">技の名前<small>自己犠牲で味方を蘇生</small></button>' +
       '</div><div class="hint">6体すべてに必ず命中します' +
         '<div class="subhint">もう一度タップで実行</div></div>';
+    /* 横持ちでは操作欄は右の細い列なので、probe もその幅で測る */
+    probe.style.width = panel.clientWidth + 'px';
+    probe.style.right = 'auto';
     panel.parentNode.appendChild(probe);
     var h = Math.ceil(probe.getBoundingClientRect().height);
+    var ac = probe.querySelector('.acts');
+    var ah = ac ? Math.ceil(ac.getBoundingClientRect().height) : 0;
     probe.remove();
     /* 万一おかしな値になっても、画面の3割を超えて占有はしない */
     var cap = Math.round(window.innerHeight * 0.3);
     if (h > 40 && h < cap) app.style.setProperty('--panelH', h + 'px');
+    /* 技ボタン2段ぶんの高さ。横持ちでもここを固定して、下の行動順が上下しないようにする */
+    if (ah > 30 && ah < window.innerHeight * 0.6) app.style.setProperty('--actsH', ah + 'px');
   }
 
   function renderBattle() {

@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="119">
+<meta name="app-version" content="120">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -3050,6 +3050,45 @@ body.shake{animation:shk2 .56s}
   display:flex;flex-direction:column;justify-content:flex-start}
 /* 案内文が長くても伸びないよう、2行までに抑える */
 #app:not(.land) .hint{max-height:2.9em;overflow:hidden}
+
+/* =========================================================
+   v120: 編成の区切り線に ⚙／⌕ を常設、横持ちの操作欄と行動順を読みやすく
+   ========================================================= */
+/* 左端の ⚙。右端の ⌕ と同じ大きさにして、中央の ◆◇◆ がずれないようにする */
+.drgear{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:1px solid #2f3a55;
+  background:#101728;color:#8593b2;font-size:14px;font-weight:900;line-height:1}
+.drgear:active{border-color:var(--gold);color:var(--gold)}
+.drfind{flex:0 0 auto}
+/* ⚙ のシート */
+.drmi{display:flex;align-items:center;gap:11px;width:100%;text-align:left;font-family:inherit;
+  background:rgba(255,255,255,.04);border:1px solid #2a3450;border-radius:11px;
+  padding:11px 13px;color:#dbe3f5}
+.drmi i{font-style:normal;font-size:20px;line-height:1;color:var(--gold);flex:0 0 auto}
+.drmi b{display:block;font-size:13.5px;font-weight:900}
+.drmi small{display:block;font-size:10.5px;color:#7f8ca8;margin-top:2px}
+.drmi:disabled{opacity:.35}
+.drhelp{font-size:11.5px;line-height:1.6;color:#a9b6d0}
+.drhelp p{margin:0 0 7px;display:flex;gap:8px;align-items:flex-start}
+.drhelp b{flex:0 0 66px;color:var(--gold);font-weight:900;font-size:11px;padding-top:1px}
+.drhelp u{text-decoration:none;color:#e8ecf5;font-weight:800}
+.drhelp p>span{flex:1 1 auto;min-width:0}
+.drhelp em{font-style:normal;color:#e8ecf5;font-weight:900;white-space:nowrap;
+  border:1px solid #3a4870;border-radius:5px;padding:0 4px;background:#131b2c}
+
+/* --- 横持ち：技ボタンは常に2段ぶんの場所を取る（下の行動順が上下しない） --- */
+@media (orientation:landscape){
+  #app.land .actpanel .acts{min-height:var(--actsH,96px);align-content:start}
+  #app.land .actpanel .acts.waiting{min-height:var(--actsH,96px)}
+  /* --- 横持ち：行動順は行間をしっかり取る。全部は見せず、スクロールで先を見る --- */
+  #app.land .om-list{gap:7px}
+  #app.land .om{padding:7px 8px;gap:9px;border-radius:9px}
+  #app.land .om .crest{width:15px;height:17px}
+  #app.land .om .n{font-size:11px;width:16px}
+  #app.land .om .pic{width:26px;height:26px;border-radius:6px}
+  #app.land .om .nm{font-size:13.5px}
+  #app.land .om .sp{font-size:12.5px}
+  #app.land .om-hd{font-size:11px;padding-bottom:7px}
+}
 
 </style>
 </head>
@@ -10687,17 +10726,20 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
           '<button class="drnx" id="tnext" aria-label="' +
             (tnAuto ? '別の名前にする' : 'チーム名を決める') + '">' +
             (tnAuto ? '⟳' : '✎') + '</button>' +
-          /* v118: 文字を外してアイコンだけに（チーム名の幅を優先） */
-          '<button class="drclr" id="clr" title="全部戻す" aria-label="全部戻す"' +
-            (team.length ? '' : ' disabled') + '><i>↺</i></button>' +
+          /* v120: 「全部やりなおす」は ⟳（名前の付け直し）と形が似ていて紛らわしいので、
+             上段から外して、区切り線の左端の ⚙ にまとめた */
           manaHTML +
         '</div>' +
         (noCost ? '' : '<div class="drbar' + (over ? ' over' : '') + '"><i style="width:' +
           Math.min(100, cost / cap * 100) + '%"></i></div>') +
         '<div class="drpick"><div class="drgrid">' + grid + '</div></div>' +
-        '<div class="drdiv"><span class="ln"></span>' + stateHTML + '<span class="ln"></span>' +
-          (hand.length >= 13 ? '<button class="drfind' + (anyState ? ' on' : '') +
-            '" id="drfind" aria-label="並べ替え・しぼり込み">⌕</button>' : '') +
+        /* v120: 左端に ⚙（やりなおし・使い方）、右端に ⌕（並べ替え・しぼり込み）。
+           どちらも常に置くので、中央の ◆◇◆ がずれない */
+        '<div class="drdiv">' +
+          '<button class="drgear" id="drgear" aria-label="メニュー">⚙</button>' +
+          '<span class="ln"></span>' + stateHTML + '<span class="ln"></span>' +
+          '<button class="drfind' + (anyState ? ' on' : '') +
+            '" id="drfind" aria-label="並べ替え・しぼり込み">⌕</button>' +
         '</div>' +
         '<div class="drpool' + (S.selCard ? ' pick' : '') + '">' +
           (list.length ? '<div class="drgridp">' + handHTML + '</div>'
@@ -10796,7 +10838,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
 
     /* ---------- 上段の道具 ---------- */
     $('#dback').onclick = function () { renderTitle(); };
-    $('#clr').onclick = function () {
+    function clearAll() {
       if (!team.length) return;
       var snap = team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; });
       commit([]); S.selSlot = null; S.selCard = null; actDone();
@@ -10811,7 +10853,9 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       };
       f.appendChild(b);
       setTimeout(function () { if (b.parentNode) b.remove(); }, 4000);
-    };
+    }
+    var gb = $('#drgear');
+    if (gb) gb.onclick = function () { openDraftMenu(team.length > 0, clearAll); };
     /* チーム名：名前を押すと入力、⟳ を押すと次の候補へ（1→2→3→4→5→1） */
     $('#tname').onclick = function () { openTeamName(side, tnAvoid); };
     $('#tnext').onclick = function () {
@@ -10894,6 +10938,35 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       m.remove();
       renderDraft();
     };
+  }
+
+  /* v120: ⚙ のメニュー。やりなおしと、この画面の使い方をここにまとめる */
+  function openDraftMenu(hasAny, clearAll) {
+    var m = document.createElement('div');
+    m.className = 'modal drsheet';
+    m.innerHTML = '<div class="box drbox">' +
+      '<h4>この編成</h4>' +
+      '<button class="drmi" id="dmclr"' + (hasAny ? '' : ' disabled') + '>' +
+        '<i>↺</i><span><b>全部やりなおす</b>' +
+        '<small>置いたキャラをすべて候補に戻します</small></span></button>' +
+      '<h4 style="margin-top:15px">この画面の使い方</h4>' +
+      '<div class="drhelp">' +
+        '<p><b>置く</b><span>候補のカードをタップ → 上の枠をタップ。' +
+          '選んだカードの右上に出る <em>↑</em> を押すと、空いている枠へ自動で入ります</span></p>' +
+        '<p><b>外す</b><span>置いたカードを<u>2回続けてタップ</u>すると候補に戻ります。' +
+          '1回タップして出る <em>✕</em> でも戻せます</span></p>' +
+        '<p><b>詳しく</b><span>カードを<u>長押し</u>すると、技や特殊能力が読めます</span></p>' +
+        '<p><b>チーム名</b><span>上の名前をタップすると変えられます。' +
+          '<em>⟳</em> を押すと、編成に合う別の名前に変わります</span></p>' +
+        '<p><b>絞り込み</b><span>区切り線の右端の <em>⌕</em> から、' +
+          '並べ替えとしぼり込みができます</span></p>' +
+        '<p><b>前衛と後衛</b><span>前衛が空いている列は、出撃のときに後衛が前へ出ます</span></p>' +
+      '</div>' +
+      '<button class="btn ghost drclose" id="dmx">閉じる</button></div>';
+    document.body.appendChild(m);
+    m.onclick = function (ev) { if (ev.target === m) m.remove(); };
+    $('#dmx', m).onclick = function () { m.remove(); };
+    $('#dmclr', m).onclick = function () { m.remove(); clearAll(); };
   }
 
   /* 並べ替え・しぼり込みのシート */
@@ -11281,12 +11354,19 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         '<button class="act">技の名前<small>自己犠牲で味方を蘇生</small></button>' +
       '</div><div class="hint">6体すべてに必ず命中します' +
         '<div class="subhint">もう一度タップで実行</div></div>';
+    /* 横持ちでは操作欄は右の細い列なので、probe もその幅で測る */
+    probe.style.width = panel.clientWidth + 'px';
+    probe.style.right = 'auto';
     panel.parentNode.appendChild(probe);
     var h = Math.ceil(probe.getBoundingClientRect().height);
+    var ac = probe.querySelector('.acts');
+    var ah = ac ? Math.ceil(ac.getBoundingClientRect().height) : 0;
     probe.remove();
     /* 万一おかしな値になっても、画面の3割を超えて占有はしない */
     var cap = Math.round(window.innerHeight * 0.3);
     if (h > 40 && h < cap) app.style.setProperty('--panelH', h + 'px');
+    /* 技ボタン2段ぶんの高さ。横持ちでもここを固定して、下の行動順が上下しないようにする */
+    if (ah > 30 && ah < window.innerHeight * 0.6) app.style.setProperty('--actsH', ah + 'px');
   }
 
   function renderBattle() {

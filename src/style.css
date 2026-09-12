@@ -3038,3 +3038,42 @@ body.shake{animation:shk2 .56s}
   display:flex;flex-direction:column;justify-content:flex-start}
 /* 案内文が長くても伸びないよう、2行までに抑える */
 #app:not(.land) .hint{max-height:2.9em;overflow:hidden}
+
+/* =========================================================
+   v120: 編成の区切り線に ⚙／⌕ を常設、横持ちの操作欄と行動順を読みやすく
+   ========================================================= */
+/* 左端の ⚙。右端の ⌕ と同じ大きさにして、中央の ◆◇◆ がずれないようにする */
+.drgear{flex:0 0 auto;width:28px;height:28px;border-radius:50%;border:1px solid #2f3a55;
+  background:#101728;color:#8593b2;font-size:14px;font-weight:900;line-height:1}
+.drgear:active{border-color:var(--gold);color:var(--gold)}
+.drfind{flex:0 0 auto}
+/* ⚙ のシート */
+.drmi{display:flex;align-items:center;gap:11px;width:100%;text-align:left;font-family:inherit;
+  background:rgba(255,255,255,.04);border:1px solid #2a3450;border-radius:11px;
+  padding:11px 13px;color:#dbe3f5}
+.drmi i{font-style:normal;font-size:20px;line-height:1;color:var(--gold);flex:0 0 auto}
+.drmi b{display:block;font-size:13.5px;font-weight:900}
+.drmi small{display:block;font-size:10.5px;color:#7f8ca8;margin-top:2px}
+.drmi:disabled{opacity:.35}
+.drhelp{font-size:11.5px;line-height:1.6;color:#a9b6d0}
+.drhelp p{margin:0 0 7px;display:flex;gap:8px;align-items:flex-start}
+.drhelp b{flex:0 0 66px;color:var(--gold);font-weight:900;font-size:11px;padding-top:1px}
+.drhelp u{text-decoration:none;color:#e8ecf5;font-weight:800}
+.drhelp p>span{flex:1 1 auto;min-width:0}
+.drhelp em{font-style:normal;color:#e8ecf5;font-weight:900;white-space:nowrap;
+  border:1px solid #3a4870;border-radius:5px;padding:0 4px;background:#131b2c}
+
+/* --- 横持ち：技ボタンは常に2段ぶんの場所を取る（下の行動順が上下しない） --- */
+@media (orientation:landscape){
+  #app.land .actpanel .acts{min-height:var(--actsH,96px);align-content:start}
+  #app.land .actpanel .acts.waiting{min-height:var(--actsH,96px)}
+  /* --- 横持ち：行動順は行間をしっかり取る。全部は見せず、スクロールで先を見る --- */
+  #app.land .om-list{gap:7px}
+  #app.land .om{padding:7px 8px;gap:9px;border-radius:9px}
+  #app.land .om .crest{width:15px;height:17px}
+  #app.land .om .n{font-size:11px;width:16px}
+  #app.land .om .pic{width:26px;height:26px;border-radius:6px}
+  #app.land .om .nm{font-size:13.5px}
+  #app.land .om .sp{font-size:12.5px}
+  #app.land .om-hd{font-size:11px;padding-bottom:7px}
+}
