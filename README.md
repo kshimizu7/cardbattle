@@ -1,4 +1,4 @@
-# ARCANA CLASH ─ アルカナ・クラッシュ
+# VORTEX OF THREE（ARCANA CLASH）
 
 6体編成の陣形カードバトル。スマートフォン1台でふたり対戦、またはCPU対戦ができます。
 
@@ -14,11 +14,12 @@
 - **カードプール**は3種類 ── 入門8枚 / スターター15枚 / エクステンション23枚
 - **配り方**も2種類 ── シャッフル（敵味方まったく同じ候補）/ フルカード（全部が候補）
 - 対戦は **CPU戦**（強さ3段階）と、1台を交代で回す **ふたり対戦**
+- チームには編成に合った名前が自動でつき、自分で決めることもできます
 
 外部ファイルは一切ありません。効果音は60種類以上をすべて WebAudio でその場から合成し、
-キャラクターの絵も SVG をコードから生成しています。**HTML 1枚で完結**します。
+キャラクターの絵も埋め込んでいます。**HTML 1枚で完結**します。
 
-## 遊び方（配布）
+## 配布
 
 `index.html` を1つダウンロードするだけで、オフラインでも動きます。
 
@@ -29,30 +30,21 @@
 
 ## 開発
 
-### 構成
-
-```
-src/
-  engine.js   ゲームエンジン（DOM非依存。Node でもブラウザでも動く）
-  ai.js       CPU の思考
-  save.js     セーブ（戦績・設定・引き継ぎコード）
-  sfx.js      効果音の合成
-  art.js      キャラクターの SVG 生成
-  ui.js       画面と進行制御
-  style.css
-build.js      src/ を1枚の HTML に束ねる
-recover.js    ビルド済み HTML から src/ を復元する
-tools/        開発用スクリプト（回帰テスト・バランス検証・音の確認）
-```
-
-### ビルド
-
 ```bash
-CBVER=21 node build.js
+CBVER=120 node build.js   # ビルド（index.html を作り直す）
+node smoke.js             # 画面の通し確認
+node rulecheck.js 300     # 戦闘ルールの回帰チェック
 ```
 
-`index.html`（Pages 用）と、配布用のコピーが出力されます。
-版番号はタイトル画面の下部に `ver 21` として表示されます。
+`index.html` はビルド成果物です。**直接編集せず、必ず `src/` を直してください。**
+
+| 読むもの | 中身 |
+|---|---|
+| **[AGENTS.md](AGENTS.md)** | **AI開発者への必須ルール。作業前に必ず読む** |
+| [docs/現在地.md](docs/現在地.md) | いまの最優先タスクと未決定事項 |
+| [docs/開発ガイド.md](docs/開発ガイド.md) | 構成・ビルド・テスト・配信手順・絵の加工 |
+| [docs/設計判断.md](docs/設計判断.md) | コードだけでは分からない判断の理由 |
+| [変更履歴.md](変更履歴.md) | 版ごとの変更履歴（正本） |
 
 ### 復元
 
@@ -60,22 +52,6 @@ CBVER=21 node build.js
 `src/` を失っても HTML さえあれば完全に復元できます。
 
 ```bash
-node recover.js            # index.html から復元
+node recover.js                          # index.html から復元
 node recover.js path/to/ArcanaClash.html
 ```
-
-### テスト
-
-Playwright で実際に画面を操作し、編成から決着までを自動で流します。
-
-```bash
-CBPOOL=full CBDEAL=shuffle node tools/batch.js 3
-```
-
-`CBPOOL` は `tutorial` / `starter` / `full`、`CBDEAL` は `shuffle` / `full`。
-
----
-
-## 変更履歴
-
-[docs/CHANGELOG.md](docs/CHANGELOG.md)
