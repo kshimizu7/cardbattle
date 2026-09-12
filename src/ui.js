@@ -2953,10 +2953,18 @@
   function playIntroSix(done) {
     var st = S.st, gen = S.gen;
     var isp = function () { return Math.max(1, S.speed || 1); };
+    /* v115: 暗幕とボタンを分ける。
+       以前はボタンを暗幕の中に置いていたため、札（.introsix）の重なり順が上になり、
+       押せる場所が札に隠れていた。ボタンは app 直下に出して、いちばん上に置く */
     var ov = document.createElement('div');
     ov.className = 'introov';
-    ov.innerHTML = '<button class="btn ghost introskip" type="button">すぐ戦闘へ ▶</button>';
+    var skip = document.createElement('button');
+    skip.className = 'btn ghost introskip';
+    skip.type = 'button';
+    skip.textContent = 'すぐ戦闘へ ▶';
     app.appendChild(ov);
+    app.appendChild(skip);
+    skip.addEventListener('click', function (ev) { ev.stopPropagation(); finish(); });
     app.classList.add('intro');
     $$('.unit[data-uid]').forEach(function (e) { e.classList.remove('arrived'); });
     var over = false, timers = [], anims = [];
@@ -2966,7 +2974,7 @@
       timers.forEach(clearTimeout);
       anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
       $$('.introsix,.introfly', app).forEach(function (e) { e.remove(); });
-      ov.remove();
+      ov.remove(); skip.remove();
       $$('.unit[data-uid]').forEach(function (e) { e.classList.add('arrived'); });
       app.classList.remove('intro');
       S.intro = false;
@@ -2978,7 +2986,6 @@
     var onTap = null;
     ov.addEventListener('click', function (ev) {
       ev.stopPropagation();
-      if (ev.target && ev.target.closest && ev.target.closest('.introskip')) { finish(); return; }
       if (onTap) { var f = onTap; onTap = null; f(); }
     });
     function team(side) {
@@ -3043,19 +3050,8 @@
     showSide(0, function () { showSide(1, function () { later(200, finish); }); });
   }
 
-  /* 端末によっては縦書き（writing-mode）が効かず、文字が重なって出ることがある。
-     実際に高さを測って、だめなら「90度回転」に切り替える。
-     文字数×0.6 を下回っていたら、送りが効いていないと判断する */
-  function checkVertical() {
-    var band = $('.vsband'); if (!band) return;
-    band.classList.remove('vfail');
-    if (!isLandscape()) return;
-    var t = $('.vsband .vs.s0 b'); if (!t) return;
-    var n = (t.textContent || '').length; if (!n) return;
-    var fs = parseFloat(getComputedStyle(t).fontSize) || 12;
-    var h = t.getBoundingClientRect().height;
-    if (h < n * fs * 0.6) band.classList.add('vfail');
-  }
+  /* v115: 横持ちの陣営名は中央の帯（縦書き）をやめ、盤面の上の横書きの帯に移した。
+     縦書きの可否を測る checkVertical は不要になったので廃止 */
   function isAI(side) { return S.mode === 'cpu' && side === 1; }
 
   function unitCellHTML(side, row, col) {
@@ -3166,8 +3162,8 @@
       var u = E.findUid(st, uid);
       var c = 'tk s' + u.side + (i < st.turnIdx ? ' done' : '') + (!u.alive ? ' dead' : '') + (actor && u.uid === actor.uid ? ' now' : '');
       /* v93: 似顔絵ではなく「陣営色の帯に名前」。4文字まで */
+      /* v115: 紋章のバッジは名前にかぶって読みにくかったので廃止。陣営は札の色で示す */
       return '<div class="' + c + '" data-order="' + uid + '" data-idx="' + i + '">' +
-        crestSVG(u.side, 'tkc') +
         '<span class="tn">' + u.def.name.slice(0, 4) + '</span></div>';
     }).join('');
 
@@ -3177,6 +3173,11 @@
       /* v93: 「行動順／自軍／敵軍／なぜこの順番？」の行は消し、帯だけにする（根拠はバー長押しで） */
       '<div class="turnbar" id="turnbar">' + order + '</div>' +
       '<div class="field">' +
+        /* v115: 横持ちは、中央の帯ではなく盤面の上に陣営名を横書きで置く（縦持ちと同じ配色・斜め） */
+        '<div class="landtop">' +
+          '<div class="lt s0"><span class="ltin">' + crestSVG(0) + '<b>' + p1name + '</b></span></div>' +
+          '<div class="lt s1"><span class="ltin">' + crestSVG(1) + '<b>' + p2name + '</b></span></div>' +
+        '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 1, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
         /* v112: 陣営の行をやめ、中央の帯に「どちらの陣か」を斜めに入れる */
@@ -3205,7 +3206,6 @@
     bindBattleBar();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
-    checkVertical();
     var tb = $('#turnbar'), nowtk = $('.tk.now');
     if (tb && nowtk) tb.scrollLeft = Math.max(0, nowtk.offsetLeft - tb.clientWidth / 2 + 20);
     $$('[data-order]').forEach(function (o) {
@@ -3268,13 +3268,18 @@
   }
   function orderMiniHTML(st) {
     var cur = E.currentActor(st);
+    /* v115: いま動く者を一番上に置き、これから動く順に並べる。
+       すでに動き終えた者は下へ回す（スクロールすれば見られる） */
+    var idx = st.order.map(function (uid, i) { return i; });
+    var cut = Math.max(0, Math.min(st.turnIdx, idx.length));
+    idx = idx.slice(cut).concat(idx.slice(0, cut));
     return '<div class="om-hd">行動順' +
         '<span class="autobtns">' +
           '<button class="autob" data-auto="one" title="このターンだけAIに任せる">⚡<b>1回</b></button>' +
           autoAllBtnHTML(cur ? cur.side : 0, 'autob') +
         '</span></div>' +
-      '<div class="om-list">' + st.order.map(function (uid, i) {
-        var v = E.findUid(st, uid);
+      '<div class="om-list">' + idx.map(function (i) {
+        var uid = st.order[i], v = E.findUid(st, uid);
         if (!v) return '';
         var cls = 'om s' + v.side + (i < st.turnIdx ? ' done' : '') + (!v.alive ? ' dead' : '') +
           (cur && v.uid === cur.uid ? ' now' : '');

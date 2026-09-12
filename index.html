@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="114">
+<meta name="app-version" content="115">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -2812,12 +2812,12 @@ body.shake{animation:shk2 .56s}
 /* 上側（相手）＝右上の三角。名前→紋章の順（外側に紋章） */
 .warline.vsband .vs.s1{justify-content:flex-end;align-items:flex-start;padding:0 12px 6px 0;
   background:linear-gradient(100deg,rgba(255,107,125,.14),rgba(255,107,125,.42));
-  color:#ffd2d8;clip-path:polygon(20% 0, 100% 0, 100% 100%, 80% 100%)}
+  color:#ffd2d8;clip-path:polygon(44% 0, 100% 0, 100% 100%, 56% 100%)}
 .warline.vsband .vs.s1 .vsin{flex-direction:row-reverse}
 /* 下側（自分）＝左下の三角 */
 .warline.vsband .vs.s0{justify-content:flex-start;align-items:flex-end;padding:6px 0 0 12px;
   background:linear-gradient(100deg,rgba(95,168,255,.42),rgba(95,168,255,.14));
-  color:#d6e6ff;clip-path:polygon(0 0, 20% 0, 80% 100%, 0 100%)}
+  color:#d6e6ff;clip-path:polygon(0 0, 44% 0, 56% 100%, 0 100%)}
 /* 手番でない側は沈める */
 #app.turn0 .warline.vsband .vs.s1,#app.turn1 .warline.vsband .vs.s0{opacity:.4}
 #app.turn0 .warline.vsband .vs.s0{box-shadow:inset 0 0 18px rgba(95,168,255,.55)}
@@ -2831,29 +2831,60 @@ body.shake{animation:shk2 .56s}
 .actpanel .acts.waiting{display:block}
 
 /* =========================================================
-   v114: 横持ちの陣営名は中央の帯に縦書きで。
-   端末が縦書きを描けないときは、JSが .vfail を付けて90度回転に切り替える
+   v115: 横持ちの陣営名は、中央の帯（縦書き）をやめ、盤面の上の横書きの帯に置く。
+   中央は「どちらの色の陣か」が分かるだけの細い縦線にして、盤面の幅を稼ぐ
    ========================================================= */
+/* 盤面の上の帯。縦持ちでは出さない（中央の帯があるため） */
+.landtop{display:none}
 @media (orientation:landscape){
-  #app.land > .field{padding:20px 10px 6px calc(10px + var(--safe-l))}
+  #app.land > .field{padding:26px 10px 6px calc(10px + var(--safe-l))}
   #app.land .field .grid3{gap:3px}
-  #app.land .warline.vsband{width:44px;flex:0 0 44px;height:auto;align-self:stretch;margin:0;
-    border-radius:10px}
-  /* 上下に分ける。自分（s0）が上、相手（s1）が下 ではなく、
-     左が自分・右が相手なので、帯は「上＝自分・下＝相手」で分ける */
-  #app.land .warline.vsband .vs{padding:0}
-  #app.land .warline.vsband .vs.s0{align-items:flex-start;justify-content:center;
-    padding-top:14px;clip-path:polygon(0 0, 100% 0, 100% 62%, 0 38%)}
-  #app.land .warline.vsband .vs.s1{align-items:flex-end;justify-content:center;
-    padding-bottom:14px;clip-path:polygon(0 38%, 100% 62%, 100% 100%, 0 100%)}
-  #app.land .warline.vsband .vsin{flex-direction:column;gap:6px;align-items:center}
-  #app.land .warline.vsband .vs.s1 .vsin{flex-direction:column-reverse}
-  #app.land .warline.vsband b{writing-mode:vertical-rl;text-orientation:upright;
-    line-height:1.1;letter-spacing:.06em;font-size:12px}
-  /* 縦書きが効かない端末：90度左回転（下から上へ読む）に切り替える */
-  #app.land .warline.vsband.vfail b{writing-mode:horizontal-tb;text-orientation:mixed;
-    transform:rotate(-90deg);transform-origin:center}
-  #app.land .warline.vsband.vfail .vsin{gap:14px}
+
+  /* --- 中央：色だけの細い縦線 --- */
+  #app.land .warline.vsband{width:8px;flex:0 0 8px;height:auto;align-self:stretch;margin:0;
+    border-radius:4px;border:none;background:#0b0f1b;overflow:hidden}
+  #app.land .warline.vsband .vs{clip-path:none;padding:0;box-shadow:none;opacity:1}
+  #app.land .warline.vsband .vs.s0{inset:0 50% 0 0;
+    background:linear-gradient(180deg,rgba(95,168,255,.75),rgba(95,168,255,.35))}
+  #app.land .warline.vsband .vs.s1{inset:0 0 0 50%;
+    background:linear-gradient(180deg,rgba(255,107,125,.35),rgba(255,107,125,.75))}
+  /* ひとり用は左右が入れ替わる（自分が右） */
+  #app.land.solo .warline.vsband .vs.s0{inset:0 0 0 50%}
+  #app.land.solo .warline.vsband .vs.s1{inset:0 50% 0 0}
+  #app.land .warline.vsband .vsin{display:none}
+  /* 攻撃の向きの矢印は出さない（細い線なので読めない） */
+  #app.land .warline.vsband .wl-flow{display:none}
+
+  /* --- 盤面の上：紋章＋チーム名。中央で斜めに二分する --- */
+  #app.land .landtop{display:block;position:absolute;left:10px;right:10px;top:2px;height:21px;
+    border-radius:6px;overflow:hidden;background:#0b0f1b;z-index:5}
+  #app.land .landtop .lt{position:absolute;inset:0;display:flex;align-items:center;
+    transition:opacity .2s}
+  #app.land .landtop .ltin{display:flex;align-items:center;gap:6px;
+    font-size:12px;font-weight:900;letter-spacing:.06em;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis;max-width:100%}
+  #app.land .landtop .crest{width:12px;height:14px;flex:0 0 auto}
+  /* 既定（ふたり対戦）＝自分が左 */
+  #app.land .landtop .lt.s0{justify-content:flex-start;padding:0 0 0 10px;color:#d6e6ff;
+    background:linear-gradient(100deg,rgba(95,168,255,.42),rgba(95,168,255,.14));
+    clip-path:polygon(0 0, 53% 0, 47% 100%, 0 100%)}
+  #app.land .landtop .lt.s1{justify-content:flex-end;padding:0 10px 0 0;color:#ffd2d8;
+    background:linear-gradient(100deg,rgba(255,107,125,.14),rgba(255,107,125,.42));
+    clip-path:polygon(53% 0, 100% 0, 100% 100%, 47% 100%)}
+  #app.land .landtop .lt.s1 .ltin{flex-direction:row-reverse}
+  /* ひとり用＝自分が右。色と並びを左右そっくり入れ替える */
+  #app.land.solo .landtop .lt.s0{justify-content:flex-end;padding:0 10px 0 0;
+    background:linear-gradient(260deg,rgba(95,168,255,.42),rgba(95,168,255,.14));
+    clip-path:polygon(53% 0, 100% 0, 100% 100%, 47% 100%)}
+  #app.land.solo .landtop .lt.s1{justify-content:flex-start;padding:0 0 0 10px;
+    background:linear-gradient(260deg,rgba(255,107,125,.14),rgba(255,107,125,.42));
+    clip-path:polygon(0 0, 53% 0, 47% 100%, 0 100%)}
+  #app.land.solo .landtop .lt.s0 .ltin{flex-direction:row-reverse}
+  #app.land.solo .landtop .lt.s1 .ltin{flex-direction:row}
+  /* 手番でない側は沈める（縦持ちの帯と同じ作法） */
+  #app.turn0.land .landtop .lt.s1,#app.turn1.land .landtop .lt.s0{opacity:.42}
+  #app.turn0.land .landtop .lt.s0{box-shadow:inset 0 0 18px rgba(95,168,255,.55)}
+  #app.turn1.land .landtop .lt.s1{box-shadow:inset 0 0 18px rgba(255,95,118,.55)}
 }
 
 /* v113: 行動順の「どちらの陣か」を、名前の色だけに頼らず示す
@@ -2869,15 +2900,50 @@ body.shake{animation:shk2 .56s}
 .om.opt3 .crest{display:block}
 .om.opt3::before{display:none}
 
-/* v114: 縦持ちの行動順チップに、陣営の紋章を角のバッジとして重ねる */
+/* v115: 縦持ちの行動順チップの紋章バッジは廃止（名前にかぶって読みにくかった） */
 .tk{position:relative}
-.tk .tkc{position:absolute;left:0;top:0;width:8px;height:9px;z-index:3;
-  filter:drop-shadow(0 1px 2px rgba(0,0,0,.9))}
 .tk .tn{position:relative;z-index:2}
 /* 行動順（横持ちの一覧）：紋章→数字→顔→名前。重ねない */
 .om .crest{display:block;width:13px;height:15px;margin-left:1px}
 .om::before{display:none}
 .om .n{margin-left:2px}
+
+/* =========================================================
+   v115: 横持ちの行動順・右パネル・開幕の紹介
+   ========================================================= */
+/* ④ 行動順の一覧：行の間にゆとりを持たせ、いま動く者が一番上に来る（並べ替えはJS側） */
+.om-list{gap:5px}
+.om{padding:4px 6px;gap:7px}
+.om .nm{font-size:11.5px}
+#app.land .om-list{gap:6px}
+#app.land .om{padding:5px 6px}
+
+/* ⑤ 右パネルは横に動かさない。中身がはみ出さないよう、上のバーは折り返す */
+@media (orientation: landscape){
+  #app.land.lp-side > .actpanel{overflow-x:hidden}
+  #app.land .panelbar{flex-wrap:wrap;row-gap:4px;column-gap:4px;padding-right:0}
+  #app.land .panelbar .sp{display:none}
+  #app.land .panelbar .t{margin-right:auto}
+  #app.land .panelbar .btn.ico{padding:5px 7px;flex:0 0 auto}
+}
+
+/* 開幕の紹介：後ろの盤面はしっかり暗くする。
+   「すぐ戦闘へ」は札より上に出す（app 直下に置いているので重なり順で勝てる） */
+.introov{background:rgba(2,4,9,.86)}
+.introskip{z-index:70}
+.introskip{position:fixed}
+/* 札が「すぐ戦闘へ」に重ならないよう、札の並びを少し下げる（縦持ちのみ） */
+@media (orientation:portrait){ .introsix{top:calc(4% + 82px)} }
+/* 中央の細い線は、手番による沈み込みをさせない（両軍の色がいつも見えるように） */
+@media (orientation:landscape){
+  #app.turn0.land .warline.vsband .vs.s1,#app.turn1.land .warline.vsband .vs.s0{opacity:1}
+}
+/* 右パネル上部のバーは、狭い端末でも1行に収める */
+@media (orientation:landscape){
+  #app.land .panelbar .t{font-size:13.5px}
+  #app.land .panelbar .btn.ico{padding:4px 6px;font-size:11.5px;min-width:0}
+  #app.land .panelbar .btn.ico.snd{font-size:13px}
+}
 
 </style>
 </head>
@@ -10570,10 +10636,18 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
   function playIntroSix(done) {
     var st = S.st, gen = S.gen;
     var isp = function () { return Math.max(1, S.speed || 1); };
+    /* v115: 暗幕とボタンを分ける。
+       以前はボタンを暗幕の中に置いていたため、札（.introsix）の重なり順が上になり、
+       押せる場所が札に隠れていた。ボタンは app 直下に出して、いちばん上に置く */
     var ov = document.createElement('div');
     ov.className = 'introov';
-    ov.innerHTML = '<button class="btn ghost introskip" type="button">すぐ戦闘へ ▶</button>';
+    var skip = document.createElement('button');
+    skip.className = 'btn ghost introskip';
+    skip.type = 'button';
+    skip.textContent = 'すぐ戦闘へ ▶';
     app.appendChild(ov);
+    app.appendChild(skip);
+    skip.addEventListener('click', function (ev) { ev.stopPropagation(); finish(); });
     app.classList.add('intro');
     $$('.unit[data-uid]').forEach(function (e) { e.classList.remove('arrived'); });
     var over = false, timers = [], anims = [];
@@ -10583,7 +10657,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       timers.forEach(clearTimeout);
       anims.forEach(function (a) { try { a.cancel(); } catch (e) {} });
       $$('.introsix,.introfly', app).forEach(function (e) { e.remove(); });
-      ov.remove();
+      ov.remove(); skip.remove();
       $$('.unit[data-uid]').forEach(function (e) { e.classList.add('arrived'); });
       app.classList.remove('intro');
       S.intro = false;
@@ -10595,7 +10669,6 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     var onTap = null;
     ov.addEventListener('click', function (ev) {
       ev.stopPropagation();
-      if (ev.target && ev.target.closest && ev.target.closest('.introskip')) { finish(); return; }
       if (onTap) { var f = onTap; onTap = null; f(); }
     });
     function team(side) {
@@ -10660,19 +10733,8 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     showSide(0, function () { showSide(1, function () { later(200, finish); }); });
   }
 
-  /* 端末によっては縦書き（writing-mode）が効かず、文字が重なって出ることがある。
-     実際に高さを測って、だめなら「90度回転」に切り替える。
-     文字数×0.6 を下回っていたら、送りが効いていないと判断する */
-  function checkVertical() {
-    var band = $('.vsband'); if (!band) return;
-    band.classList.remove('vfail');
-    if (!isLandscape()) return;
-    var t = $('.vsband .vs.s0 b'); if (!t) return;
-    var n = (t.textContent || '').length; if (!n) return;
-    var fs = parseFloat(getComputedStyle(t).fontSize) || 12;
-    var h = t.getBoundingClientRect().height;
-    if (h < n * fs * 0.6) band.classList.add('vfail');
-  }
+  /* v115: 横持ちの陣営名は中央の帯（縦書き）をやめ、盤面の上の横書きの帯に移した。
+     縦書きの可否を測る checkVertical は不要になったので廃止 */
   function isAI(side) { return S.mode === 'cpu' && side === 1; }
 
   function unitCellHTML(side, row, col) {
@@ -10783,8 +10845,8 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       var u = E.findUid(st, uid);
       var c = 'tk s' + u.side + (i < st.turnIdx ? ' done' : '') + (!u.alive ? ' dead' : '') + (actor && u.uid === actor.uid ? ' now' : '');
       /* v93: 似顔絵ではなく「陣営色の帯に名前」。4文字まで */
+      /* v115: 紋章のバッジは名前にかぶって読みにくかったので廃止。陣営は札の色で示す */
       return '<div class="' + c + '" data-order="' + uid + '" data-idx="' + i + '">' +
-        crestSVG(u.side, 'tkc') +
         '<span class="tn">' + u.def.name.slice(0, 4) + '</span></div>';
     }).join('');
 
@@ -10794,6 +10856,11 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       /* v93: 「行動順／自軍／敵軍／なぜこの順番？」の行は消し、帯だけにする（根拠はバー長押しで） */
       '<div class="turnbar" id="turnbar">' + order + '</div>' +
       '<div class="field">' +
+        /* v115: 横持ちは、中央の帯ではなく盤面の上に陣営名を横書きで置く（縦持ちと同じ配色・斜め） */
+        '<div class="landtop">' +
+          '<div class="lt s0"><span class="ltin">' + crestSVG(0) + '<b>' + p1name + '</b></span></div>' +
+          '<div class="lt s1"><span class="ltin">' + crestSVG(1) + '<b>' + p2name + '</b></span></div>' +
+        '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 1, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
         /* v112: 陣営の行をやめ、中央の帯に「どちらの陣か」を斜めに入れる */
@@ -10822,7 +10889,6 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     bindBattleBar();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
-    checkVertical();
     var tb = $('#turnbar'), nowtk = $('.tk.now');
     if (tb && nowtk) tb.scrollLeft = Math.max(0, nowtk.offsetLeft - tb.clientWidth / 2 + 20);
     $$('[data-order]').forEach(function (o) {
@@ -10885,13 +10951,18 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
   }
   function orderMiniHTML(st) {
     var cur = E.currentActor(st);
+    /* v115: いま動く者を一番上に置き、これから動く順に並べる。
+       すでに動き終えた者は下へ回す（スクロールすれば見られる） */
+    var idx = st.order.map(function (uid, i) { return i; });
+    var cut = Math.max(0, Math.min(st.turnIdx, idx.length));
+    idx = idx.slice(cut).concat(idx.slice(0, cut));
     return '<div class="om-hd">行動順' +
         '<span class="autobtns">' +
           '<button class="autob" data-auto="one" title="このターンだけAIに任せる">⚡<b>1回</b></button>' +
           autoAllBtnHTML(cur ? cur.side : 0, 'autob') +
         '</span></div>' +
-      '<div class="om-list">' + st.order.map(function (uid, i) {
-        var v = E.findUid(st, uid);
+      '<div class="om-list">' + idx.map(function (i) {
+        var uid = st.order[i], v = E.findUid(st, uid);
         if (!v) return '';
         var cls = 'om s' + v.side + (i < st.turnIdx ? ' done' : '') + (!v.alive ? ' dead' : '') +
           (cur && v.uid === cur.uid ? ' now' : '');
