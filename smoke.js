@@ -1,6 +1,8 @@
 /* 画面の通し確認（速い方）。ブラウザは使うが、戦闘は開始だけ見る */
-const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
-const F='file://'+require('path').join(__dirname,'ArcanaClash.html');
+const { chromium } = require('./tools/playwright-loader');
+const path = require('path');
+const { pathToFileURL } = require('url');
+const F = pathToFileURL(path.join(__dirname, 'ArcanaClash.html')).href;
 (async()=>{
   const b=await chromium.launch(); const bad=[]; const ok=[];
   async function check(name, fn){ try{ await fn(); ok.push(name); }catch(e){ bad.push(name+' … '+e.message.split('\n')[0]); } }
