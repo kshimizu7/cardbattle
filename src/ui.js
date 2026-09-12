@@ -3043,6 +3043,19 @@
     showSide(0, function () { showSide(1, function () { later(200, finish); }); });
   }
 
+  /* 端末によっては縦書き（writing-mode）が効かず、文字が重なって出ることがある。
+     実際に高さを測って、だめなら「90度回転」に切り替える。
+     文字数×0.6 を下回っていたら、送りが効いていないと判断する */
+  function checkVertical() {
+    var band = $('.vsband'); if (!band) return;
+    band.classList.remove('vfail');
+    if (!isLandscape()) return;
+    var t = $('.vsband .vs.s0 b'); if (!t) return;
+    var n = (t.textContent || '').length; if (!n) return;
+    var fs = parseFloat(getComputedStyle(t).fontSize) || 12;
+    var h = t.getBoundingClientRect().height;
+    if (h < n * fs * 0.6) band.classList.add('vfail');
+  }
   function isAI(side) { return S.mode === 'cpu' && side === 1; }
 
   function unitCellHTML(side, row, col) {
@@ -3154,6 +3167,7 @@
       var c = 'tk s' + u.side + (i < st.turnIdx ? ' done' : '') + (!u.alive ? ' dead' : '') + (actor && u.uid === actor.uid ? ' now' : '');
       /* v93: 似顔絵ではなく「陣営色の帯に名前」。4文字まで */
       return '<div class="' + c + '" data-order="' + uid + '" data-idx="' + i + '">' +
+        crestSVG(u.side, 'tkc') +
         '<span class="tn">' + u.def.name.slice(0, 4) + '</span></div>';
     }).join('');
 
@@ -3167,15 +3181,12 @@
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
         /* v112: 陣営の行をやめ、中央の帯に「どちらの陣か」を斜めに入れる */
         '<div class="warline vsband">' +
-          '<div class="vs s1"><b>' + p2name + '</b><i>' + liveCount(st, 1) + '</i></div>' +
-          '<div class="vs s0"><b>' + p1name + '</b><i>' + liveCount(st, 0) + '</i></div>' +
+          '<div class="vs s1"><span class="vsin">' + crestSVG(1) + '<b>' + p2name + '</b></span></div>' +
+          '<div class="vs s0"><span class="vsin">' + crestSVG(0) + '<b>' + p1name + '</b></span></div>' +
           '<span class="wl-flow"><i>❯</i><i>❯</i><i>❯</i><i>❯</i></span>' +
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 1, c); }).join('') + '</div>' +
-        /* 横持ちのときだけ見える陣営名（縦持ちでは中央の帯が担う） */
-        '<div class="landname s0"><b>' + p1name + '</b><i>' + liveCount(st, 0) + '</i></div>' +
-        '<div class="landname s1"><b>' + p2name + '</b><i>' + liveCount(st, 1) + '</i></div>' +
       '</div>' +
       '<div class="actpanel" id="actpanel"></div>';
 
@@ -3194,6 +3205,7 @@
     bindBattleBar();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
+    checkVertical();
     var tb = $('#turnbar'), nowtk = $('.tk.now');
     if (tb && nowtk) tb.scrollLeft = Math.max(0, nowtk.offsetLeft - tb.clientWidth / 2 + 20);
     $$('[data-order]').forEach(function (o) {
@@ -3243,12 +3255,16 @@
   }
 
   /* 操作パネル内の行動順（横向きで余ったスペースに出す） */
-  /* 陣営の紋章（小さな盾）。絵文字だと端末で形が変わるので、線で描く */
-  function crestSVG(side) {
+  /* 陣営の紋章。自軍＝盾（青）／敵軍＝軍旗（赤）。
+     絵文字は端末で形が変わるので、線で描く */
+  function crestSVG(side, cls) {
     var c = side === 0 ? 'var(--p1)' : 'var(--p2)';
-    return '<svg class="crest" viewBox="0 0 13 15" aria-hidden="true">' +
-      '<path d="M6.5 0.8 L12 2.6 V7.6 C12 11.2 9.4 13.3 6.5 14.2 C3.6 13.3 1 11.2 1 7.6 V2.6 Z" ' +
-      'fill="' + c + '" fill-opacity=".22" stroke="' + c + '" stroke-width="1.2"/></svg>';
+    var d = side === 0
+      ? '<path d="M6.5 0.8 L12 2.6 V7.6 C12 11.2 9.4 13.3 6.5 14.2 C3.6 13.3 1 11.2 1 7.6 V2.6 Z" ' +
+        'fill="' + c + '" fill-opacity=".26" stroke="' + c + '" stroke-width="1.2"/>'
+      : '<path d="M3 1.2 V14 M3 1.6 H11.4 L9.2 4.6 L11.4 7.6 H3" ' +
+        'fill="' + c + '" fill-opacity=".26" stroke="' + c + '" stroke-width="1.25" stroke-linejoin="round"/>';
+    return '<svg class="crest ' + (cls || '') + '" viewBox="0 0 13 15" aria-hidden="true">' + d + '</svg>';
   }
   function orderMiniHTML(st) {
     var cur = E.currentActor(st);
@@ -3262,7 +3278,6 @@
         if (!v) return '';
         var cls = 'om s' + v.side + (i < st.turnIdx ? ' done' : '') + (!v.alive ? ' dead' : '') +
           (cur && v.uid === cur.uid ? ' now' : '');
-        cls += (S.omStyle ? ' opt' + S.omStyle : '');
         return '<div class="' + cls + '">' + crestSVG(v.side) + '<span class="n">' + (i + 1) + '</span>' +
           '<span class="pic">' + ART.portrait(v.defId, v.def.elem) + '</span>' +
           '<span class="nm">' + v.def.name + '</span>' +

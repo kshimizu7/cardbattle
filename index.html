@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="113">
+<meta name="app-version" content="114">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -2804,19 +2804,20 @@ body.shake{animation:shk2 .56s}
 /* 中央の帯：斜めに二分して、上が相手・下が自分 */
 .warline.vsband{margin:6px 0;position:relative;height:34px;overflow:hidden;border-radius:8px;
   background:#0b0f1b;border:1px solid #1c2438}
-.warline.vsband .vs{position:absolute;inset:0;display:flex;align-items:center;gap:8px;
-  font-size:12.5px;font-weight:900;letter-spacing:.06em;transition:opacity .2s}
+.warline.vsband .vs{position:absolute;inset:0;display:flex;transition:opacity .2s}
+.warline.vsband .vsin{display:flex;align-items:center;gap:7px;
+  font-size:12.5px;font-weight:900;letter-spacing:.06em;white-space:nowrap}
 .warline.vsband .vs b{font-weight:900}
-.warline.vsband .vs i{font-style:normal;font-size:10.5px;font-weight:800;opacity:.75;
-  font-variant-numeric:tabular-nums}
-/* 上側（相手）＝右上の三角 */
-.warline.vsband .vs.s1{justify-content:flex-end;padding:0 12px 6px 0;align-items:flex-start;
+.warline.vsband .crest{width:13px;height:15px;flex:0 0 auto}
+/* 上側（相手）＝右上の三角。名前→紋章の順（外側に紋章） */
+.warline.vsband .vs.s1{justify-content:flex-end;align-items:flex-start;padding:0 12px 6px 0;
   background:linear-gradient(100deg,rgba(255,107,125,.14),rgba(255,107,125,.42));
-  color:#ffd2d8;clip-path:polygon(42% 0, 100% 0, 100% 100%, 58% 100%)}
+  color:#ffd2d8;clip-path:polygon(20% 0, 100% 0, 100% 100%, 80% 100%)}
+.warline.vsband .vs.s1 .vsin{flex-direction:row-reverse}
 /* 下側（自分）＝左下の三角 */
-.warline.vsband .vs.s0{justify-content:flex-start;padding:6px 0 0 12px;align-items:flex-end;
+.warline.vsband .vs.s0{justify-content:flex-start;align-items:flex-end;padding:6px 0 0 12px;
   background:linear-gradient(100deg,rgba(95,168,255,.42),rgba(95,168,255,.14));
-  color:#d6e6ff;clip-path:polygon(0 0, 42% 0, 58% 100%, 0 100%)}
+  color:#d6e6ff;clip-path:polygon(0 0, 20% 0, 80% 100%, 0 100%)}
 /* 手番でない側は沈める */
 #app.turn0 .warline.vsband .vs.s1,#app.turn1 .warline.vsband .vs.s0{opacity:.4}
 #app.turn0 .warline.vsband .vs.s0{box-shadow:inset 0 0 18px rgba(95,168,255,.55)}
@@ -2830,36 +2831,29 @@ body.shake{animation:shk2 .56s}
 .actpanel .acts.waiting{display:block}
 
 /* =========================================================
-   v113: 横持ちの陣営表示（案A＝上段に名前／案B＝中央の帯に縦書き）
+   v114: 横持ちの陣営名は中央の帯に縦書きで。
+   端末が縦書きを描けないときは、JSが .vfail を付けて90度回転に切り替える
    ========================================================= */
 @media (orientation:landscape){
-  /* 共通：カードの縦のすき間を詰めて、上に名前の場所を作る */
-  #app.land > .field{padding:22px 10px 6px calc(10px + var(--safe-l))}
+  #app.land > .field{padding:20px 10px 6px calc(10px + var(--safe-l))}
   #app.land .field .grid3{gap:3px}
-  #app.land .warline.vsband{width:34px;flex:0 0 34px;height:auto;align-self:stretch;margin:0;border-radius:10px}
-
-  /* --- 案A：名前は盤面の上に置く。帯は色の境目だけ --- */
-  #app.land .vsband .vs{font-size:11px}
-  #app.landA .vsband .vs b,#app.landA .vsband .vs i{display:none}
-  #app.landA .vsband .vs.s0{clip-path:polygon(0 0, 100% 0, 100% 58%, 0 42%)}
-  #app.landA .vsband .vs.s1{clip-path:polygon(0 42%, 100% 58%, 100% 100%, 0 100%)}
-  #app.landA .landname{position:absolute;top:2px;height:20px;z-index:6;display:flex;align-items:center;gap:7px;
-    font-size:12px;font-weight:900;letter-spacing:.08em}
-  #app.landA .landname i{font-style:normal;font-size:10.5px;font-weight:800;opacity:.75}
-  #app.landA .landname.s0{left:calc(12px + var(--safe-l));color:#d6e6ff}
-  #app.landA .landname.s1{right:calc(12px + var(--safe-r));color:#ffd2d8;flex-direction:row-reverse}
-  #app.landA.turn0 .landname.s1,#app.landA.turn1 .landname.s0{opacity:.4}
-
-  /* --- 案B：帯の中に縦書きで入れる --- */
-  #app.landB .landname{display:none}
-  #app.landB .warline.vsband{width:42px;flex:0 0 42px}
-  #app.landB .vsband .vs{writing-mode:vertical-rl;text-orientation:mixed;padding:10px 0;gap:10px}
-  #app.landB .vsband .vs.s0{clip-path:polygon(0 0, 100% 0, 100% 58%, 0 42%);
-    justify-content:flex-start;align-items:center;
-    background:linear-gradient(180deg,rgba(95,168,255,.42),rgba(95,168,255,.16))}
-  #app.landB .vsband .vs.s1{clip-path:polygon(0 42%, 100% 58%, 100% 100%, 0 100%);
-    justify-content:flex-end;align-items:center;
-    background:linear-gradient(180deg,rgba(255,107,125,.16),rgba(255,107,125,.42))}
+  #app.land .warline.vsband{width:44px;flex:0 0 44px;height:auto;align-self:stretch;margin:0;
+    border-radius:10px}
+  /* 上下に分ける。自分（s0）が上、相手（s1）が下 ではなく、
+     左が自分・右が相手なので、帯は「上＝自分・下＝相手」で分ける */
+  #app.land .warline.vsband .vs{padding:0}
+  #app.land .warline.vsband .vs.s0{align-items:flex-start;justify-content:center;
+    padding-top:14px;clip-path:polygon(0 0, 100% 0, 100% 62%, 0 38%)}
+  #app.land .warline.vsband .vs.s1{align-items:flex-end;justify-content:center;
+    padding-bottom:14px;clip-path:polygon(0 38%, 100% 62%, 100% 100%, 0 100%)}
+  #app.land .warline.vsband .vsin{flex-direction:column;gap:6px;align-items:center}
+  #app.land .warline.vsband .vs.s1 .vsin{flex-direction:column-reverse}
+  #app.land .warline.vsband b{writing-mode:vertical-rl;text-orientation:upright;
+    line-height:1.1;letter-spacing:.06em;font-size:12px}
+  /* 縦書きが効かない端末：90度左回転（下から上へ読む）に切り替える */
+  #app.land .warline.vsband.vfail b{writing-mode:horizontal-tb;text-orientation:mixed;
+    transform:rotate(-90deg);transform-origin:center}
+  #app.land .warline.vsband.vfail .vsin{gap:14px}
 }
 
 /* v113: 行動順の「どちらの陣か」を、名前の色だけに頼らず示す
@@ -2874,6 +2868,16 @@ body.shake{animation:shk2 .56s}
 .om .crest{flex:0 0 auto;width:13px;height:15px;display:none}
 .om.opt3 .crest{display:block}
 .om.opt3::before{display:none}
+
+/* v114: 縦持ちの行動順チップに、陣営の紋章を角のバッジとして重ねる */
+.tk{position:relative}
+.tk .tkc{position:absolute;left:0;top:0;width:8px;height:9px;z-index:3;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.9))}
+.tk .tn{position:relative;z-index:2}
+/* 行動順（横持ちの一覧）：紋章→数字→顔→名前。重ねない */
+.om .crest{display:block;width:13px;height:15px;margin-left:1px}
+.om::before{display:none}
+.om .n{margin-left:2px}
 
 </style>
 </head>
@@ -10656,6 +10660,19 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     showSide(0, function () { showSide(1, function () { later(200, finish); }); });
   }
 
+  /* 端末によっては縦書き（writing-mode）が効かず、文字が重なって出ることがある。
+     実際に高さを測って、だめなら「90度回転」に切り替える。
+     文字数×0.6 を下回っていたら、送りが効いていないと判断する */
+  function checkVertical() {
+    var band = $('.vsband'); if (!band) return;
+    band.classList.remove('vfail');
+    if (!isLandscape()) return;
+    var t = $('.vsband .vs.s0 b'); if (!t) return;
+    var n = (t.textContent || '').length; if (!n) return;
+    var fs = parseFloat(getComputedStyle(t).fontSize) || 12;
+    var h = t.getBoundingClientRect().height;
+    if (h < n * fs * 0.6) band.classList.add('vfail');
+  }
   function isAI(side) { return S.mode === 'cpu' && side === 1; }
 
   function unitCellHTML(side, row, col) {
@@ -10767,6 +10784,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       var c = 'tk s' + u.side + (i < st.turnIdx ? ' done' : '') + (!u.alive ? ' dead' : '') + (actor && u.uid === actor.uid ? ' now' : '');
       /* v93: 似顔絵ではなく「陣営色の帯に名前」。4文字まで */
       return '<div class="' + c + '" data-order="' + uid + '" data-idx="' + i + '">' +
+        crestSVG(u.side, 'tkc') +
         '<span class="tn">' + u.def.name.slice(0, 4) + '</span></div>';
     }).join('');
 
@@ -10780,15 +10798,12 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(1, 0, c); }).join('') + '</div>' +
         /* v112: 陣営の行をやめ、中央の帯に「どちらの陣か」を斜めに入れる */
         '<div class="warline vsband">' +
-          '<div class="vs s1"><b>' + p2name + '</b><i>' + liveCount(st, 1) + '</i></div>' +
-          '<div class="vs s0"><b>' + p1name + '</b><i>' + liveCount(st, 0) + '</i></div>' +
+          '<div class="vs s1"><span class="vsin">' + crestSVG(1) + '<b>' + p2name + '</b></span></div>' +
+          '<div class="vs s0"><span class="vsin">' + crestSVG(0) + '<b>' + p1name + '</b></span></div>' +
           '<span class="wl-flow"><i>❯</i><i>❯</i><i>❯</i><i>❯</i></span>' +
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 1, c); }).join('') + '</div>' +
-        /* 横持ちのときだけ見える陣営名（縦持ちでは中央の帯が担う） */
-        '<div class="landname s0"><b>' + p1name + '</b><i>' + liveCount(st, 0) + '</i></div>' +
-        '<div class="landname s1"><b>' + p2name + '</b><i>' + liveCount(st, 1) + '</i></div>' +
       '</div>' +
       '<div class="actpanel" id="actpanel"></div>';
 
@@ -10807,6 +10822,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     bindBattleBar();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
+    checkVertical();
     var tb = $('#turnbar'), nowtk = $('.tk.now');
     if (tb && nowtk) tb.scrollLeft = Math.max(0, nowtk.offsetLeft - tb.clientWidth / 2 + 20);
     $$('[data-order]').forEach(function (o) {
@@ -10856,12 +10872,16 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
   }
 
   /* 操作パネル内の行動順（横向きで余ったスペースに出す） */
-  /* 陣営の紋章（小さな盾）。絵文字だと端末で形が変わるので、線で描く */
-  function crestSVG(side) {
+  /* 陣営の紋章。自軍＝盾（青）／敵軍＝軍旗（赤）。
+     絵文字は端末で形が変わるので、線で描く */
+  function crestSVG(side, cls) {
     var c = side === 0 ? 'var(--p1)' : 'var(--p2)';
-    return '<svg class="crest" viewBox="0 0 13 15" aria-hidden="true">' +
-      '<path d="M6.5 0.8 L12 2.6 V7.6 C12 11.2 9.4 13.3 6.5 14.2 C3.6 13.3 1 11.2 1 7.6 V2.6 Z" ' +
-      'fill="' + c + '" fill-opacity=".22" stroke="' + c + '" stroke-width="1.2"/></svg>';
+    var d = side === 0
+      ? '<path d="M6.5 0.8 L12 2.6 V7.6 C12 11.2 9.4 13.3 6.5 14.2 C3.6 13.3 1 11.2 1 7.6 V2.6 Z" ' +
+        'fill="' + c + '" fill-opacity=".26" stroke="' + c + '" stroke-width="1.2"/>'
+      : '<path d="M3 1.2 V14 M3 1.6 H11.4 L9.2 4.6 L11.4 7.6 H3" ' +
+        'fill="' + c + '" fill-opacity=".26" stroke="' + c + '" stroke-width="1.25" stroke-linejoin="round"/>';
+    return '<svg class="crest ' + (cls || '') + '" viewBox="0 0 13 15" aria-hidden="true">' + d + '</svg>';
   }
   function orderMiniHTML(st) {
     var cur = E.currentActor(st);
@@ -10875,7 +10895,6 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         if (!v) return '';
         var cls = 'om s' + v.side + (i < st.turnIdx ? ' done' : '') + (!v.alive ? ' dead' : '') +
           (cur && v.uid === cur.uid ? ' now' : '');
-        cls += (S.omStyle ? ' opt' + S.omStyle : '');
         return '<div class="' + cls + '">' + crestSVG(v.side) + '<span class="n">' + (i + 1) + '</span>' +
           '<span class="pic">' + ART.portrait(v.defId, v.def.elem) + '</span>' +
           '<span class="nm">' + v.def.name + '</span>' +
