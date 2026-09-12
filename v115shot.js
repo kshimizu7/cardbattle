@@ -1,5 +1,9 @@
 /* v115 の画面確認：縦持ち・横持ち・開幕の紹介 */
-const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
+const { chromium } = require('./tools/playwright-loader');
+const path = require('path');
+const { pathToFileURL } = require('url');
+const repoRoot = path.resolve(__dirname);
+const indexURL = pathToFileURL(path.join(repoRoot, 'index.html')).href;
 const mk = ids => ids.map((id, i) => ({ id: id, row: i < 3 ? 0 : 1, col: i % 3 }));
 const A = mk(['knight', 'warrior', 'priest', 'archer', 'mage', 'rogue']);
 const B = mk(['paladin', 'berserker', 'shaman', 'archmage', 'valkyrie', 'assassin']);
@@ -12,7 +16,7 @@ const B = mk(['paladin', 'berserker', 'shaman', 'archmage', 'valkyrie', 'assassi
     const errs = [];
     p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     p.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
-    await p.goto('file:///root/cardbattle/index.html');
+    await p.goto(indexURL);
     await p.waitForTimeout(700);
     await p.evaluate(([a, c]) => window.CBTEST(a, c, 'cpu'), [A, B]);
     await p.waitForTimeout(opts.wait || 4200);
@@ -21,7 +25,7 @@ const B = mk(['paladin', 'berserker', 'shaman', 'archmage', 'valkyrie', 'assassi
       console.log(name + ' skip:', ok);
       await p.waitForTimeout(900);
     }
-    await p.screenshot({ path: '/root/cardbattle/' + name });
+    await p.screenshot({ path: path.join(repoRoot, name) });
     console.log(name, errs.length ? 'ERRORS:\n' + errs.join('\n') : 'ok');
     await p.close();
   }

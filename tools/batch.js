@@ -1,4 +1,8 @@
-const { chromium } = require('playwright');
+const { chromium } = require('./playwright-loader');
+const path = require('path');
+const { pathToFileURL } = require('url');
+const repoRoot = path.resolve(__dirname, '..');
+const indexURL = pathToFileURL(path.join(repoRoot, 'index.html')).href;
 (async () => {
   const b = await chromium.launch();
   const N = +process.argv[2] || 8;
@@ -8,10 +12,15 @@ const { chromium } = require('playwright');
     const errs = [];
     p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
     p.on('pageerror', e => errs.push('PAGEERROR: ' + e.message + ' | ' + (e.stack||'').split('\n')[1]));
-    await p.goto('file:///root/cardbattle/index.html');
+    await p.goto(indexURL);
+    await p.click('#h_arena');
+    await p.waitForSelector('#screen-title');
     const pvp = g % 3 === 0;
     if (pvp) await p.click('[data-mode="pvp"]');
-    else await p.click('[data-diff="' + ['easy','normal','hard'][g%3] + '"]');
+    else {
+      await p.click('[data-mode="cpu"]');
+      await p.click('[data-diff="' + ['easy','normal','hard'][g%3] + '"]');
+    }
     await p.click('[data-pool="'+(process.env.CBPOOL||'full')+'"]');
     if (await p.$('[data-deal="'+(process.env.CBDEAL||'shuffle')+'"]')) {
       await p.click('[data-deal="'+(process.env.CBDEAL||'shuffle')+'"]');
@@ -21,24 +30,16 @@ const { chromium } = require('playwright');
       if (await p.$('#pgo')) { await p.click('#pgo'); await p.waitForTimeout(150); }
       // 候補を1タップずつ置く（前衛左から自動で埋まる）
       for (let i = 0; i < 20; i++) {
-        const cards = await p.$$eval('.hand .card:not(.used)', els => els.map(e => ({ id: e.dataset.card, c: e.querySelector('.cost') ? +e.querySelector('.cost').textContent : 0 })));
+        const cards = await p.$$eval('.drpool .card:not(.used)', els => els.map(e => ({ id: e.dataset.card, c: e.querySelector('.cost') ? +e.querySelector('.cost').textContent : 0 })));
         if (!cards.length) break;
         cards.sort((a, b) => (Math.random()<0.5? a.c-b.c : b.c-a.c));
-        const el = await p.$(`.hand .card[data-card="${cards[0].id}"]:not(.used)`);
+        const el = await p.$(`.drpool .card[data-card="${cards[0].id}"]:not(.used)`);
         if (!el) break;
         await el.click().catch(()=>{}); await p.waitForTimeout(40);
-        if ((await p.textContent('.hdr .badge')).includes('6/6')) break;
-      }
-      // 自動整列 → 場のカードを選んで移動、を1回ずつ試す
-      const au = await p.$('#arrange:not([disabled])');
-      if (au) { await au.click().catch(()=>{}); await p.waitForTimeout(60); }
-      const filled = await p.$$('.slot.filled');
-      if (filled.length) {
-        await filled[0].click().catch(()=>{}); await p.waitForTimeout(60);
-        const mv = await p.$('[data-mv="V"]:not([disabled])');
-        if (mv) { await mv.click().catch(()=>{}); await p.waitForTimeout(60); }
-        const un = await p.$('#undo:not([disabled])');
-        if (un) { await un.click().catch(()=>{}); await p.waitForTimeout(60); }
+        const put = await p.$('.drpool .card.sel .drput');
+        if (put) await put.click().catch(()=>{});
+        await p.waitForTimeout(40);
+        if ((await p.$$('.drslot.filled')).length >= 6) break;
       }
       const ok = await p.$('#done:not([disabled])');
       if (!ok) return false;
@@ -47,16 +48,14 @@ const { chromium } = require('playwright');
     }
     if (!(await doDraft())) { results.push('draft fail'); await p.close(); continue; }
     if (pvp) { await doDraft(); }
-    if (await p.$('#rgo')) { await p.click('#rgo'); await p.waitForTimeout(250); }
+    if (await p.$('.introskip')) { await p.click('.introskip'); await p.waitForTimeout(250); }
     await p.waitForTimeout(2500);
     for (let k = 0; k < 2; k++) { const sp = await p.$('.b-spd'); if (sp) await sp.click().catch(()=>{}); }
     let guard = 0;
     while (guard++ < 700) {
       if (await p.$('#again')) break;
-      const auto = await p.$('#auto');
+      const auto = await p.$('[data-auto="one"]');
       if (auto) { await auto.click().catch(() => {}); await p.waitForTimeout(90); continue; }
-      const ex = await p.$('#exec');
-      if (ex) { await ex.click().catch(() => {}); await p.waitForTimeout(90); continue; }
       await p.waitForTimeout(90);
     }
     const done = await p.$('#again');

@@ -1,6 +1,10 @@
 /* 各効果音をオフラインレンダリングして、数値チェック＋試聴用WAVを書き出す */
 const fs = require('fs');
-const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
+const { chromium } = require('./playwright-loader');
+const path = require('path');
+const { pathToFileURL } = require('url');
+const repoRoot = path.resolve(__dirname, '..');
+const indexURL = pathToFileURL(path.join(repoRoot, 'index.html')).href;
 
 const ORDER = [
   ['slash', '斬撃', 1.2], ['pierce', '刺突', 1.0], ['lance', '長槍突き', 1.0], ['sweep', '薙ぎ払い', 1.2],
@@ -49,7 +53,7 @@ function wav(samples, rate) {
   const p = await b.newPage();
   const errs = [];
   p.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
-  await p.goto('file:///root/cardbattle/index.html');
+  await p.goto(indexURL);
 
   const all = [];
   const rows = [];
@@ -102,7 +106,7 @@ function wav(samples, rate) {
   const mix = new Float32Array(total);
   let off = 0;
   all.forEach(x => { mix.set(x.f32, off); off += x.f32.length + gap; });
-  fs.writeFileSync('/root/cardbattle/サウンド一覧.wav', wav(mix, RATE));
+  fs.writeFileSync(path.join(repoRoot, 'サウンド一覧.wav'), wav(mix, RATE));
   console.log('サウンド一覧.wav', (total / RATE).toFixed(1) + '秒');
 
   console.log(errs.length ? 'ERR:\n' + errs.join('\n') : '✓ エラーなし');

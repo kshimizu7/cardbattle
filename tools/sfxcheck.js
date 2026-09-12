@@ -1,5 +1,9 @@
 /* 音の"性格"が狙いどおりか（立ち上がりの鋭さ／炎のゆらぎ／余韻の長さ）を数値で確認 */
-const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
+const { chromium } = require('./playwright-loader');
+const path = require('path');
+const { pathToFileURL } = require('url');
+const repoRoot = path.resolve(__dirname, '..');
+const indexURL = pathToFileURL(path.join(repoRoot, 'index.html')).href;
 const RATE = 32000;
 const LIST = [
   ['arrow', 1.2], ['i_arrow', 0.8], ['frost', 1.6], ['i_ice', 0.8],
@@ -14,7 +18,7 @@ const LIST = [
 (async () => {
   const b = await chromium.launch();
   const p = await b.newPage();
-  await p.goto('file:///root/cardbattle/index.html');
+  await p.goto(indexURL);
   const rows = [];
   for (const [n, sec] of LIST) {
     const r = await p.evaluate(async ([name, s, rate]) => {
