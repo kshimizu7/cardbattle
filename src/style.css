@@ -2920,8 +2920,9 @@ body.shake{animation:shk2 .56s}
 .introov{background:rgba(2,4,9,.86)}
 .introskip{z-index:70}
 .introskip{position:fixed}
-/* 札が「すぐ戦闘へ」に重ならないよう、札の並びを少し下げる（縦持ちのみ） */
-@media (orientation:portrait){ .introsix{top:calc(4% + 82px)} }
+/* 札が「すぐ戦闘へ」に重ならないよう、札の並びを少し下げる（縦持ちのみ）。
+   v118: カメラ穴のぶん（safe-t）もボタンと一緒に下がるので、札も同じだけ下げる */
+@media (orientation:portrait){ .introsix{top:calc(4% + 82px + var(--safe-t))} }
 /* 中央の細い線は、手番による沈み込みをさせない（両軍の色がいつも見えるように） */
 @media (orientation:landscape){
   #app.turn0.land .warline.vsband .vs.s1,#app.turn1.land .warline.vsband .vs.s0{opacity:1}
@@ -2995,3 +2996,36 @@ body.shake{animation:shk2 .56s}
   animation:revfade .9s ease-out forwards}
 @keyframes revglow{0%{filter:grayscale(1) brightness(.5)}45%{filter:none}100%{filter:none}}
 @keyframes revfade{0%{opacity:1}100%{opacity:0}}
+
+/* =========================================================
+   v118: セーフエリア（カメラ穴・丸い角）を全画面で避ける／編成の最上段／技名の折り返し
+   ========================================================= */
+/* --- ① 上端・左右の安全余白。画面ごとに一番上の要素へ入れる --- */
+#screen-title{padding:calc(28px + var(--safe-t)) calc(20px + var(--safe-r))
+  calc(28px + var(--safe-b)) calc(20px + var(--safe-l))}
+#screen-title.t2{padding:calc(8px + var(--safe-t)) calc(14px + var(--safe-r))
+  calc(10px + var(--safe-b)) calc(14px + var(--safe-l))}
+/* 闘技場は絵の高さを残りから決めているので、安全余白のぶんだけ差し引く */
+#screen-title.t2{--heroH:clamp(104px, calc(100dvh - var(--t2rest) - var(--safe-t) - var(--safe-b)), 300px)}
+#screen-pass{padding:calc(30px + var(--safe-t)) calc(30px + var(--safe-r))
+  calc(30px + var(--safe-b)) calc(30px + var(--safe-l))}
+#screen-result{padding:calc(18px + var(--safe-t)) calc(18px + var(--safe-r))
+  calc(18px + var(--safe-b)) calc(18px + var(--safe-l)) !important}
+.drtop{padding:calc(6px + var(--safe-t)) calc(12px + var(--safe-r)) 0 calc(6px + var(--safe-l))}
+.drpick,.drpool{padding-left:calc(8px + var(--safe-l));padding-right:calc(8px + var(--safe-r))}
+/* 上端に置いているボタン類は、最低でも指で押せる大きさを確保する */
+.t2ico,.home-fs,.drback,.drnx{min-height:40px}
+.t2top{padding-top:2px}
+
+/* --- ② 編成の最上段。チーム名の幅を最優先にする --- */
+.drname{max-width:none;flex:1 1 auto;min-width:0}
+.drclr{margin-left:2px;flex:0 0 auto;padding:6px 5px}
+.drclr i{font-size:17px}
+.drmana{flex:0 0 auto;white-space:nowrap;align-items:baseline}
+.drmana .big{font-size:30px}
+.drtop{flex-wrap:nowrap}
+
+/* --- ④ 技名カットインは折り返さない（入らない分はJSが縮める） --- */
+.techrib{max-width:94vw;min-width:min(68vw,420px)}
+.techrib .t{white-space:nowrap}
+.techrib .w{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}

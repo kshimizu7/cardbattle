@@ -2660,10 +2660,11 @@
 
     /* ---------- 最上段（のこりマナ／入門は出撃数） ---------- */
     var manaHTML = noCost
-      ? '<div class="drmana"><span class="lb">出撃</span><span class="big">' + team.length +
+      /* v118: 「のこり」の文字は外した。チーム名の幅を優先する */
+      ? '<div class="drmana"><span class="big">' + team.length +
         '</span><span class="cap">/' + maxU + '</span></div>'
       : '<div class="drmana' + (rest <= 4 ? ' low' : '') + (over ? ' over' : '') + '">' +
-        '<span class="lb">のこり</span><span class="big">' + rest + '</span>' +
+        '<span class="big">' + rest + '</span>' +
         '<span class="cap">/' + cap + '</span>' +
         '<span class="dlt">' + (S.selCard ? '−' + E.BY_ID[S.selCard].cost : '') + '</span></div>';
 
@@ -2703,8 +2704,9 @@
           '<button class="drnx" id="tnext" aria-label="' +
             (tnAuto ? '別の名前にする' : 'チーム名を決める') + '">' +
             (tnAuto ? '⟳' : '✎') + '</button>' +
-          '<button class="drclr" id="clr"' + (team.length ? '' : ' disabled') +
-            '><i>↺</i><b>全部戻す</b></button>' +
+          /* v118: 文字を外してアイコンだけに（チーム名の幅を優先） */
+          '<button class="drclr" id="clr" title="全部戻す" aria-label="全部戻す"' +
+            (team.length ? '' : ' disabled') + '><i>↺</i></button>' +
           manaHTML +
         '</div>' +
         (noCost ? '' : '<div class="drbar' + (over ? ' over' : '') + '"><i style="width:' +
@@ -4155,6 +4157,17 @@
       'transform:translateY(-50%) rotate(' + ang + 'deg)';
     d.innerHTML = '<i></i>';
     fxl.appendChild(d);
+    /* v118: 端末の文字サイズ設定で文字が大きくなると、技名が2行に折り返していた。
+       折り返しを禁止して、入りきらないぶんだけ字を小さくする */
+    (function fitRibbon() {
+      var tEl = d.querySelector('.t'); if (!tEl) return;
+      var cs = getComputedStyle(d);
+      var box = d.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+      var fs = parseFloat(getComputedStyle(tEl).fontSize) || 29, guard = 0;
+      while (tEl.scrollWidth > box && fs > 13 && guard++ < 16) {
+        fs -= 1.5; tEl.style.fontSize = fs + 'px';
+      }
+    })();
     d.animate([{ opacity: 0, clipPath: 'inset(0 100% 0 0)' },
                { opacity: 1, clipPath: 'inset(0 0 0 0)', offset: .45 },
                { opacity: 0, clipPath: 'inset(0 0 0 88%)' }],
