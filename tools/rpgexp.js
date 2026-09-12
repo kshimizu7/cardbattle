@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { wrap } = require('./standalone.js');
 
-const R = f => fs.readFileSync(path.join(__dirname, f), 'utf8');
+const R = f => fs.readFileSync(path.join(__dirname, f), 'utf8').replace(/\r\n?/g, '\n');
 const strip = s => s
   .replace(/^\s*const \{?[^=]*\}? *= *require\([^)]*\);?\s*$/gm, '')
   .replace(/^\s*module\.exports.*$/gm, '')
