@@ -2932,3 +2932,56 @@ body.shake{animation:shk2 .56s}
   #app.land .panelbar .btn.ico{padding:4px 6px;font-size:11.5px;min-width:0}
   #app.land .panelbar .btn.ico.snd{font-size:13px}
 }
+
+/* =========================================================
+   v116: チーム名
+   ========================================================= */
+/* 編成画面の上段。「P1 編成」の場所をそのまま名前に使う（行は増やさない） */
+.drname{background:none;border:0;font-family:inherit;cursor:pointer;padding:2px 2px;
+  font-size:15.5px;font-weight:900;letter-spacing:.04em;line-height:1.1;
+  max-width:46vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:opacity .17s}
+.drname em{font-style:normal;font-weight:800;font-size:13px;color:#6e7a94}
+.drname.fade{opacity:0}
+.drname.pop{animation:tnpop .28s ease-out}
+@keyframes tnpop{0%{opacity:0;transform:translateY(3px)}100%{opacity:1;transform:none}}
+.drnx{background:none;border:0;color:#8fa0c0;font-size:17px;line-height:1;cursor:pointer;
+  padding:7px 6px;margin-left:-4px;min-width:34px;min-height:34px}
+.drnx:active{transform:scale(.9);color:var(--gold)}
+
+/* 名前を決める小窓 */
+.tnbox{max-width:330px}
+.tnbox h3{color:var(--gold);font-size:14px;margin-bottom:10px}
+.tnrow{display:flex;align-items:center;gap:6px}
+.tnrow input{flex:1;min-width:0;font-family:inherit;font-size:16px;font-weight:900;
+  padding:10px 12px;border-radius:9px;background:#0c1220;border:1px solid #2c3854;color:#e8ecf5}
+.tnrow input.autoval{color:var(--gold)}
+.tnrow input:focus{outline:none;border-color:var(--gold)}
+.tnroll{flex:0 0 auto;background:linear-gradient(180deg,#1b2338,#121829);border:1px solid #2c3854;
+  color:#a9b8d6;font-size:18px;border-radius:9px;width:42px;height:42px;cursor:pointer}
+.tnroll:active{transform:scale(.93);color:var(--gold)}
+.tntgl{display:flex;align-items:center;gap:8px;width:100%;margin-top:10px;cursor:pointer;
+  background:rgba(255,255,255,.03);border:1px solid #223054;border-radius:9px;
+  padding:9px 11px;font-family:inherit;color:#a9b8d6;text-align:left}
+.tntgl i{flex:0 0 auto;width:17px;height:17px;border-radius:5px;border:1.5px solid #3a4870;
+  position:relative}
+.tntgl b{font-size:12.5px;font-weight:900}
+.tntgl small{font-size:10.5px;color:#6e7a94;margin-left:auto;text-align:right}
+.tntgl.on{border-color:var(--gold);color:var(--gold);background:rgba(242,198,92,.10)}
+.tntgl.on i{border-color:var(--gold);background:var(--gold)}
+.tntgl.on i::after{content:"✓";position:absolute;left:50%;top:50%;transform:translate(-50%,-52%);
+  color:#241a02;font-size:12px;font-weight:900}
+.tnbtns{display:flex;gap:8px;margin-top:12px}
+.tnbtns .btn{flex:1}
+
+/* (CPU) の添え字。名前より一段小さく、目立ちすぎないように */
+.cpuf{font-style:normal;font-size:.72em;font-weight:800;opacity:.62;margin-left:.35em;
+  letter-spacing:0}
+
+/* 開幕の紹介：見出しをチーム名に。紋章つきで大きく、金の下線 */
+.introsix .sixtag{display:flex;align-items:center;gap:6px;
+  font-size:17px;letter-spacing:.06em;padding:4px 2px 5px;border:0;border-radius:0;
+  border-bottom:2px solid var(--gold);top:-38px;max-width:94%}
+.introsix .sixtag b{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.introsix .sixtag .crest{width:16px;height:18px;flex:0 0 auto}
+.introsix.s0 .sixtag{color:#d6e6ff} .introsix.s1 .sixtag{color:#ffd2d8}

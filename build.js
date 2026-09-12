@@ -86,6 +86,9 @@ ${R('bgm.js')}
 ${R('art.js')}
 </script>
 <script>
+${R('teamname.js')}
+</script>
+<script>
 ${CHARJS}
 ${UIJS}
 ${ARTJS}

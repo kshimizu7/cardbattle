@@ -21,7 +21,9 @@
     deal: 'shuffle', selSlot: null, hist: [[], []],
     hintSeen: false,
     /* 全自動は陣営ごとに持つ。PvPでは P1だけ・P2だけ・両方(観戦) を選べる */
-    autoSides: [false, false]
+    autoSides: [false, false],
+    /* v116 チーム名。tnAuto=自動で命名するか／tnName=自分で決めた名前／tnIdx=候補の何番目か */
+    tnAuto: [true, true], tnName: ['', ''], tnIdx: [0, 0]
   };
 
   // 最初のタップでオーディオを解錠（iOS対策）
@@ -51,9 +53,32 @@
      プレイヤー名で呼ぶ。以前は side0 基準に固定されていて、
      P2 には自分の軍が「敵軍」と表示されていた。 */
   function sideName(side) {
-    if (S.mode === 'cpu') return side === 0 ? '自軍' : '敵軍';
     var st = S.st;
-    return (st && st.players[side] && st.players[side].name) || ('プレイヤー' + (side + 1));
+    var n = st && st.players[side] && st.players[side].name;
+    if (n) return n;
+    if (S.mode === 'cpu') return side === 0 ? '自軍' : '敵軍';
+    return 'プレイヤー' + (side + 1);
+  }
+  /* v116: CPU戦では、敵のチーム名のうしろに小さく (CPU) を添える */
+  function sideNameHTML(side) {
+    return esc(sideName(side)) +
+      (S.mode === 'cpu' && side === 1 ? '<i class="cpuf">(CPU)</i>' : '');
+  }
+  /* ---------- チーム名（v116） ----------
+     自分で決めた名前があればそれ。無ければ編成から自動で作る。
+     avoid と同じになる候補は黙って飛ばす（相手と同じ名前にしない） */
+  function teamNameOf(side, avoid) {
+    if (!S.tnAuto[side]) return (S.tnName[side] || '').trim();
+    return TEAMNAME.pick(S.teams[side] || [], E.BY_ID, S.tnIdx[side] || 0, avoid);
+  }
+  /* 戦闘に持ち込む2つの名前。空なら従来どおり「プレイヤーN」「CPU」 */
+  function battleNames() {
+    var a = teamNameOf(0, null) || 'プレイヤー1';
+    var b = S.mode === 'cpu'
+      /* CPUは必ず自動。ずらすのは常にCPU側で、人が決めた名前は動かさない */
+      ? (TEAMNAME.pick(S.teams[1] || [], E.BY_ID, 0, a) || 'CPU')
+      : (teamNameOf(1, a) || 'プレイヤー2');
+    return [a, b];
   }
   /* 端末がいま横向きか。横並びレイアウトはこれで自動的に切り替わる */
   function isLandscape() {
@@ -101,7 +126,9 @@
     try {
       SAVE.setSettings({ sound: S.sound, bgm: S.bgm, speed: S.speed, pool: S.pool, deal: S.deal,
                          mode: S.mode, diff: S.diff,
-                         hintSeen: S.hintSeen });
+                         hintSeen: S.hintSeen,
+                         /* チーム名は「自分（P1）のもの」だけ覚える */
+                         teamName: S.tnName[0], teamAuto: S.tnAuto[0] });
     } catch (e) {}
   }
   function restoreSettings() {
@@ -116,6 +143,8 @@
       if (g.mode === 'cpu' || g.mode === 'pvp') S.mode = g.mode;
       if (g.diff === 'easy' || g.diff === 'normal' || g.diff === 'hard') S.diff = g.diff;
       if (typeof g.hintSeen === 'boolean') S.hintSeen = g.hintSeen;
+      if (typeof g.teamName === 'string') S.tnName[0] = g.teamName.slice(0, TEAMNAME.MAXLEN);
+      if (typeof g.teamAuto === 'boolean') S.tnAuto[0] = g.teamAuto;
     } catch (e) {}
   }
 
@@ -2426,6 +2455,8 @@
     S.selSlot = null; S.selCard = null;
     S.dSort = 'deal'; S.dRng = 'all'; S.dHide = false; S._dtKey = null;
     S.draftIdx = 0;
+    /* チーム名の候補は1番目から。自分で決めた名前とモードは持ち越す */
+    S.tnIdx = [0, 0]; S._tnLast = ['', ''];
     if (S.mode === 'cpu') {
       S.teams[1] = AI.buildTeam(S.hands[1], S.diff, Math.random);
       renderDraft();
@@ -2578,6 +2609,8 @@
       S.hist[side].push(team.map(function (c) { return { id: c.id, row: c.row, col: c.col }; }));
       if (S.hist[side].length > 30) S.hist[side].shift();
       S.teams[side] = next.map(function (c) { return { id: c.id, row: c.row, col: c.col }; });
+      /* v116: 編成が変わったら、名前の候補は1番目（いちばん似合うもの）に戻す */
+      S.tnIdx[side] = 0;
     }
 
     /* ---------- 候補の並べ替え・しぼり込み ---------- */
@@ -2641,6 +2674,16 @@
           '<u>✕</u></button>'
       : '<span class="drorn">◆◇◆</span>';
 
+    /* ---------- チーム名（v116） ---------- */
+    var tnAuto = !!S.tnAuto[side];
+    /* P2の編成中は、P1の名前がもう決まっている。同じ名前になる候補は飛ばす */
+    var tnAvoid = (side === 1 && S.mode === 'pvp') ? teamNameOf(0, null) : null;
+    var tnNow = teamNameOf(side, tnAvoid);
+    var tnLabel = tnNow ? esc(tnNow) : '<em>（自動で命名）</em>';
+    S._tnLast = S._tnLast || ['', ''];
+    var tnChanged = tnNow && tnNow !== S._tnLast[side];
+    S._tnLast[side] = tnNow;
+
     var goLabel = team.length < minU
       ? (minU > 1 ? 'あと' + (minU - team.length) + '体を配置してください' : 'キャラを配置してください')
       : over ? 'コスト超過'
@@ -2652,8 +2695,14 @@
       '<div id="screen-draft">' +
         '<div class="drtop">' +
           '<button class="drback" id="dback" aria-label="設定へ戻る">‹</button>' +
-          '<span class="drttl" style="color:' + (side === 0 ? 'var(--p1)' : 'var(--p2)') + '">P' +
-            (side + 1) + ' 編成</span>' +
+          /* v116: 「P1 編成」の場所がそのままチーム名。行は増やさない。
+             名前を押すと入力、⟳ を押すと次の候補（自動のときだけ） */
+          '<button class="drname' + (tnChanged ? ' pop' : '') + '" id="tname"' +
+            ' style="color:' + (side === 0 ? 'var(--p1)' : 'var(--p2)') + '"' +
+            ' aria-label="チーム名を決める">' + tnLabel + '</button>' +
+          '<button class="drnx" id="tnext" aria-label="' +
+            (tnAuto ? '別の名前にする' : 'チーム名を決める') + '">' +
+            (tnAuto ? '⟳' : '✎') + '</button>' +
           '<button class="drclr" id="clr"' + (team.length ? '' : ' disabled') +
             '><i>↺</i><b>全部戻す</b></button>' +
           manaHTML +
@@ -2778,6 +2827,21 @@
       f.appendChild(b);
       setTimeout(function () { if (b.parentNode) b.remove(); }, 4000);
     };
+    /* チーム名：名前を押すと入力、⟳ を押すと次の候補へ（1→2→3→4→5→1） */
+    $('#tname').onclick = function () { openTeamName(side, tnAvoid); };
+    $('#tnext').onclick = function () {
+      if (!S.tnAuto[side]) { openTeamName(side, tnAvoid); return; }
+      S.tnIdx[side] = (S.tnIdx[side] || 0) + 1;
+      var el = $('#tname'); if (!el) return;
+      var nx = teamNameOf(side, tnAvoid);
+      S._tnLast[side] = nx;
+      el.classList.remove('pop');
+      el.classList.add('fade');
+      setTimeout(function () {
+        el.innerHTML = nx ? esc(nx) : '<em>（自動で命名）</em>';
+        el.classList.remove('fade');
+      }, 170);
+    };
     var fb = $('#drfind'); if (fb) fb.onclick = openDraftFind;
     var cb = $('#drclear');
     if (cb) cb.onclick = function () {
@@ -2791,6 +2855,59 @@
       } else {
         beginBattle();
       }
+    };
+  }
+
+  /* チーム名を決める小窓（v116）。
+     編成画面に入力欄を直接置くと、キーボードが出た瞬間に画面が縮んで
+     6枠と候補欄が崩れるので、小窓にして編成の状態を一切触らない。 */
+  function openTeamName(side, avoid) {
+    var auto = !!S.tnAuto[side];
+    var idx = S.tnIdx[side] || 0;
+    var m = document.createElement('div');
+    m.className = 'modal';
+    function autoName(i) { return TEAMNAME.pick(S.teams[side] || [], E.BY_ID, i, avoid); }
+    m.innerHTML = '<div class="box tnbox">' +
+      '<h3>チーム名</h3>' +
+      '<div class="tnrow">' +
+        '<input type="text" id="tnin" maxlength="' + TEAMNAME.MAXLEN + '" ' +
+          'placeholder="チーム名" autocomplete="off" spellcheck="false">' +
+        '<button class="tnroll" id="tnroll" aria-label="別の名前にする">⟳</button>' +
+      '</div>' +
+      '<button class="tntgl" id="tntgl"><i></i><b>自動で決める</b>' +
+        '<small>編成に合わせて名前が変わります</small></button>' +
+      '<div class="tnbtns">' +
+        '<button class="btn ghost" id="tncx">やめる</button>' +
+        '<button class="btn primary" id="tnok">決定</button>' +
+      '</div></div>';
+    document.body.appendChild(m);
+    var inp = $('#tnin', m), tgl = $('#tntgl', m), roll = $('#tnroll', m);
+    function draw() {
+      tgl.classList.toggle('on', auto);
+      roll.style.display = auto ? '' : 'none';
+      inp.classList.toggle('autoval', auto);
+    }
+    inp.value = auto ? (autoName(idx) || '') : (S.tnName[side] || '');
+    draw();
+    /* 1文字でも打てば「自分で決める」に切り替わる。トグルを探さなくてよい */
+    inp.addEventListener('input', function () { if (auto) { auto = false; draw(); } });
+    roll.onclick = function () { idx++; inp.value = autoName(idx) || ''; };
+    tgl.onclick = function () {
+      auto = !auto;
+      if (auto) inp.value = autoName(idx) || '';
+      draw();
+      if (!auto) inp.focus();
+    };
+    $('#tncx', m).onclick = function () { m.remove(); };
+    m.onclick = function (ev) { if (ev.target === m) m.remove(); };
+    $('#tnok', m).onclick = function () {
+      /* 名前は色々な場所にそのまま出すので、記号は取り除いておく */
+      var v = (inp.value || '').replace(/[<>&"'\\]/g, '').trim().slice(0, TEAMNAME.MAXLEN);
+      if (auto || !v) { S.tnAuto[side] = true; S.tnIdx[side] = idx; }
+      else { S.tnAuto[side] = false; S.tnName[side] = v; }
+      if (side === 0) rememberSettings();
+      m.remove();
+      renderDraft();
     };
   }
 
@@ -2854,9 +2971,8 @@
     S.autoSides = [false, false];
     /* v108: 前衛が空いている列は、ここで後衛を繰り上げてから戦いに入る */
     S.teams = [compactTeam(S.teams[0]), compactTeam(S.teams[1])];
-    S.st = E.createState(S.teams[0], S.teams[1], {
-      nameA: 'プレイヤー1', nameB: S.mode === 'cpu' ? 'CPU' : 'プレイヤー2'
-    });
+    var nm = battleNames();
+    S.st = E.createState(S.teams[0], S.teams[1], { nameA: nm[0], nameB: nm[1] });
     S.gen = (S.gen || 0) + 1;
     S.screen = 'battle'; syncBgm();
     S.intro = true;
@@ -3006,7 +3122,9 @@
       var us = team(side);
       var wrap = document.createElement('div');
       wrap.className = 'introsix s' + side;
-      wrap.innerHTML = '<div class="sixtag">' + sideName(side) + '</div>' + us.map(function (u) {
+      /* v116: 紹介の見出しはチーム名。紋章つきで大きく、金の下線を引く */
+      wrap.innerHTML = '<div class="sixtag">' + crestSVG(side) + '<b>' + sideNameHTML(side) +
+        '</b></div>' + us.map(function (u) {
         var cell = $('.unit[data-uid="' + u.uid + '"]');
         var flip = introMirrored($('.pic .lay', cell));
         var big = $('.pic .lay', cell) && $('.pic .lay', cell).classList.contains('v-big');
@@ -3167,7 +3285,8 @@
         '<span class="tn">' + u.def.name.slice(0, 4) + '</span></div>';
     }).join('');
 
-    var p2name = st.players[1].name, p1name = st.players[0].name;
+    /* v116: チーム名。CPU戦では敵の名前のうしろに小さく (CPU) を添える */
+    var p2name = sideNameHTML(1), p1name = sideNameHTML(0);
     app.innerHTML =
       '<div class="hdr">' + battleBarHTML(st) + '</div>' +
       /* v93: 「行動順／自軍／敵軍／なぜこの順番？」の行は消し、帯だけにする（根拠はバー長押しで） */
