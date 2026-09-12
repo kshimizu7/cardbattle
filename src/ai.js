@@ -109,7 +109,8 @@ var CBAI = (function () {
     } else if (a.range === 'any1') {
       var t = E.findUid(st, target.uid); if (t) out.push({ u: t, mul: 1 });
     } else if (a.range === 'weakest') {
-      var c = E.aliveUnits(st, foe).slice().sort(function (x, y) { return x.hp - y.hp; })[0];
+      /* v117: 「一番弱い」はエンジンの共通関数で決める（画面の予告と必ず一致させる） */
+      var c = E.weakestOf(st, foe);
       if (c) out.push({ u: c, mul: 1 });
     } else if (a.range === 'square') {
       E.squareCells(st, foe, target.col).forEach(function (v) { out.push({ u: v, mul: 1 }); });

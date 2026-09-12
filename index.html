@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="116">
+<meta name="app-version" content="117">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -2998,6 +2998,16 @@ body.shake{animation:shk2 .56s}
 .introsix .sixtag .crest{width:16px;height:18px;flex:0 0 auto}
 .introsix.s0 .sixtag{color:#d6e6ff} .introsix.s1 .sixtag{color:#ffd2d8}
 
+/* =========================================================
+   v117: 献身で「一度倒れて、光で戻る」
+   ========================================================= */
+.unit.revived{animation:revglow .9s ease-out}
+.unit.revived::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:9;
+  background:radial-gradient(circle at 50% 45%,rgba(255,224,138,.55),transparent 62%);
+  animation:revfade .9s ease-out forwards}
+@keyframes revglow{0%{filter:grayscale(1) brightness(.5)}45%{filter:none}100%{filter:none}}
+@keyframes revfade{0%{opacity:1}100%{opacity:0}}
+
 </style>
 </head>
 <body>
@@ -3277,7 +3287,7 @@ var CB = (function () {
     devotion:    { name:'献身',     text:'味方1体の致死ダメージを1度だけ肩代わりし、HP1で耐えさせる' },
     snipe:       { name:'狙撃',     text:'敵後衛を狙うとダメージ+3' },
     ambush:      { name:'不意打ち', text:'第1ラウンドの攻撃ダメージ+2' },
-    decapitate:  { name:'首狩り',   text:'常に敵の最も残HPが少ない敵を狙う。対象のHPが最大の35%以下なら即死させる' },
+    decapitate:  { name:'首狩り',   text:'常に敵の最も残HPが少ない敵を狙う（並んだら脅威の高い方）。対象のHPが最大の35%以下なら即死させる' },
     flight:      { name:'飛行',     text:'敵陣のどのマスでも攻撃できる' },
     triumph:     { name:'凱歌',     text:'敵を倒すと即座にもう一度行動できる（1ラウンド1回）' },
     bloodsuck:   { name:'吸血',     text:'与えたダメージの半分だけ自分が回復する' },
@@ -3308,7 +3318,7 @@ var CB = (function () {
   /* ---- 表示用：射程テキスト ---- */
   var RANGE_TEXT = {
     melee:'正面（近接）', pierce:'正面＋その後方', front_row:'敵前衛3体',
-    any1:'敵陣6マスの任意1体', weakest:'敵の最弱1体（自動）',
+    any1:'敵陣6マスの任意1体', weakest:'敵の最弱1体（自動・並んだら危険な方）',
     square:'敵陣2×2の4マス', row:'敵の前衛列 or 後衛列', all:'敵全体',
     ally1:'味方1体', all_ally:'味方全体', dead_ally:'倒れた味方1体',
     random:'敵陣にランダム（同じ相手に重なることあり）', adj_ally:'自分の前または後ろの味方1体'
@@ -3387,6 +3397,21 @@ var CB = (function () {
   /* ---------- 盤面ヘルパー ---------- */
   function allUnits(st) { return st.players[0].units.concat(st.players[1].units); }
   function aliveUnits(st, side) { return st.players[side].units.filter(function (u) { return u.alive; }); }
+  /* v117:「一番弱い」敵をひとつに決める。エンジン・画面・CPUが必ずこれを呼ぶ。
+     以前は3か所に別々の式が書かれていて、残HPが並ぶと
+     「光っている相手」と「実際に殴られる相手」が食い違っていた。
+     上から順に比べ、差がついたところで決定する：
+       ① 残りHPが少ない　② 脅威が高い　③ 最大HPが少ない　④ 前衛が先　⑤ 左が先
+     ④⑤まで下りれば必ず一意（同じマスに2体はいないため）。 */
+  function weakestOf(st, side) {
+    return aliveUnits(st, side).slice().sort(function (x, y) {
+      return (x.hp - y.hp)
+          || (threat(y, st) - threat(x, st))
+          || (x.maxHp - y.maxHp)
+          || (x.row - y.row)
+          || (x.col - y.col);
+    })[0] || null;
+  }
   /* 生死を問わず、そのマスに居るユニット（＝死体も含む）。
      前進で生者が入るとき、先客の死体を押し出すために使う。 */
   function occupantAt(st, side, row, col) {
@@ -3790,9 +3815,14 @@ var CB = (function () {
     });
     if (savior) {
       savior.flags.devotionUsed = true;
+      /* v117: 献身は「一度倒れて、光で引き戻される」と見せる。
+         alive は落とさない（本当に死なせると繰り上げや蘇生の予約が走ってしまう）ので、
+         画面に「倒れた合図」だけを送る */
+      tgt.hp = 0;
+      push(st, { type: 'downed', uid: tgt.uid });
       push(st, { type: 'passive', uid: savior.uid, name: '献身', text: '致死ダメージを肩代わり', kind: 'good' });
       tgt.hp = 1;
-      push(st, { type: 'devotion', uid: tgt.uid, by: savior.uid });
+      push(st, { type: 'devotion', uid: tgt.uid, by: savior.uid, hp: 1 });
       logMsg(st, savior.def.name + ' の【献身】！ ' + tgt.def.name + ' はHP1で持ちこたえた', 'good');
       return;
     }
@@ -3853,6 +3883,9 @@ var CB = (function () {
     var entry = null;
     opts.forEach(function (o) { if (o.action.key === actionKey) entry = o; });
     if (!entry) entry = opts[0];
+    /* v117: 対象が渡ってこなかったときの保険。盤面が変わって古い対象が無効になっても、
+       ここで例外を出して戦闘が「行動中…」のまま固まることが無いようにする */
+    if (!target) target = entry.auto || entry.targets[0] || { type: 'auto' };
     var a = entry.action;
     var foe = 1 - u.side;
     var atk = getAtk(u, st);
@@ -3969,9 +4002,9 @@ var CB = (function () {
       if (!t2) return finishAction(st, u, a);
       victims.push({ u: t2, mul: 1 });
     } else if (a.range === 'weakest') {
-      var cand = aliveUnits(st, foe).slice().sort(function (x, y) { return x.hp - y.hp || threat(y, st) - threat(x, st); });
-      if (!cand.length) return finishAction(st, u, a);
-      victims.push({ u: cand[0], mul: 1 });
+      var cand = weakestOf(st, foe);
+      if (!cand) return finishAction(st, u, a);
+      victims.push({ u: cand, mul: 1 });
     } else if (a.range === 'square') {
       squareCells(st, foe, target.col).forEach(function (v) { victims.push({ u: v, mul: 1 }); });
     } else if (a.range === 'row') {
@@ -4013,12 +4046,15 @@ var CB = (function () {
       if (hasP(u, 'snipe') && v.u.row === 1) amt += 3;
       // 首狩り
       if (hasP(u, 'decapitate') && v.u.hp <= v.u.maxHp * 0.35) {
-        push(st, { type: 'execute', uid: v.u.uid });
-        logMsg(st, u.def.name + ' の【首狩り】が炸裂！ ' + v.u.def.name + ' を一撃で葬った', 'bad');
         var hpLeft = v.u.hp;
+        /* v117: 体力バーを動かすために、残量を演出へ渡す（以前はバーが最後まで動かなかった） */
+        push(st, { type: 'execute', uid: v.u.uid, amount: hpLeft, hp: 0 });
+        logMsg(st, u.def.name + ' の【首狩り】が炸裂！ ' + v.u.def.name + ' を一撃で葬った', 'bad');
         v.u.hp = 0;
-        u.stats.dmg += hpLeft; st.players[u.side].stats.dmg += hpLeft;
         killUnit(st, v.u, u);
+        /* 献身で助かったらHPが1残る。その分は与ダメージに数えない */
+        var lost = hpLeft - (v.u.alive ? v.u.hp : 0);
+        u.stats.dmg += lost; st.players[u.side].stats.dmg += lost;
         killedAny = true;
         return;
       }
@@ -4468,7 +4504,7 @@ var CB = (function () {
     createState: createState, buildOrder: buildOrder, getOptions: getOptions,
     performAction: performAction, currentActor: currentActor, nextTurn: nextTurn,
     endRound: endRound, aliveUnits: aliveUnits, allUnits: allUnits, unitAt: unitAt,
-    findUid: findUid, getAtk: getAtk, getSpd: getSpd, hasP: hasP, threat: threat,
+    findUid: findUid, getAtk: getAtk, getSpd: getSpd, hasP: hasP, threat: threat, weakestOf: weakestOf,
     cardPower: cardPower, RATING: RATING, meleeChain: meleeChain, meleeReady: meleeReady,
     squareCells: squareCells, tally: tally, deal: deal, redraw: redraw,
     setAdvanceMode: setAdvanceMode, getAdvanceMode: getAdvanceMode, normalizeTeam: normalizeTeam,
@@ -4597,7 +4633,8 @@ var CBAI = (function () {
     } else if (a.range === 'any1') {
       var t = E.findUid(st, target.uid); if (t) out.push({ u: t, mul: 1 });
     } else if (a.range === 'weakest') {
-      var c = E.aliveUnits(st, foe).slice().sort(function (x, y) { return x.hp - y.hp; })[0];
+      /* v117: 「一番弱い」はエンジンの共通関数で決める（画面の予告と必ず一致させる） */
+      var c = E.weakestOf(st, foe);
       if (c) out.push({ u: c, mul: 1 });
     } else if (a.range === 'square') {
       E.squareCells(st, foe, target.col).forEach(function (v) { out.push({ u: v, mul: 1 }); });
@@ -11030,7 +11067,12 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         var cell = $('.unit[data-uid="' + u.uid + '"]');
         var flip = introMirrored($('.pic .lay', cell));
         var big = $('.pic .lay', cell) && $('.pic .lay', cell).classList.contains('v-big');
-        return '<div class="sixcard' + (big ? ' big' : '') + '" data-uid="' + u.uid + '"><div class="face back"></div>' +
+        /* v117: 札を前から詰めず、盤面と同じマスに置く。
+           5体以下だと穴の位置がずれて、紹介と盤面の並びが食い違っていた。
+           敵（side 1）は盤面と同じく「後衛が上・前衛が下」 */
+        var gc = u.col + 1, gr = (side === 0 ? u.row + 1 : 2 - u.row);
+        return '<div class="sixcard' + (big ? ' big' : '') + '" data-uid="' + u.uid + '"' +
+          ' style="grid-column:' + gc + ';grid-row:' + gr + '"><div class="face back"></div>' +
           '<div class="face front"><div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
           '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i>' + statsHTML(u) + '</div></div></div>';
       }).join('') + '<div class="sixhint">' +
@@ -11461,7 +11503,12 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       openDetail(u.defId, E.aliveUnits(st, u.side).map(function (v) { return v.defId; }));
     };
     function autoOnce() {
-      var ch = AI.chooseAction(st, u, 'hard');
+      var ch;
+      try { ch = AI.chooseAction(st, u, 'hard'); }
+      catch (err) {
+        if (window.console && console.warn) console.warn('おまかせの思考で失敗:', err);
+        ch = { actionKey: 'guard', target: { type: 'auto' } };
+      }
       doAction(u, ch.actionKey, ch.target);
     }
     if ($('#auto')) $('#auto').onclick = autoOnce;
@@ -11731,7 +11778,9 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     } else if (a.range === 'all') {
       E.aliveUnits(st, foe).forEach(function (v) { fixed.push([v, 1]); });
     } else if (a.range === 'weakest') {
-      var w = E.aliveUnits(st, foe).slice().sort(function (x, y) { return x.hp - y.hp; })[0];
+      /* v117: 「一番弱い」はエンジンの共通関数で決める。
+         以前はここだけ式が違い、残HPが並ぶと光る相手と殴られる相手がずれていた */
+      var w = E.weakestOf(st, foe);
       if (w) fixed.push([w, 1]);
     } else if (a.range === 'random') {
       E.aliveUnits(st, foe).forEach(function (v) { fixed.push([v, 1]); });
@@ -11818,15 +11867,43 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
   }
 
   /* ---------- 行動実行と演出 ---------- */
+  /* v117: 「行動中…」のまま固まらないための番人。
+     行動を始めてから一定時間たっても演出が終わらなければ、操作に復帰させる。
+     原因が何であれ、戦闘が死なないようにするための最後の砦。 */
+  function armWatchdog() {
+    clearTimeout(S._wd);
+    S._wd = setTimeout(function () {
+      if (!S.busy || S.screen !== 'battle') return;
+      S.busy = false;
+      if (window.console && console.warn) console.warn('演出が止まったので進めました');
+      renderBattle();
+      toast('演出が止まったので先へ進めました');
+    }, 14000);
+  }
+  function disarmWatchdog() { clearTimeout(S._wd); }
+
   function doAction(u, key, target) {
     if (S.busy || S.screen !== 'battle') return;
     var gen = S.gen;
     S.busy = true;
-    clearMarks();
-    renderActions();
-    var evs = E.performAction(S.st, u, key, target);
+    armWatchdog();
+    var evs;
+    try {
+      clearMarks();
+      renderActions();
+      evs = E.performAction(S.st, u, key, target);
+    } catch (err) {
+      /* 行動の組み立てで失敗しても、操作できない状態で固まらせない */
+      if (window.console && console.warn) console.warn('行動を組み立てられませんでした:', err);
+      disarmWatchdog();
+      S.busy = false; S.selAct = null;
+      renderBattle();
+      toast('その技はいま実行できませんでした。もう一度選んでください');
+      return;
+    }
     playEvents(evs.slice(), function () {
-      if (gen !== S.gen) return;
+      disarmWatchdog();
+      if (gen !== S.gen) { S.busy = false; return; }
       S.busy = false;
       S.selAct = null;
       if (S.st.phase === 'ended') { showResult(); return; }
@@ -11859,7 +11936,12 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     renderBattle();
     if (isAI(u.side)) {
       wait(620, function () {
-        var ch = AI.chooseAction(S.st, u, S.diff);
+        var ch;
+        try { ch = AI.chooseAction(S.st, u, S.diff); }
+        catch (err) {
+          if (window.console && console.warn) console.warn('CPUの思考で失敗:', err);
+          ch = { actionKey: 'guard', target: { type: 'auto' } };   /* 固まらせず、防御で進める */
+        }
         doAction(u, ch.actionKey, ch.target);
       });
     }
@@ -12190,7 +12272,9 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
          { transform: 'translate(-50%,-64%) scale(1.14)', opacity: 1, offset: .4 },
          { transform: 'translate(-50%,-78%) scale(1.06)', opacity: 1, offset: .8 },
          { transform: 'translate(-50%,-140%) scale(.86)', opacity: 0 }];
-    d.animate(frames, { duration: dur, easing: 'cubic-bezier(.18,.9,.25,1)' });
+    /* v117: fill を付けないと、再生し終わった瞬間に素の見た目（不透明・浮き上がり無し）へ
+       戻ってしまい、消える直前に一瞬だけ数字がちらついていた */
+    d.animate(frames, { duration: dur, easing: 'cubic-bezier(.18,.9,.25,1)', fill: 'forwards' });
     setTimeout(function () { d.remove(); }, dur + 60);
   }
 
@@ -12329,6 +12413,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       else if (ty === 'heal') t += 620;
       else if (ty === 'revive') t += 1200;
       else if (ty === 'devotion') t += 1000;
+      else if (ty === 'downed') t += 620;
       else if (ty === 'move') t += 700;
       else if (ty === 'passive') t += r.small ? 620 : 1150;
       else if (ty === 'buffFx') t += 200;
@@ -12537,15 +12622,49 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
           burstRays(re.x, re.y, '#ff2d4a', 20, 260);
           particles(re.x, re.y, '#ff6b7d', 22, 'shard');
         }
+        /* v117: 体力バーもここで0まで落とす（以前は最後まで動かず、無傷に見えていた） */
+        if (re && e.hp != null) {
+          var ue = E.findUid(st, e.uid);
+          var be = $('.hpf', re.el), ne = $('.hpn', re.el);
+          if (be) { be.style.width = '0%'; be.className = 'hpf low'; }
+          if (ne && ue) ne.textContent = '0/' + ue.maxHp;
+        }
         hitStop(220); shakeBy(18); tintScreen('#ff2d4a', 0.26);
         banner('☠ 首狩り！', 'color:#ff6b7d;border-color:#ff6b7d');
         return 1150;
       }
+      /* v117: 献身は「一度倒れて、光で引き戻される」。
+         倒れた合図（撃破の帯は出さない。本当に死んだわけではないため） */
+      case 'downed': {
+        SFX.play('death');
+        var rw = rectOf(e.uid);
+        if (rw) {
+          var uw = E.findUid(st, e.uid);
+          var bw = $('.hpf', rw.el), nw = $('.hpn', rw.el);
+          if (bw) { bw.style.width = '0%'; bw.className = 'hpf low'; }
+          if (nw && uw) nw.textContent = '0/' + uw.maxHp;
+          particles(rw.x, rw.y, '#8b96ad', 12, 'drop');
+          rw.el.classList.add('dying');
+          setTimeout(function () { rw.el.classList.add('dead'); rw.el.classList.remove('dying'); }, 380 / spd());
+        }
+        shakeBy(7);
+        return 620;
+      }
       case 'devotion': {
         SFX.play('holy');
         var rv = rectOf(e.uid);
-        if (rv) { ringWave(rv.x, rv.y, '#ffe08a', 125, 6); burstRays(rv.x, rv.y, '#ffe08a', 14, 190);
-                  particles(rv.x, rv.y, '#fff3c4', 15, 'ray'); }
+        if (rv) {
+          /* 黒みを晴らして、体力を1に戻す */
+          rv.el.classList.remove('dead', 'dying');
+          rv.el.classList.add('revived');
+          setTimeout(function () { rv.el.classList.remove('revived'); }, 900 / spd());
+          var uv = E.findUid(st, e.uid);
+          var bv = $('.hpf', rv.el), nv = $('.hpn', rv.el);
+          if (bv && uv) { bv.style.width = (100 / uv.maxHp) + '%'; bv.className = 'hpf low'; }
+          if (nv && uv) nv.textContent = (e.hp != null ? e.hp : 1) + '/' + uv.maxHp;
+          ringWave(rv.x, rv.y, '#ffe08a', 125, 6); burstRays(rv.x, rv.y, '#ffe08a', 14, 190);
+          particles(rv.x, rv.y, '#fff3c4', 15, 'ray');
+        }
         banner('✚ 献身', 'color:#ffe08a');
         return 1000;
       }

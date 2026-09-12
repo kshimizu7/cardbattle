@@ -270,7 +270,7 @@ var CB = (function () {
     devotion:    { name:'献身',     text:'味方1体の致死ダメージを1度だけ肩代わりし、HP1で耐えさせる' },
     snipe:       { name:'狙撃',     text:'敵後衛を狙うとダメージ+3' },
     ambush:      { name:'不意打ち', text:'第1ラウンドの攻撃ダメージ+2' },
-    decapitate:  { name:'首狩り',   text:'常に敵の最も残HPが少ない敵を狙う。対象のHPが最大の35%以下なら即死させる' },
+    decapitate:  { name:'首狩り',   text:'常に敵の最も残HPが少ない敵を狙う（並んだら脅威の高い方）。対象のHPが最大の35%以下なら即死させる' },
     flight:      { name:'飛行',     text:'敵陣のどのマスでも攻撃できる' },
     triumph:     { name:'凱歌',     text:'敵を倒すと即座にもう一度行動できる（1ラウンド1回）' },
     bloodsuck:   { name:'吸血',     text:'与えたダメージの半分だけ自分が回復する' },
@@ -301,7 +301,7 @@ var CB = (function () {
   /* ---- 表示用：射程テキスト ---- */
   var RANGE_TEXT = {
     melee:'正面（近接）', pierce:'正面＋その後方', front_row:'敵前衛3体',
-    any1:'敵陣6マスの任意1体', weakest:'敵の最弱1体（自動）',
+    any1:'敵陣6マスの任意1体', weakest:'敵の最弱1体（自動・並んだら危険な方）',
     square:'敵陣2×2の4マス', row:'敵の前衛列 or 後衛列', all:'敵全体',
     ally1:'味方1体', all_ally:'味方全体', dead_ally:'倒れた味方1体',
     random:'敵陣にランダム（同じ相手に重なることあり）', adj_ally:'自分の前または後ろの味方1体'
@@ -380,6 +380,21 @@ var CB = (function () {
   /* ---------- 盤面ヘルパー ---------- */
   function allUnits(st) { return st.players[0].units.concat(st.players[1].units); }
   function aliveUnits(st, side) { return st.players[side].units.filter(function (u) { return u.alive; }); }
+  /* v117:「一番弱い」敵をひとつに決める。エンジン・画面・CPUが必ずこれを呼ぶ。
+     以前は3か所に別々の式が書かれていて、残HPが並ぶと
+     「光っている相手」と「実際に殴られる相手」が食い違っていた。
+     上から順に比べ、差がついたところで決定する：
+       ① 残りHPが少ない　② 脅威が高い　③ 最大HPが少ない　④ 前衛が先　⑤ 左が先
+     ④⑤まで下りれば必ず一意（同じマスに2体はいないため）。 */
+  function weakestOf(st, side) {
+    return aliveUnits(st, side).slice().sort(function (x, y) {
+      return (x.hp - y.hp)
+          || (threat(y, st) - threat(x, st))
+          || (x.maxHp - y.maxHp)
+          || (x.row - y.row)
+          || (x.col - y.col);
+    })[0] || null;
+  }
   /* 生死を問わず、そのマスに居るユニット（＝死体も含む）。
      前進で生者が入るとき、先客の死体を押し出すために使う。 */
   function occupantAt(st, side, row, col) {
@@ -783,9 +798,14 @@ var CB = (function () {
     });
     if (savior) {
       savior.flags.devotionUsed = true;
+      /* v117: 献身は「一度倒れて、光で引き戻される」と見せる。
+         alive は落とさない（本当に死なせると繰り上げや蘇生の予約が走ってしまう）ので、
+         画面に「倒れた合図」だけを送る */
+      tgt.hp = 0;
+      push(st, { type: 'downed', uid: tgt.uid });
       push(st, { type: 'passive', uid: savior.uid, name: '献身', text: '致死ダメージを肩代わり', kind: 'good' });
       tgt.hp = 1;
-      push(st, { type: 'devotion', uid: tgt.uid, by: savior.uid });
+      push(st, { type: 'devotion', uid: tgt.uid, by: savior.uid, hp: 1 });
       logMsg(st, savior.def.name + ' の【献身】！ ' + tgt.def.name + ' はHP1で持ちこたえた', 'good');
       return;
     }
@@ -846,6 +866,9 @@ var CB = (function () {
     var entry = null;
     opts.forEach(function (o) { if (o.action.key === actionKey) entry = o; });
     if (!entry) entry = opts[0];
+    /* v117: 対象が渡ってこなかったときの保険。盤面が変わって古い対象が無効になっても、
+       ここで例外を出して戦闘が「行動中…」のまま固まることが無いようにする */
+    if (!target) target = entry.auto || entry.targets[0] || { type: 'auto' };
     var a = entry.action;
     var foe = 1 - u.side;
     var atk = getAtk(u, st);
@@ -962,9 +985,9 @@ var CB = (function () {
       if (!t2) return finishAction(st, u, a);
       victims.push({ u: t2, mul: 1 });
     } else if (a.range === 'weakest') {
-      var cand = aliveUnits(st, foe).slice().sort(function (x, y) { return x.hp - y.hp || threat(y, st) - threat(x, st); });
-      if (!cand.length) return finishAction(st, u, a);
-      victims.push({ u: cand[0], mul: 1 });
+      var cand = weakestOf(st, foe);
+      if (!cand) return finishAction(st, u, a);
+      victims.push({ u: cand, mul: 1 });
     } else if (a.range === 'square') {
       squareCells(st, foe, target.col).forEach(function (v) { victims.push({ u: v, mul: 1 }); });
     } else if (a.range === 'row') {
@@ -1006,12 +1029,15 @@ var CB = (function () {
       if (hasP(u, 'snipe') && v.u.row === 1) amt += 3;
       // 首狩り
       if (hasP(u, 'decapitate') && v.u.hp <= v.u.maxHp * 0.35) {
-        push(st, { type: 'execute', uid: v.u.uid });
-        logMsg(st, u.def.name + ' の【首狩り】が炸裂！ ' + v.u.def.name + ' を一撃で葬った', 'bad');
         var hpLeft = v.u.hp;
+        /* v117: 体力バーを動かすために、残量を演出へ渡す（以前はバーが最後まで動かなかった） */
+        push(st, { type: 'execute', uid: v.u.uid, amount: hpLeft, hp: 0 });
+        logMsg(st, u.def.name + ' の【首狩り】が炸裂！ ' + v.u.def.name + ' を一撃で葬った', 'bad');
         v.u.hp = 0;
-        u.stats.dmg += hpLeft; st.players[u.side].stats.dmg += hpLeft;
         killUnit(st, v.u, u);
+        /* 献身で助かったらHPが1残る。その分は与ダメージに数えない */
+        var lost = hpLeft - (v.u.alive ? v.u.hp : 0);
+        u.stats.dmg += lost; st.players[u.side].stats.dmg += lost;
         killedAny = true;
         return;
       }
@@ -1461,7 +1487,7 @@ var CB = (function () {
     createState: createState, buildOrder: buildOrder, getOptions: getOptions,
     performAction: performAction, currentActor: currentActor, nextTurn: nextTurn,
     endRound: endRound, aliveUnits: aliveUnits, allUnits: allUnits, unitAt: unitAt,
-    findUid: findUid, getAtk: getAtk, getSpd: getSpd, hasP: hasP, threat: threat,
+    findUid: findUid, getAtk: getAtk, getSpd: getSpd, hasP: hasP, threat: threat, weakestOf: weakestOf,
     cardPower: cardPower, RATING: RATING, meleeChain: meleeChain, meleeReady: meleeReady,
     squareCells: squareCells, tally: tally, deal: deal, redraw: redraw,
     setAdvanceMode: setAdvanceMode, getAdvanceMode: getAdvanceMode, normalizeTeam: normalizeTeam,

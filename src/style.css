@@ -2985,3 +2985,13 @@ body.shake{animation:shk2 .56s}
 .introsix .sixtag b{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .introsix .sixtag .crest{width:16px;height:18px;flex:0 0 auto}
 .introsix.s0 .sixtag{color:#d6e6ff} .introsix.s1 .sixtag{color:#ffd2d8}
+
+/* =========================================================
+   v117: 献身で「一度倒れて、光で戻る」
+   ========================================================= */
+.unit.revived{animation:revglow .9s ease-out}
+.unit.revived::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:9;
+  background:radial-gradient(circle at 50% 45%,rgba(255,224,138,.55),transparent 62%);
+  animation:revfade .9s ease-out forwards}
+@keyframes revglow{0%{filter:grayscale(1) brightness(.5)}45%{filter:none}100%{filter:none}}
+@keyframes revfade{0%{opacity:1}100%{opacity:0}}

@@ -3128,7 +3128,12 @@
         var cell = $('.unit[data-uid="' + u.uid + '"]');
         var flip = introMirrored($('.pic .lay', cell));
         var big = $('.pic .lay', cell) && $('.pic .lay', cell).classList.contains('v-big');
-        return '<div class="sixcard' + (big ? ' big' : '') + '" data-uid="' + u.uid + '"><div class="face back"></div>' +
+        /* v117: 札を前から詰めず、盤面と同じマスに置く。
+           5体以下だと穴の位置がずれて、紹介と盤面の並びが食い違っていた。
+           敵（side 1）は盤面と同じく「後衛が上・前衛が下」 */
+        var gc = u.col + 1, gr = (side === 0 ? u.row + 1 : 2 - u.row);
+        return '<div class="sixcard' + (big ? ' big' : '') + '" data-uid="' + u.uid + '"' +
+          ' style="grid-column:' + gc + ';grid-row:' + gr + '"><div class="face back"></div>' +
           '<div class="face front"><div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
           '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i>' + statsHTML(u) + '</div></div></div>';
       }).join('') + '<div class="sixhint">' +
@@ -3559,7 +3564,12 @@
       openDetail(u.defId, E.aliveUnits(st, u.side).map(function (v) { return v.defId; }));
     };
     function autoOnce() {
-      var ch = AI.chooseAction(st, u, 'hard');
+      var ch;
+      try { ch = AI.chooseAction(st, u, 'hard'); }
+      catch (err) {
+        if (window.console && console.warn) console.warn('おまかせの思考で失敗:', err);
+        ch = { actionKey: 'guard', target: { type: 'auto' } };
+      }
       doAction(u, ch.actionKey, ch.target);
     }
     if ($('#auto')) $('#auto').onclick = autoOnce;
@@ -3829,7 +3839,9 @@
     } else if (a.range === 'all') {
       E.aliveUnits(st, foe).forEach(function (v) { fixed.push([v, 1]); });
     } else if (a.range === 'weakest') {
-      var w = E.aliveUnits(st, foe).slice().sort(function (x, y) { return x.hp - y.hp; })[0];
+      /* v117: 「一番弱い」はエンジンの共通関数で決める。
+         以前はここだけ式が違い、残HPが並ぶと光る相手と殴られる相手がずれていた */
+      var w = E.weakestOf(st, foe);
       if (w) fixed.push([w, 1]);
     } else if (a.range === 'random') {
       E.aliveUnits(st, foe).forEach(function (v) { fixed.push([v, 1]); });
@@ -3916,15 +3928,43 @@
   }
 
   /* ---------- 行動実行と演出 ---------- */
+  /* v117: 「行動中…」のまま固まらないための番人。
+     行動を始めてから一定時間たっても演出が終わらなければ、操作に復帰させる。
+     原因が何であれ、戦闘が死なないようにするための最後の砦。 */
+  function armWatchdog() {
+    clearTimeout(S._wd);
+    S._wd = setTimeout(function () {
+      if (!S.busy || S.screen !== 'battle') return;
+      S.busy = false;
+      if (window.console && console.warn) console.warn('演出が止まったので進めました');
+      renderBattle();
+      toast('演出が止まったので先へ進めました');
+    }, 14000);
+  }
+  function disarmWatchdog() { clearTimeout(S._wd); }
+
   function doAction(u, key, target) {
     if (S.busy || S.screen !== 'battle') return;
     var gen = S.gen;
     S.busy = true;
-    clearMarks();
-    renderActions();
-    var evs = E.performAction(S.st, u, key, target);
+    armWatchdog();
+    var evs;
+    try {
+      clearMarks();
+      renderActions();
+      evs = E.performAction(S.st, u, key, target);
+    } catch (err) {
+      /* 行動の組み立てで失敗しても、操作できない状態で固まらせない */
+      if (window.console && console.warn) console.warn('行動を組み立てられませんでした:', err);
+      disarmWatchdog();
+      S.busy = false; S.selAct = null;
+      renderBattle();
+      toast('その技はいま実行できませんでした。もう一度選んでください');
+      return;
+    }
     playEvents(evs.slice(), function () {
-      if (gen !== S.gen) return;
+      disarmWatchdog();
+      if (gen !== S.gen) { S.busy = false; return; }
       S.busy = false;
       S.selAct = null;
       if (S.st.phase === 'ended') { showResult(); return; }
@@ -3957,7 +3997,12 @@
     renderBattle();
     if (isAI(u.side)) {
       wait(620, function () {
-        var ch = AI.chooseAction(S.st, u, S.diff);
+        var ch;
+        try { ch = AI.chooseAction(S.st, u, S.diff); }
+        catch (err) {
+          if (window.console && console.warn) console.warn('CPUの思考で失敗:', err);
+          ch = { actionKey: 'guard', target: { type: 'auto' } };   /* 固まらせず、防御で進める */
+        }
         doAction(u, ch.actionKey, ch.target);
       });
     }
@@ -4288,7 +4333,9 @@
          { transform: 'translate(-50%,-64%) scale(1.14)', opacity: 1, offset: .4 },
          { transform: 'translate(-50%,-78%) scale(1.06)', opacity: 1, offset: .8 },
          { transform: 'translate(-50%,-140%) scale(.86)', opacity: 0 }];
-    d.animate(frames, { duration: dur, easing: 'cubic-bezier(.18,.9,.25,1)' });
+    /* v117: fill を付けないと、再生し終わった瞬間に素の見た目（不透明・浮き上がり無し）へ
+       戻ってしまい、消える直前に一瞬だけ数字がちらついていた */
+    d.animate(frames, { duration: dur, easing: 'cubic-bezier(.18,.9,.25,1)', fill: 'forwards' });
     setTimeout(function () { d.remove(); }, dur + 60);
   }
 
@@ -4427,6 +4474,7 @@
       else if (ty === 'heal') t += 620;
       else if (ty === 'revive') t += 1200;
       else if (ty === 'devotion') t += 1000;
+      else if (ty === 'downed') t += 620;
       else if (ty === 'move') t += 700;
       else if (ty === 'passive') t += r.small ? 620 : 1150;
       else if (ty === 'buffFx') t += 200;
@@ -4635,15 +4683,49 @@
           burstRays(re.x, re.y, '#ff2d4a', 20, 260);
           particles(re.x, re.y, '#ff6b7d', 22, 'shard');
         }
+        /* v117: 体力バーもここで0まで落とす（以前は最後まで動かず、無傷に見えていた） */
+        if (re && e.hp != null) {
+          var ue = E.findUid(st, e.uid);
+          var be = $('.hpf', re.el), ne = $('.hpn', re.el);
+          if (be) { be.style.width = '0%'; be.className = 'hpf low'; }
+          if (ne && ue) ne.textContent = '0/' + ue.maxHp;
+        }
         hitStop(220); shakeBy(18); tintScreen('#ff2d4a', 0.26);
         banner('☠ 首狩り！', 'color:#ff6b7d;border-color:#ff6b7d');
         return 1150;
       }
+      /* v117: 献身は「一度倒れて、光で引き戻される」。
+         倒れた合図（撃破の帯は出さない。本当に死んだわけではないため） */
+      case 'downed': {
+        SFX.play('death');
+        var rw = rectOf(e.uid);
+        if (rw) {
+          var uw = E.findUid(st, e.uid);
+          var bw = $('.hpf', rw.el), nw = $('.hpn', rw.el);
+          if (bw) { bw.style.width = '0%'; bw.className = 'hpf low'; }
+          if (nw && uw) nw.textContent = '0/' + uw.maxHp;
+          particles(rw.x, rw.y, '#8b96ad', 12, 'drop');
+          rw.el.classList.add('dying');
+          setTimeout(function () { rw.el.classList.add('dead'); rw.el.classList.remove('dying'); }, 380 / spd());
+        }
+        shakeBy(7);
+        return 620;
+      }
       case 'devotion': {
         SFX.play('holy');
         var rv = rectOf(e.uid);
-        if (rv) { ringWave(rv.x, rv.y, '#ffe08a', 125, 6); burstRays(rv.x, rv.y, '#ffe08a', 14, 190);
-                  particles(rv.x, rv.y, '#fff3c4', 15, 'ray'); }
+        if (rv) {
+          /* 黒みを晴らして、体力を1に戻す */
+          rv.el.classList.remove('dead', 'dying');
+          rv.el.classList.add('revived');
+          setTimeout(function () { rv.el.classList.remove('revived'); }, 900 / spd());
+          var uv = E.findUid(st, e.uid);
+          var bv = $('.hpf', rv.el), nv = $('.hpn', rv.el);
+          if (bv && uv) { bv.style.width = (100 / uv.maxHp) + '%'; bv.className = 'hpf low'; }
+          if (nv && uv) nv.textContent = (e.hp != null ? e.hp : 1) + '/' + uv.maxHp;
+          ringWave(rv.x, rv.y, '#ffe08a', 125, 6); burstRays(rv.x, rv.y, '#ffe08a', 14, 190);
+          particles(rv.x, rv.y, '#fff3c4', 15, 'ray');
+        }
         banner('✚ 献身', 'color:#ffe08a');
         return 1000;
       }
