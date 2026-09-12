@@ -3534,6 +3534,28 @@
     });
   }
 
+  /* v121: 取り返しのつく技は、対象を260ms見せてから1タップで実行する。 */
+  var PREFIRE = 260;
+  function isRiskyAction(a) { return a.cd != null || a.uses != null; }
+  function isInstant(o) {
+    return !!o && !isRiskyAction(o.action) && (!!o.auto || o.targets.length === 1);
+  }
+  function instantTarget(o) { return o.auto || o.targets[0]; }
+  function fireInstant(u, key, target) {
+    if (S._prefire) return;
+    var pre = { gen: S.gen, uid: u.uid, key: key };
+    S._prefire = pre;
+    S.selAct = key;
+    renderActions();
+    setTimeout(function () {
+      if (S._prefire !== pre) return;
+      S._prefire = null;
+      var now = S.st && E.currentActor(S.st);
+      if (pre.gen !== S.gen || S.screen !== 'battle' || S.busy || !now || now.uid !== pre.uid) return;
+      doAction(u, key, target);
+    }, PREFIRE / spd());
+  }
+
   function renderActions() {
     var st = S.st, panel = $('#actpanel');
     if (!panel) return;
@@ -3600,13 +3622,16 @@
         else sub = '今は使えない';
       }
       var isSel = o && S.selAct === a.key;
-      return '<button class="act' + (o ? (isSel ? ' on' : '') : ' dis') + '"' + (o ? '' : ' disabled') +
-        ' data-act="' + a.key + '">' + (isSel ? '<span class="tapgo">▶</span>' : '') +
+      var instant = isInstant(o);
+      return '<button class="act' + (o ? (isSel ? ' on' : '') : ' dis') + (instant ? ' now1' : '') + '"' + (o ? '' : ' disabled') +
+        ' data-act="' + a.key + '">' + (isSel || instant ? '<span class="tapgo">▶</span>' : '') +
         a.name + '<small>' + sub + '</small></button>';
     }).join('');
     var guardOpt = opts.filter(function (o) { return o.action.key === 'guard'; })[0];
-    if (guardOpt) btns += '<button class="act' + (S.selAct === 'guard' ? ' on' : '') + '" data-act="guard">' +
-      (S.selAct === 'guard' ? '<span class="tapgo">▶</span>' : '') + '防御<small>攻撃できない・被ダメ-2</small></button>';
+    if (guardOpt) btns += '<button class="act' + (S.selAct === 'guard' ? ' on' : '') +
+      (isInstant(guardOpt) ? ' now1' : '') + '" data-act="guard">' +
+      (S.selAct === 'guard' || isInstant(guardOpt) ? '<span class="tapgo">▶</span>' : '') +
+      '防御<small>攻撃できない・被ダメ-2</small></button>';
 
     /* v94: 手番の者の行（似顔絵・詳細・1回・全部）は消した。
        手番は盤面の金の枠で分かり、詳細は長押し、オートは上段バーに移した */
@@ -3617,10 +3642,11 @@
 
     $$('[data-act]').forEach(function (b) {
       b.onclick = function () {
+        if (S._prefire) return;
         var k = b.dataset.act;
+        var o = null;
+        opts.forEach(function (x) { if (x.action.key === k) o = x; });
         if (S.selAct === k) {                       // 選択中の技をもう一度タップ＝実行
-          var o = null;
-          opts.forEach(function (x) { if (x.action.key === k) o = x; });
           if (o && !o.targets.length) { doAction(u, k, o.auto || { type: 'auto' }); return; }
           if (o && (o.action.range === 'square' || o.action.range === 'row')) {
             doAction(u, k, o.targets[Math.min(S.selGrp || 0, o.targets.length - 1)]); return;
@@ -3628,6 +3654,7 @@
           var h = $('#hint'); if (h) { h.classList.remove('shakeh'); void h.offsetWidth; h.classList.add('shakeh'); }
           return;
         }
+        if (isInstant(o)) { fireInstant(u, k, instantTarget(o)); return; }
         S.selAct = k; renderActions();
       };
     });
@@ -3674,7 +3701,7 @@
     var info = highlightTargets(u, cur, S.selGrp);
     /* 全体攻撃・全体回復・必中など「選ぶ余地がない技」は、
        わざわざマスをタップさせず、技ボタンをもう一度押すだけで実行する */
-    if (info.go) {
+    if (info.go && !S._prefire) {
       var sb0 = $('[data-act="' + S.selAct + '"]');
       if (sb0) sb0.onclick = info.go;
     }
@@ -3689,12 +3716,18 @@
     });
     var hintEl = $('#hint');
     var selBtn = $('[data-act="' + S.selAct + '"]');
-    var goTxt = '<b class="go">「' + (cur ? cur.action.name : '') + '」をもう一度タップで実行</b>';
+    var prefiring = S._prefire && S._prefire.uid === u.uid && S._prefire.key === S.selAct;
+    var goTxt = prefiring
+      ? '<b class="go">「' + (cur ? cur.action.name : '') + '」！</b>'
+      : '<b class="go">「' + (cur ? cur.action.name : '') + '」をもう一度タップで実行</b>';
     if (hintEl) {
       S._hintCount = (S._hintCount || 0) + 1;
       if (S._hintCount > 3 && !S.hintSeen) { S.hintSeen = true; rememberSettings(); }
       var tapTxt = '<b class="go">赤く光っているマスをタップして実行</b>';
-      if (info.mode === 'fixed') {
+      if (prefiring) {
+        hintEl.innerHTML = goTxt;
+        if (selBtn) selBtn.classList.add('ready');
+      } else if (info.mode === 'fixed') {
         hintEl.innerHTML = '<span class="lgd f' + (info.heal ? ' h' : '') + '"></span>' +
           (info.random
             ? '<b>光っている' + info.count + '体からランダムに' + info.hits + '回</b>（同じ相手に重なることあり）　'
@@ -3719,7 +3752,7 @@
         hintEl.innerHTML = goTxt;
         if (selBtn) selBtn.classList.add('ready');
       }
-      if (!S.hintSeen) hintEl.innerHTML += '<span class="subhint">キャラを長押しすると詳細（敵味方どちらでも）</span>';
+      if (!prefiring && !S.hintSeen) hintEl.innerHTML += '<span class="subhint">キャラを長押しすると詳細（敵味方どちらでも）</span>';
     }
   }
 
@@ -4015,7 +4048,7 @@
   function disarmWatchdog() { clearTimeout(S._wd); }
 
   function doAction(u, key, target) {
-    if (S.busy || S.screen !== 'battle') return;
+    if (S._prefire || S.busy || S.screen !== 'battle') return;
     var gen = S.gen;
     S.busy = true;
     armWatchdog();

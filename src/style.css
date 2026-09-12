@@ -455,8 +455,10 @@ h1,h2,h3{margin:0}
 .hint .lgd.g1{border:2px solid #c98cff;background:rgba(201,140,255,.25)}
 .hint.shakeh{animation:shk .32s}
 
-/* 技ボタン：選択中は「▶」を出して押せば実行と分かるように */
+/* 技ボタン：1タップ技は常に控えめな「▶」、選択中は金色で示す */
 .act .tapgo{color:var(--gold);font-size:12px;margin-right:4px}
+.act.now1 .tapgo{color:#8294b5}
+.act.now1.on .tapgo{color:var(--gold)}
 .act.on{background:linear-gradient(180deg,#4a3612,#2a1e08);border-color:var(--gold);
   box-shadow:0 0 14px rgba(242,198,92,.45),inset 0 1px 0 rgba(255,255,255,.12)}
 .act.on.ready{animation:readyglow 1.4s infinite}
