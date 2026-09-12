@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="description" content="ARCANA CLASH — 6体編成の陣形カードバトル。スマホ1台でふたり対戦、またはCPU対戦。">
-<meta name="app-version" content="112">
+<meta name="app-version" content="113">
 <title>ARCANA CLASH ─ アルカナ・クラッシュ</title>
 <style>
 /* =========================================================
@@ -21,6 +21,9 @@
   --ok:#5fe0a0; --bad:#ff6b7d; --mag:#c98cff;
   --r:14px;
   --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%}
@@ -82,7 +85,10 @@ h1,h2,h3{margin:0}
 
 /* ---------- 編成 ---------- */
 .hdr{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0b0f1c,rgba(11,15,28,.92));
-  border-bottom:1px solid var(--line);padding:6px 10px;display:flex;align-items:center;gap:8px}
+  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;
+  padding:calc(6px + var(--safe-t)) calc(12px + var(--safe-r)) 6px calc(12px + var(--safe-l))}
+/* 押しやすさの下限（どの端末でも指が入る大きさにする） */
+.hdr .btn.ico{min-width:40px;min-height:36px}
 .hdr .t{font-weight:900;font-size:14px}
 .hdr .sp{flex:1}
 .meter{display:flex;flex-direction:column;gap:3px;min-width:96px}
@@ -2455,8 +2461,8 @@ body.shake{animation:shk2 .56s}
 #app.intro .turnbar{opacity:0;transition:opacity .4s}
 #app .unit .pic,#app .unit .nm,#app .unit .hpb,#app .unit .hpn,#app .unit .spb,#app .unit .atb{transition:opacity .35s}
 .introov{position:fixed;inset:0;z-index:60;background:rgba(3,5,11,.35)}
-.introskip{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);
-  z-index:63;padding:9px 22px;font-weight:900;letter-spacing:.1em}
+.introskip{position:absolute;top:calc(54px + var(--safe-t));right:calc(12px + var(--safe-r));left:auto;bottom:auto;
+  z-index:63;padding:8px 14px;font-size:12px;font-weight:900;letter-spacing:.06em;opacity:.85}
 .introfly .art .lay{width:100%;height:100%;border-radius:10px}
 .introfly .art.flipL .lay{transform:scaleX(-1)}
 .introfly{position:fixed;z-index:62;border-radius:10px;overflow:hidden;transform-origin:0 0;pointer-events:none}
@@ -2467,14 +2473,16 @@ body.shake{animation:shk2 .56s}
    v98: 開幕の紹介「六枚同時」＋ 飛びながら切り出しへ寄せる
    ========================================================= */
 .introfly .art .lay .cut{left:3%;top:4%;width:94%;height:92%}   /* 出発は全身。数値は JS が動かす */
-.introsix{position:fixed;left:4%;right:4%;top:calc(6% + 40px);bottom:calc(10% + 40px);z-index:62;
-  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px;pointer-events:none}
+.introsix{position:fixed;left:3%;right:3%;top:calc(4% + 40px);bottom:calc(8% + 44px);z-index:62;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:4px;pointer-events:none}
 #app.land .introsix{left:8%;right:36%;top:6%;bottom:12%;gap:6px}
 .introsix .sixtag{position:absolute;left:0;top:-30px;font-size:11px;font-weight:900;letter-spacing:.15em;padding:3px 9px;border-radius:999px;border:1px solid}
 .introsix.s0 .sixtag{color:var(--p1);border-color:var(--p1)} .introsix.s1 .sixtag{color:var(--p2);border-color:var(--p2)}
 .sixcard{position:relative;transform:rotateY(180deg);transform-style:preserve-3d;border-radius:10px}
 .sixcard .face{position:absolute;inset:0;border-radius:10px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  border:1.5px solid var(--gold);background:#0b0f1b;box-shadow:0 10px 24px rgba(0,0,0,.6)}
+  border:0;background:#0b0f1b;box-shadow:0 10px 24px rgba(0,0,0,.6)}
+/* 裏面だけは金の縁を残す（めくる前の札らしさ） */
+.sixcard .back{border:1.5px solid var(--gold)}
 .sixcard .back{transform:rotateY(180deg);
   background:radial-gradient(circle at 50% 42%,rgba(242,198,92,.25),transparent 38%),
              repeating-linear-gradient(45deg,#0e1424 0 6px,#111a2e 6px 12px)}
@@ -2499,9 +2507,11 @@ body.shake{animation:shk2 .56s}
 .sixcard .sixst i{font-style:normal;font-size:7.5px;font-weight:800;color:#9fb0d0;letter-spacing:.04em}
 .sixcard .sixst .hp{color:#7de8a4} .sixcard .sixst .sp{color:#7fd0ff}
 .sixcard .sixst .at{color:#ffb36b} .sixcard .sixst .at.mag{color:#c98cff} .sixcard .sixst .at.heal{color:#7de8a4}
-.introsix .sixhint{position:absolute;left:0;right:0;bottom:-30px;text-align:center;font-size:12px;font-weight:900;
-  letter-spacing:.15em;color:var(--gold);opacity:0;transition:opacity .3s}
-.introsix .sixhint.on{opacity:1;animation:sixblink 1.2s ease-in-out infinite}
+.introsix .sixhint{position:absolute;left:50%;transform:translateX(-50%);bottom:-38px;white-space:nowrap;
+  text-align:center;font-size:13px;font-weight:900;letter-spacing:.08em;color:#1a1408;
+  padding:9px 22px;border-radius:999px;background:linear-gradient(180deg,#f7d888,#e0ac3f);
+  box-shadow:0 4px 14px rgba(0,0,0,.5);opacity:0;transition:opacity .3s}
+.introsix .sixhint.on{opacity:1;animation:sixblink 1.6s ease-in-out infinite}
 @keyframes sixblink{0%,100%{opacity:1}50%{opacity:.45}}
 
 /* =========================================================
@@ -2818,6 +2828,52 @@ body.shake{animation:shk2 .56s}
 .actpanel .acts .act{min-width:0;width:auto}
 .actpanel .acts .act:first-child:nth-last-child(odd){grid-column:1 / -1}
 .actpanel .acts.waiting{display:block}
+
+/* =========================================================
+   v113: 横持ちの陣営表示（案A＝上段に名前／案B＝中央の帯に縦書き）
+   ========================================================= */
+@media (orientation:landscape){
+  /* 共通：カードの縦のすき間を詰めて、上に名前の場所を作る */
+  #app.land > .field{padding:22px 10px 6px calc(10px + var(--safe-l))}
+  #app.land .field .grid3{gap:3px}
+  #app.land .warline.vsband{width:34px;flex:0 0 34px;height:auto;align-self:stretch;margin:0;border-radius:10px}
+
+  /* --- 案A：名前は盤面の上に置く。帯は色の境目だけ --- */
+  #app.land .vsband .vs{font-size:11px}
+  #app.landA .vsband .vs b,#app.landA .vsband .vs i{display:none}
+  #app.landA .vsband .vs.s0{clip-path:polygon(0 0, 100% 0, 100% 58%, 0 42%)}
+  #app.landA .vsband .vs.s1{clip-path:polygon(0 42%, 100% 58%, 100% 100%, 0 100%)}
+  #app.landA .landname{position:absolute;top:2px;height:20px;z-index:6;display:flex;align-items:center;gap:7px;
+    font-size:12px;font-weight:900;letter-spacing:.08em}
+  #app.landA .landname i{font-style:normal;font-size:10.5px;font-weight:800;opacity:.75}
+  #app.landA .landname.s0{left:calc(12px + var(--safe-l));color:#d6e6ff}
+  #app.landA .landname.s1{right:calc(12px + var(--safe-r));color:#ffd2d8;flex-direction:row-reverse}
+  #app.landA.turn0 .landname.s1,#app.landA.turn1 .landname.s0{opacity:.4}
+
+  /* --- 案B：帯の中に縦書きで入れる --- */
+  #app.landB .landname{display:none}
+  #app.landB .warline.vsband{width:42px;flex:0 0 42px}
+  #app.landB .vsband .vs{writing-mode:vertical-rl;text-orientation:mixed;padding:10px 0;gap:10px}
+  #app.landB .vsband .vs.s0{clip-path:polygon(0 0, 100% 0, 100% 58%, 0 42%);
+    justify-content:flex-start;align-items:center;
+    background:linear-gradient(180deg,rgba(95,168,255,.42),rgba(95,168,255,.16))}
+  #app.landB .vsband .vs.s1{clip-path:polygon(0 42%, 100% 58%, 100% 100%, 0 100%);
+    justify-content:flex-end;align-items:center;
+    background:linear-gradient(180deg,rgba(255,107,125,.16),rgba(255,107,125,.42))}
+}
+
+/* v113: 行動順の「どちらの陣か」を、名前の色だけに頼らず示す
+   案1＝行の左に色の帯／案2＝番号の丸を陣営色に／案3＝小さな盾の紋章 */
+.om{position:relative;overflow:hidden}
+.om::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px}
+.om.s0::before{background:var(--p1)} .om.s1::before{background:var(--p2)}
+.om .n{margin-left:4px}
+.om.opt2 .n{width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;
+  color:#0a0e18;font-size:9.5px}
+.om.opt2.s0 .n{background:var(--p1)} .om.opt2.s1 .n{background:var(--p2)}
+.om .crest{flex:0 0 auto;width:13px;height:15px;display:none}
+.om.opt3 .crest{display:block}
+.om.opt3::before{display:none}
 
 </style>
 </head>
@@ -10449,17 +10505,23 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     fly.innerHTML = '<div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>';
     app.appendChild(fly);
     var img = $('.cut', fly), target = cropOf(lay);
-    var a = fly.animate([{ transform: 'translate(0,0) scale(1,1)' },
-                         { transform: 'translate(' + (to.left - from.left) + 'px,' + (to.top - from.top) + 'px) scale(' +
-                           (to.width / from.width) + ',' + (to.height / from.height) + ')' }],
+    /* v113: 縦と横で違う倍率をかけると、飛んでいる途中でキャラが縦に潰れて見えた。
+       倍率は幅でそろえ（等倍）、札の中心をマスの中心へ寄せて、最後に溶かして入れ替える */
+    var sc = to.width / from.width;
+    var tx = (to.left + to.width / 2) - (from.left + from.width / 2);
+    var ty = (to.top + to.height / 2) - (from.top + from.height / 2);
+    var a = fly.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0 },
+                         { opacity: 1, offset: 0.72 },
+                         { transform: 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')',
+                           opacity: 0, offset: 1 }],
                         { duration: dur, easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'forwards' });
     var ai = img.animate([CROP.full, target], { duration: dur, easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'forwards' });
     anims.push(a, ai);
+    /* 盤面の本体は、札が寄り切る少し前から浮かび上がらせる（黒い穴が見えないように） */
+    setTimeout(function () { cell.classList.add('arrived'); }, dur * 0.62);
     a.onfinish = function () {
       cell.classList.add('arrived');
-      var a2 = fly.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' });
-      anims.push(a2);
-      a2.onfinish = function () { fly.remove(); if (onDone) onDone(); };
+      fly.remove(); if (onDone) onDone();
     };
   }
   /* 絵の「目」（両目が見えれば その中間、片目なら見える目。目のない者は頭の中心）が
@@ -10506,7 +10568,7 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     var isp = function () { return Math.max(1, S.speed || 1); };
     var ov = document.createElement('div');
     ov.className = 'introov';
-    ov.innerHTML = '<button class="btn ghost introskip" type="button">スキップ ▶</button>';
+    ov.innerHTML = '<button class="btn ghost introskip" type="button">すぐ戦闘へ ▶</button>';
     app.appendChild(ov);
     app.classList.add('intro');
     $$('.unit[data-uid]').forEach(function (e) { e.classList.remove('arrived'); });
@@ -10533,7 +10595,10 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
       if (onTap) { var f = onTap; onTap = null; f(); }
     });
     function team(side) {
-      return introUnits(st).filter(function (v) { return v.side === side; });
+      var us = introUnits(st).filter(function (v) { return v.side === side; });
+      /* 盤面では、上側の陣は「後衛が上・前衛が下（中央寄り）」に並ぶ。紹介もそれに合わせる */
+      if (side === 1) us.sort(function (a, b) { return (b.row - a.row) || (a.col - b.col); });
+      return us;
     }
     function statsHTML(u) {
       var pw = atkLive(u), spdv = E.getSpd(u, st);
@@ -10554,7 +10619,8 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         return '<div class="sixcard' + (big ? ' big' : '') + '" data-uid="' + u.uid + '"><div class="face back"></div>' +
           '<div class="face front"><div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
           '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i>' + statsHTML(u) + '</div></div></div>';
-      }).join('') + '<div class="sixhint">タップで次へ</div>';
+      }).join('') + '<div class="sixhint">' +
+        (side === 0 ? '相手の陣を見る ▶' : '戦いを始める ▶') + '</div>';
       app.appendChild(wrap);
       var cards = $$('.sixcard', wrap), hint = $('.sixhint', wrap);
       cards.forEach(function (c) { fitFace($('.art', c), $('.cut', c), E.findUid(st, c.dataset.uid).defId); });
@@ -10720,6 +10786,9 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 1, c); }).join('') + '</div>' +
+        /* 横持ちのときだけ見える陣営名（縦持ちでは中央の帯が担う） */
+        '<div class="landname s0"><b>' + p1name + '</b><i>' + liveCount(st, 0) + '</i></div>' +
+        '<div class="landname s1"><b>' + p2name + '</b><i>' + liveCount(st, 1) + '</i></div>' +
       '</div>' +
       '<div class="actpanel" id="actpanel"></div>';
 
@@ -10733,6 +10802,8 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
     app.classList.toggle('turn0', !!act && act.side === 0);
     app.classList.toggle('turn1', !!act && act.side === 1);
     app.classList.toggle('lp-side', land);
+    app.classList.toggle('landA', S.landStyle !== 'B');
+    app.classList.toggle('landB', S.landStyle === 'B');
     bindBattleBar();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
@@ -10785,6 +10856,13 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
   }
 
   /* 操作パネル内の行動順（横向きで余ったスペースに出す） */
+  /* 陣営の紋章（小さな盾）。絵文字だと端末で形が変わるので、線で描く */
+  function crestSVG(side) {
+    var c = side === 0 ? 'var(--p1)' : 'var(--p2)';
+    return '<svg class="crest" viewBox="0 0 13 15" aria-hidden="true">' +
+      '<path d="M6.5 0.8 L12 2.6 V7.6 C12 11.2 9.4 13.3 6.5 14.2 C3.6 13.3 1 11.2 1 7.6 V2.6 Z" ' +
+      'fill="' + c + '" fill-opacity=".22" stroke="' + c + '" stroke-width="1.2"/></svg>';
+  }
   function orderMiniHTML(st) {
     var cur = E.currentActor(st);
     return '<div class="om-hd">行動順' +
@@ -10797,7 +10875,8 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
         if (!v) return '';
         var cls = 'om s' + v.side + (i < st.turnIdx ? ' done' : '') + (!v.alive ? ' dead' : '') +
           (cur && v.uid === cur.uid ? ' now' : '');
-        return '<div class="' + cls + '"><span class="n">' + (i + 1) + '</span>' +
+        cls += (S.omStyle ? ' opt' + S.omStyle : '');
+        return '<div class="' + cls + '">' + crestSVG(v.side) + '<span class="n">' + (i + 1) + '</span>' +
           '<span class="pic">' + ART.portrait(v.defId, v.def.elem) + '</span>' +
           '<span class="nm">' + v.def.name + '</span>' +
           '<span class="sp">⚡' + E.getSpd(v, st) + '</span></div>';
@@ -12317,13 +12396,16 @@ window.RPG_PAGE = "<!DOCTYPE html>\n<html lang=\"ja\">\n<head>\n<meta charset=\"
   /* 端末を回したらレイアウトを組み直す */
   var _reflow = null, _wasLandscape = null;
   function applyOrientClasses() {
-    if (S.screen !== 'battle') return;
+    if (S.screen !== 'battle' || S.intro) return;   /* v113: 紹介の最中は縦のまま */
     var land = isLandscape();
     app.classList.toggle('land', land);
     app.classList.toggle('solo', S.mode === 'cpu');
     app.classList.toggle('lp-side', land);
   }
   function onOrient() {
+    /* v113: 開幕の紹介のあいだは作り直さない。
+       作り直すと紹介の札ごと消えて、空っぽの盤面が出てしまう */
+    if (S.intro) return;
     /* モバイルではアドレスバーの出入りだけで resize が連発する。
        そのたびに作り直すと画面が揺れるので、まずクラスだけ付け替える。
        上段バーと右パネル内バーは常に両方描いてあり、表示はCSSが決めるので、

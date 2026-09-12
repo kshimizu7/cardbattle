@@ -9,6 +9,9 @@
   --ok:#5fe0a0; --bad:#ff6b7d; --mag:#c98cff;
   --r:14px;
   --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0;height:100%}
@@ -70,7 +73,10 @@ h1,h2,h3{margin:0}
 
 /* ---------- 編成 ---------- */
 .hdr{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,#0b0f1c,rgba(11,15,28,.92));
-  border-bottom:1px solid var(--line);padding:6px 10px;display:flex;align-items:center;gap:8px}
+  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;
+  padding:calc(6px + var(--safe-t)) calc(12px + var(--safe-r)) 6px calc(12px + var(--safe-l))}
+/* 押しやすさの下限（どの端末でも指が入る大きさにする） */
+.hdr .btn.ico{min-width:40px;min-height:36px}
 .hdr .t{font-weight:900;font-size:14px}
 .hdr .sp{flex:1}
 .meter{display:flex;flex-direction:column;gap:3px;min-width:96px}
@@ -2443,8 +2449,8 @@ body.shake{animation:shk2 .56s}
 #app.intro .turnbar{opacity:0;transition:opacity .4s}
 #app .unit .pic,#app .unit .nm,#app .unit .hpb,#app .unit .hpn,#app .unit .spb,#app .unit .atb{transition:opacity .35s}
 .introov{position:fixed;inset:0;z-index:60;background:rgba(3,5,11,.35)}
-.introskip{position:absolute;left:50%;bottom:calc(16px + env(safe-area-inset-bottom));transform:translateX(-50%);
-  z-index:63;padding:9px 22px;font-weight:900;letter-spacing:.1em}
+.introskip{position:absolute;top:calc(54px + var(--safe-t));right:calc(12px + var(--safe-r));left:auto;bottom:auto;
+  z-index:63;padding:8px 14px;font-size:12px;font-weight:900;letter-spacing:.06em;opacity:.85}
 .introfly .art .lay{width:100%;height:100%;border-radius:10px}
 .introfly .art.flipL .lay{transform:scaleX(-1)}
 .introfly{position:fixed;z-index:62;border-radius:10px;overflow:hidden;transform-origin:0 0;pointer-events:none}
@@ -2455,14 +2461,16 @@ body.shake{animation:shk2 .56s}
    v98: 開幕の紹介「六枚同時」＋ 飛びながら切り出しへ寄せる
    ========================================================= */
 .introfly .art .lay .cut{left:3%;top:4%;width:94%;height:92%}   /* 出発は全身。数値は JS が動かす */
-.introsix{position:fixed;left:4%;right:4%;top:calc(6% + 40px);bottom:calc(10% + 40px);z-index:62;
-  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:8px;pointer-events:none}
+.introsix{position:fixed;left:3%;right:3%;top:calc(4% + 40px);bottom:calc(8% + 44px);z-index:62;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);gap:4px;pointer-events:none}
 #app.land .introsix{left:8%;right:36%;top:6%;bottom:12%;gap:6px}
 .introsix .sixtag{position:absolute;left:0;top:-30px;font-size:11px;font-weight:900;letter-spacing:.15em;padding:3px 9px;border-radius:999px;border:1px solid}
 .introsix.s0 .sixtag{color:var(--p1);border-color:var(--p1)} .introsix.s1 .sixtag{color:var(--p2);border-color:var(--p2)}
 .sixcard{position:relative;transform:rotateY(180deg);transform-style:preserve-3d;border-radius:10px}
 .sixcard .face{position:absolute;inset:0;border-radius:10px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden;
-  border:1.5px solid var(--gold);background:#0b0f1b;box-shadow:0 10px 24px rgba(0,0,0,.6)}
+  border:0;background:#0b0f1b;box-shadow:0 10px 24px rgba(0,0,0,.6)}
+/* 裏面だけは金の縁を残す（めくる前の札らしさ） */
+.sixcard .back{border:1.5px solid var(--gold)}
 .sixcard .back{transform:rotateY(180deg);
   background:radial-gradient(circle at 50% 42%,rgba(242,198,92,.25),transparent 38%),
              repeating-linear-gradient(45deg,#0e1424 0 6px,#111a2e 6px 12px)}
@@ -2487,9 +2495,11 @@ body.shake{animation:shk2 .56s}
 .sixcard .sixst i{font-style:normal;font-size:7.5px;font-weight:800;color:#9fb0d0;letter-spacing:.04em}
 .sixcard .sixst .hp{color:#7de8a4} .sixcard .sixst .sp{color:#7fd0ff}
 .sixcard .sixst .at{color:#ffb36b} .sixcard .sixst .at.mag{color:#c98cff} .sixcard .sixst .at.heal{color:#7de8a4}
-.introsix .sixhint{position:absolute;left:0;right:0;bottom:-30px;text-align:center;font-size:12px;font-weight:900;
-  letter-spacing:.15em;color:var(--gold);opacity:0;transition:opacity .3s}
-.introsix .sixhint.on{opacity:1;animation:sixblink 1.2s ease-in-out infinite}
+.introsix .sixhint{position:absolute;left:50%;transform:translateX(-50%);bottom:-38px;white-space:nowrap;
+  text-align:center;font-size:13px;font-weight:900;letter-spacing:.08em;color:#1a1408;
+  padding:9px 22px;border-radius:999px;background:linear-gradient(180deg,#f7d888,#e0ac3f);
+  box-shadow:0 4px 14px rgba(0,0,0,.5);opacity:0;transition:opacity .3s}
+.introsix .sixhint.on{opacity:1;animation:sixblink 1.6s ease-in-out infinite}
 @keyframes sixblink{0%,100%{opacity:1}50%{opacity:.45}}
 
 /* =========================================================
@@ -2806,3 +2816,49 @@ body.shake{animation:shk2 .56s}
 .actpanel .acts .act{min-width:0;width:auto}
 .actpanel .acts .act:first-child:nth-last-child(odd){grid-column:1 / -1}
 .actpanel .acts.waiting{display:block}
+
+/* =========================================================
+   v113: 横持ちの陣営表示（案A＝上段に名前／案B＝中央の帯に縦書き）
+   ========================================================= */
+@media (orientation:landscape){
+  /* 共通：カードの縦のすき間を詰めて、上に名前の場所を作る */
+  #app.land > .field{padding:22px 10px 6px calc(10px + var(--safe-l))}
+  #app.land .field .grid3{gap:3px}
+  #app.land .warline.vsband{width:34px;flex:0 0 34px;height:auto;align-self:stretch;margin:0;border-radius:10px}
+
+  /* --- 案A：名前は盤面の上に置く。帯は色の境目だけ --- */
+  #app.land .vsband .vs{font-size:11px}
+  #app.landA .vsband .vs b,#app.landA .vsband .vs i{display:none}
+  #app.landA .vsband .vs.s0{clip-path:polygon(0 0, 100% 0, 100% 58%, 0 42%)}
+  #app.landA .vsband .vs.s1{clip-path:polygon(0 42%, 100% 58%, 100% 100%, 0 100%)}
+  #app.landA .landname{position:absolute;top:2px;height:20px;z-index:6;display:flex;align-items:center;gap:7px;
+    font-size:12px;font-weight:900;letter-spacing:.08em}
+  #app.landA .landname i{font-style:normal;font-size:10.5px;font-weight:800;opacity:.75}
+  #app.landA .landname.s0{left:calc(12px + var(--safe-l));color:#d6e6ff}
+  #app.landA .landname.s1{right:calc(12px + var(--safe-r));color:#ffd2d8;flex-direction:row-reverse}
+  #app.landA.turn0 .landname.s1,#app.landA.turn1 .landname.s0{opacity:.4}
+
+  /* --- 案B：帯の中に縦書きで入れる --- */
+  #app.landB .landname{display:none}
+  #app.landB .warline.vsband{width:42px;flex:0 0 42px}
+  #app.landB .vsband .vs{writing-mode:vertical-rl;text-orientation:mixed;padding:10px 0;gap:10px}
+  #app.landB .vsband .vs.s0{clip-path:polygon(0 0, 100% 0, 100% 58%, 0 42%);
+    justify-content:flex-start;align-items:center;
+    background:linear-gradient(180deg,rgba(95,168,255,.42),rgba(95,168,255,.16))}
+  #app.landB .vsband .vs.s1{clip-path:polygon(0 42%, 100% 58%, 100% 100%, 0 100%);
+    justify-content:flex-end;align-items:center;
+    background:linear-gradient(180deg,rgba(255,107,125,.16),rgba(255,107,125,.42))}
+}
+
+/* v113: 行動順の「どちらの陣か」を、名前の色だけに頼らず示す
+   案1＝行の左に色の帯／案2＝番号の丸を陣営色に／案3＝小さな盾の紋章 */
+.om{position:relative;overflow:hidden}
+.om::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px}
+.om.s0::before{background:var(--p1)} .om.s1::before{background:var(--p2)}
+.om .n{margin-left:4px}
+.om.opt2 .n{width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;
+  color:#0a0e18;font-size:9.5px}
+.om.opt2.s0 .n{background:var(--p1)} .om.opt2.s1 .n{background:var(--p2)}
+.om .crest{flex:0 0 auto;width:13px;height:15px;display:none}
+.om.opt3 .crest{display:block}
+.om.opt3::before{display:none}

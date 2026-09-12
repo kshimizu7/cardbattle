@@ -2892,17 +2892,23 @@
     fly.innerHTML = '<div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>';
     app.appendChild(fly);
     var img = $('.cut', fly), target = cropOf(lay);
-    var a = fly.animate([{ transform: 'translate(0,0) scale(1,1)' },
-                         { transform: 'translate(' + (to.left - from.left) + 'px,' + (to.top - from.top) + 'px) scale(' +
-                           (to.width / from.width) + ',' + (to.height / from.height) + ')' }],
+    /* v113: 縦と横で違う倍率をかけると、飛んでいる途中でキャラが縦に潰れて見えた。
+       倍率は幅でそろえ（等倍）、札の中心をマスの中心へ寄せて、最後に溶かして入れ替える */
+    var sc = to.width / from.width;
+    var tx = (to.left + to.width / 2) - (from.left + from.width / 2);
+    var ty = (to.top + to.height / 2) - (from.top + from.height / 2);
+    var a = fly.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1, offset: 0 },
+                         { opacity: 1, offset: 0.72 },
+                         { transform: 'translate(' + tx + 'px,' + ty + 'px) scale(' + sc + ')',
+                           opacity: 0, offset: 1 }],
                         { duration: dur, easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'forwards' });
     var ai = img.animate([CROP.full, target], { duration: dur, easing: 'cubic-bezier(.2,.75,.25,1)', fill: 'forwards' });
     anims.push(a, ai);
+    /* 盤面の本体は、札が寄り切る少し前から浮かび上がらせる（黒い穴が見えないように） */
+    setTimeout(function () { cell.classList.add('arrived'); }, dur * 0.62);
     a.onfinish = function () {
       cell.classList.add('arrived');
-      var a2 = fly.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, fill: 'forwards' });
-      anims.push(a2);
-      a2.onfinish = function () { fly.remove(); if (onDone) onDone(); };
+      fly.remove(); if (onDone) onDone();
     };
   }
   /* 絵の「目」（両目が見えれば その中間、片目なら見える目。目のない者は頭の中心）が
@@ -2949,7 +2955,7 @@
     var isp = function () { return Math.max(1, S.speed || 1); };
     var ov = document.createElement('div');
     ov.className = 'introov';
-    ov.innerHTML = '<button class="btn ghost introskip" type="button">スキップ ▶</button>';
+    ov.innerHTML = '<button class="btn ghost introskip" type="button">すぐ戦闘へ ▶</button>';
     app.appendChild(ov);
     app.classList.add('intro');
     $$('.unit[data-uid]').forEach(function (e) { e.classList.remove('arrived'); });
@@ -2976,7 +2982,10 @@
       if (onTap) { var f = onTap; onTap = null; f(); }
     });
     function team(side) {
-      return introUnits(st).filter(function (v) { return v.side === side; });
+      var us = introUnits(st).filter(function (v) { return v.side === side; });
+      /* 盤面では、上側の陣は「後衛が上・前衛が下（中央寄り）」に並ぶ。紹介もそれに合わせる */
+      if (side === 1) us.sort(function (a, b) { return (b.row - a.row) || (a.col - b.col); });
+      return us;
     }
     function statsHTML(u) {
       var pw = atkLive(u), spdv = E.getSpd(u, st);
@@ -2997,7 +3006,8 @@
         return '<div class="sixcard' + (big ? ' big' : '') + '" data-uid="' + u.uid + '"><div class="face back"></div>' +
           '<div class="face front"><div class="art' + (flip ? ' flipL' : '') + '">' + ART.portrait(u.defId, u.def.elem) + '</div>' +
           '<div class="nm"><b>' + u.def.name + '</b><i>' + u.def.en + '</i>' + statsHTML(u) + '</div></div></div>';
-      }).join('') + '<div class="sixhint">タップで次へ</div>';
+      }).join('') + '<div class="sixhint">' +
+        (side === 0 ? '相手の陣を見る ▶' : '戦いを始める ▶') + '</div>';
       app.appendChild(wrap);
       var cards = $$('.sixcard', wrap), hint = $('.sixhint', wrap);
       cards.forEach(function (c) { fitFace($('.art', c), $('.cut', c), E.findUid(st, c.dataset.uid).defId); });
@@ -3163,6 +3173,9 @@
         '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 0, c); }).join('') + '</div>' +
         '<div class="grid3">' + [0, 1, 2].map(function (c) { return unitCellHTML(0, 1, c); }).join('') + '</div>' +
+        /* 横持ちのときだけ見える陣営名（縦持ちでは中央の帯が担う） */
+        '<div class="landname s0"><b>' + p1name + '</b><i>' + liveCount(st, 0) + '</i></div>' +
+        '<div class="landname s1"><b>' + p2name + '</b><i>' + liveCount(st, 1) + '</i></div>' +
       '</div>' +
       '<div class="actpanel" id="actpanel"></div>';
 
@@ -3176,6 +3189,8 @@
     app.classList.toggle('turn0', !!act && act.side === 0);
     app.classList.toggle('turn1', !!act && act.side === 1);
     app.classList.toggle('lp-side', land);
+    app.classList.toggle('landA', S.landStyle !== 'B');
+    app.classList.toggle('landB', S.landStyle === 'B');
     bindBattleBar();
     var ordqb = $('#ordq');
     if (ordqb) ordqb.onclick = showOrder;
@@ -3228,6 +3243,13 @@
   }
 
   /* 操作パネル内の行動順（横向きで余ったスペースに出す） */
+  /* 陣営の紋章（小さな盾）。絵文字だと端末で形が変わるので、線で描く */
+  function crestSVG(side) {
+    var c = side === 0 ? 'var(--p1)' : 'var(--p2)';
+    return '<svg class="crest" viewBox="0 0 13 15" aria-hidden="true">' +
+      '<path d="M6.5 0.8 L12 2.6 V7.6 C12 11.2 9.4 13.3 6.5 14.2 C3.6 13.3 1 11.2 1 7.6 V2.6 Z" ' +
+      'fill="' + c + '" fill-opacity=".22" stroke="' + c + '" stroke-width="1.2"/></svg>';
+  }
   function orderMiniHTML(st) {
     var cur = E.currentActor(st);
     return '<div class="om-hd">行動順' +
@@ -3240,7 +3262,8 @@
         if (!v) return '';
         var cls = 'om s' + v.side + (i < st.turnIdx ? ' done' : '') + (!v.alive ? ' dead' : '') +
           (cur && v.uid === cur.uid ? ' now' : '');
-        return '<div class="' + cls + '"><span class="n">' + (i + 1) + '</span>' +
+        cls += (S.omStyle ? ' opt' + S.omStyle : '');
+        return '<div class="' + cls + '">' + crestSVG(v.side) + '<span class="n">' + (i + 1) + '</span>' +
           '<span class="pic">' + ART.portrait(v.defId, v.def.elem) + '</span>' +
           '<span class="nm">' + v.def.name + '</span>' +
           '<span class="sp">⚡' + E.getSpd(v, st) + '</span></div>';
@@ -4760,13 +4783,16 @@
   /* 端末を回したらレイアウトを組み直す */
   var _reflow = null, _wasLandscape = null;
   function applyOrientClasses() {
-    if (S.screen !== 'battle') return;
+    if (S.screen !== 'battle' || S.intro) return;   /* v113: 紹介の最中は縦のまま */
     var land = isLandscape();
     app.classList.toggle('land', land);
     app.classList.toggle('solo', S.mode === 'cpu');
     app.classList.toggle('lp-side', land);
   }
   function onOrient() {
+    /* v113: 開幕の紹介のあいだは作り直さない。
+       作り直すと紹介の札ごと消えて、空っぽの盤面が出てしまう */
+    if (S.intro) return;
     /* モバイルではアドレスバーの出入りだけで resize が連発する。
        そのたびに作り直すと画面が揺れるので、まずクラスだけ付け替える。
        上段バーと右パネル内バーは常に両方描いてあり、表示はCSSが決めるので、
